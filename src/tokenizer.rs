@@ -117,7 +117,7 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
             // Strings
             '"' => tokens.push(tokenize_string(&mut chars)?),
 
-            // Mult-character tokens (literals, keywords, identifiers)
+            // Multi-character tokens (literals, keywords, identifiers)
             _ if ch.is_alphanumeric() || ch == '_' => tokens.extend(tokenize_multi_char(&mut chars)),
 
             _ => return Err(format!("Unexpected token: {ch}")),
