@@ -18,7 +18,7 @@ pub enum Token {
     // Operators
     Plus,
     Minus,
-    Star,
+    Multiply,
     Slash,
 
     // Parenthesis
@@ -35,7 +35,7 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let mut chars = input.chars().peekable();
 
-    macro_rules! token {
+    macro_rules! push_token {
         ($token_type:ident) => {
             tokens.push(Token::$token_type)
         };
@@ -54,42 +54,66 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
 
             // Parenthesis
             '(' => {
-                token!(LParen);
+                push_token!(LParen);
                 chars.next();
             }
             ')' => {
-                token!(RParen);
+                push_token!(RParen);
                 chars.next();
             }
 
             // Operators
             '+' => {
-                token!(Plus);
+                push_token!(Plus);
                 chars.next();
             }
             '-' => {
-                token!(Minus);
+                push_token!(Minus);
                 chars.next();
             }
             '*' => {
-                token!(Star);
+                push_token!(Multiply);
                 chars.next();
             }
             '/' => {
-                token!(Slash);
+                push_token!(Slash);
                 chars.next();
             }
             '=' => {
-                token!(Equals);
+                push_token!(Equals);
                 chars.next();
             }
 
+            // Strings
+            '"' => {
+                let mut closed: bool = false;
+                let mut value = String::new();
+                chars.next();
+
+                while let Some(&ch) = chars.peek() {
+                    if ch == '"' {
+                        chars.next();
+                        closed = true;
+                        break;
+                    }
+
+                    value.push(ch);
+                    chars.next();
+                }
+
+                if !closed {
+                    return Err("Unclosed string literal".to_string());
+                }
+
+                push_token!(String, handle_string_escapes(value));
+            }
+
             // Mult-character tokens
-            _ if ch.is_alphanumeric() => {
+            _ if ch.is_alphanumeric() || ch == '_' => {
                 let mut value = String::new();
 
                 while let Some(&ch) = chars.peek()
-                    && (ch.is_alphanumeric() || ch == '_')
+                    && (ch.is_alphanumeric() || ch == '_' || ch == '.')
                 {
                     value.push(ch);
                     chars.next();
@@ -99,24 +123,19 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
 
                 match value.as_str() {
                     // Number / Float
-                    _ if value.parse::<u64>().is_ok() => token!(Number, value.parse::<u64>().unwrap()),
-                    _ if value.parse::<f64>().is_ok() => token!(Float, value.parse::<f64>().unwrap()),
-
-                    // String
-                    _ if value.starts_with('"') && value.ends_with('"') => {
-                        token!(String, handle_string_escapes(value[1..value.len() - 1].to_string()));
-                    }
+                    _ if value.parse::<u64>().is_ok() => push_token!(Number, value.parse::<u64>().unwrap()),
+                    _ if value.parse::<f64>().is_ok() => push_token!(Float, value.parse::<f64>().unwrap()),
 
                     // Boolean
-                    "true" => token!(Bool, true),
-                    "false" => token!(Bool, false),
+                    "true" => push_token!(Bool, true),
+                    "false" => push_token!(Bool, false),
 
                     // Keyword
-                    "let" => token!(Let),
-                    "import" => token!(Import),
+                    "let" => push_token!(Let),
+                    "import" => push_token!(Import),
 
                     // Identifier
-                    _ => token!(Identifier, value),
+                    _ => push_token!(Identifier, value),
                 }
             }
 
@@ -124,7 +143,6 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
                 return Err(format!("Unexpected token: {ch}"));
             }
         }
-        chars.next();
     }
 
     Ok(tokens)
