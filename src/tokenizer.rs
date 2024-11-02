@@ -34,7 +34,6 @@ pub enum Token {
     Equals,
 }
 
-#[allow(clippy::too_many_lines)] // mind your own bussiness clippy
 pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
     let input: String = input.into();
     let mut tokens = Vec::new();
