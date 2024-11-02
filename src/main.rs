@@ -13,5 +13,5 @@ mod utils;
 fn main() {
     let input = fs::read_to_string("main.tl").expect("Failed to read file");
     let tokens = tokenizer::tokenize(input).expect("Failed to tokenize input");
-    println!("{tokens:#?}");
+    println!("Tokenizer output:\n{tokens:#?}");
 }
