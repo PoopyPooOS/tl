@@ -29,7 +29,7 @@ pub enum Token {
     Equals,
 }
 
-#[allow(clippy::unnecessary_wraps)]
+#[allow(clippy::too_many_lines)] // mind your own bussiness clippy
 pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
     let input: String = input.into();
     let mut tokens = Vec::new();
@@ -50,6 +50,27 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
             ' ' | '\t' | '\n' => {
                 chars.next();
                 continue;
+            }
+
+            // Comments / Slash operator
+            '/' => {
+                if let Some(next_ch) = chars.clone().nth(1) {
+                    if next_ch == '/' {
+                        chars.next();
+                        chars.next();
+
+                        while let Some(&ch) = chars.peek() {
+                            if ch == '\n' {
+                                break;
+                            }
+                            chars.next();
+                        }
+                        continue;
+                    }
+                }
+
+                push_token!(Slash);
+                chars.next();
             }
 
             // Parenthesis
@@ -73,10 +94,6 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
             }
             '*' => {
                 push_token!(Multiply);
-                chars.next();
-            }
-            '/' => {
-                push_token!(Slash);
                 chars.next();
             }
             '=' => {
@@ -118,8 +135,6 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
                     value.push(ch);
                     chars.next();
                 }
-
-                dbg!(&value);
 
                 match value.as_str() {
                     // Number / Float

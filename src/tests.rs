@@ -48,6 +48,23 @@ mod tokenizer {
     }
 
     #[test]
+    fn binary_operators() {
+        let input = "1 + 1 - 1 * 1 / 1";
+        let expected = vec![
+            Token::Number(1),
+            Token::Plus,
+            Token::Number(1),
+            Token::Minus,
+            Token::Number(1),
+            Token::Multiply,
+            Token::Number(1),
+            Token::Slash,
+            Token::Number(1),
+        ];
+        assert_eq!(tokenize(input).unwrap(), expected);
+    }
+
+    #[test]
     fn parenthesis() {
         let input = "(2 + 3) * 4";
         let expected = vec![
@@ -58,6 +75,23 @@ mod tokenizer {
             Token::RParen,
             Token::Multiply,
             Token::Number(4),
+        ];
+        assert_eq!(tokenize(input).unwrap(), expected);
+    }
+
+    #[test]
+    fn comment() {
+        let input = r#"
+            let magic = 3241.3 // magic number that indicates something
+            // another comment
+            "hello"
+        "#;
+        let expected = vec![
+            Token::Let,
+            Token::Identifier("magic".to_string()),
+            Token::Equals,
+            Token::Float(3241.3),
+            Token::String("hello".to_string()),
         ];
         assert_eq!(tokenize(input).unwrap(), expected);
     }
