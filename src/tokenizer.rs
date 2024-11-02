@@ -1,4 +1,5 @@
 use crate::utils::handle_string_escapes;
+use std::{iter::Peekable, str::Chars};
 
 #[derive(Debug, PartialEq, PartialOrd)]
 pub enum Token {
@@ -102,57 +103,10 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
             }
 
             // Strings
-            '"' => {
-                let mut closed: bool = false;
-                let mut value = String::new();
-                chars.next();
-
-                while let Some(&ch) = chars.peek() {
-                    if ch == '"' {
-                        chars.next();
-                        closed = true;
-                        break;
-                    }
-
-                    value.push(ch);
-                    chars.next();
-                }
-
-                if !closed {
-                    return Err("Unclosed string literal".to_string());
-                }
-
-                push_token!(String, handle_string_escapes(value));
-            }
+            '"' => tokens.push(tokenize_string(&mut chars)?),
 
             // Mult-character tokens
-            _ if ch.is_alphanumeric() || ch == '_' => {
-                let mut value = String::new();
-
-                while let Some(&ch) = chars.peek()
-                    && (ch.is_alphanumeric() || ch == '_' || ch == '.')
-                {
-                    value.push(ch);
-                    chars.next();
-                }
-
-                match value.as_str() {
-                    // Number / Float
-                    _ if value.parse::<u64>().is_ok() => push_token!(Number, value.parse::<u64>().unwrap()),
-                    _ if value.parse::<f64>().is_ok() => push_token!(Float, value.parse::<f64>().unwrap()),
-
-                    // Boolean
-                    "true" => push_token!(Bool, true),
-                    "false" => push_token!(Bool, false),
-
-                    // Keyword
-                    "let" => push_token!(Let),
-                    "import" => push_token!(Import),
-
-                    // Identifier
-                    _ => push_token!(Identifier, value),
-                }
-            }
+            _ if ch.is_alphanumeric() || ch == '_' => tokens.extend(tokenize_multi_char(&mut chars)),
 
             _ => {
                 return Err(format!("Unexpected token: {ch}"));
@@ -161,4 +115,58 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
     }
 
     Ok(tokens)
+}
+
+pub fn tokenize_string(chars: &mut Peekable<Chars<'_>>) -> Result<Token, String> {
+    let mut closed: bool = false;
+    let mut value = String::new();
+    chars.next();
+
+    while let Some(&ch) = chars.peek() {
+        if ch == '"' {
+            chars.next();
+            closed = true;
+            break;
+        }
+
+        value.push(ch);
+        chars.next();
+    }
+
+    if !closed {
+        return Err("Unclosed string literal".to_string());
+    }
+
+    Ok(Token::String(handle_string_escapes(value)))
+}
+
+pub fn tokenize_multi_char(chars: &mut Peekable<Chars<'_>>) -> Vec<Token> {
+    let mut value = String::new();
+    let mut tokens = Vec::new();
+
+    while let Some(&ch) = chars.peek()
+        && (ch.is_alphanumeric() || ch == '_' || ch == '.')
+    {
+        value.push(ch);
+        chars.next();
+    }
+
+    match value.as_str() {
+        // Number / Float
+        _ if value.parse::<u64>().is_ok() => tokens.push(Token::Number(value.parse::<u64>().unwrap())),
+        _ if value.parse::<f64>().is_ok() => tokens.push(Token::Float(value.parse::<f64>().unwrap())),
+
+        // Boolean
+        "true" => tokens.push(Token::Bool(true)),
+        "false" => tokens.push(Token::Bool(false)),
+
+        // Keyword
+        "let" => tokens.push(Token::Let),
+        "import" => tokens.push(Token::Import),
+
+        // Identifier
+        _ => tokens.push(Token::Identifier(value)),
+    }
+
+    tokens
 }
