@@ -105,7 +105,7 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
             // Strings
             '"' => tokens.push(tokenize_string(&mut chars)?),
 
-            // Mult-character tokens
+            // Mult-character tokens (literals, keywords, identifiers)
             _ if ch.is_alphanumeric() || ch == '_' => tokens.extend(tokenize_multi_char(&mut chars)),
 
             _ => {
@@ -160,7 +160,7 @@ pub fn tokenize_multi_char(chars: &mut Peekable<Chars<'_>>) -> Vec<Token> {
         "true" => tokens.push(Token::Bool(true)),
         "false" => tokens.push(Token::Bool(false)),
 
-        // Keyword
+        // Keywords
         "let" => tokens.push(Token::Let),
         "import" => tokens.push(Token::Import),
 
