@@ -72,7 +72,7 @@ fn binary_operators() {
 }
 
 #[test]
-fn parenthesis() {
+fn round_brackets() {
     let input = "(2 + 3) * 4";
     let expected = vec![
         Token::LParen,
@@ -83,6 +83,36 @@ fn parenthesis() {
         Token::Multiply,
         Token::Number(4),
     ];
+    assert_eq!(tokenize(input).unwrap(), expected);
+}
+
+#[test]
+fn square_brackets() {
+    let input = "[ 1 2 3 4 5 ]";
+    let mut expected = vec![Token::LBracket];
+    expected.extend([1, 2, 3, 4, 5].map(|x| Token::Number(x)));
+    expected.push(Token::RBracket);
+
+    assert_eq!(tokenize(input).unwrap(), expected);
+}
+
+#[test]
+fn curly_brackets() {
+    let input = r#"{
+        first = "John"
+        last = "Doe"
+    }"#;
+    let mut expected = vec![
+        Token::LBrace,
+        Token::Identifier("first".to_string()),
+        Token::Equals,
+        Token::String("John".to_string()),
+        Token::Identifier("last".to_string()),
+        Token::Equals,
+        Token::String("Doe".to_string()),
+        Token::RBrace,
+    ];
+
     assert_eq!(tokenize(input).unwrap(), expected);
 }
 

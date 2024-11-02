@@ -22,9 +22,13 @@ pub enum Token {
     Multiply,
     Slash,
 
-    // Parenthesis
+    // Brackets
     LParen,
     RParen,
+    LBracket,
+    RBracket,
+    LBrace,
+    RBrace,
 
     // Misc
     Equals,
@@ -38,10 +42,12 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
 
     macro_rules! push_token {
         ($token_type:ident) => {
-            tokens.push(Token::$token_type)
+            tokens.push(Token::$token_type);
+            chars.next();
         };
         ($token_type:ident, $value:expr) => {
-            tokens.push(Token::$token_type($value))
+            tokens.push(Token::$token_type($value));
+            chars.next();
         };
     }
 
@@ -71,35 +77,42 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
                 }
 
                 push_token!(Slash);
-                chars.next();
             }
 
-            // Parenthesis
+            // Do not try to simplify the match arm body, the push_token macro wont work if you do so.
+
+            // Brackets
             '(' => {
                 push_token!(LParen);
-                chars.next();
             }
             ')' => {
                 push_token!(RParen);
-                chars.next();
+            }
+            '[' => {
+                push_token!(LBracket);
+            }
+            ']' => {
+                push_token!(RBracket);
+            }
+            '{' => {
+                push_token!(LBrace);
+            }
+            '}' => {
+                push_token!(RBrace);
             }
 
             // Operators
             '+' => {
                 push_token!(Plus);
-                chars.next();
             }
             '-' => {
                 push_token!(Minus);
-                chars.next();
             }
             '*' => {
                 push_token!(Multiply);
-                chars.next();
             }
             '=' => {
                 push_token!(Equals);
-                chars.next();
             }
 
             // Strings
@@ -108,9 +121,7 @@ pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
             // Mult-character tokens (literals, keywords, identifiers)
             _ if ch.is_alphanumeric() || ch == '_' => tokens.extend(tokenize_multi_char(&mut chars)),
 
-            _ => {
-                return Err(format!("Unexpected token: {ch}"));
-            }
+            _ => return Err(format!("Unexpected token: {ch}")),
         }
     }
 
