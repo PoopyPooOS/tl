@@ -26,13 +26,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tl"
-version = "0.1.0"
-dependencies = [
- "logger",
-]
-
-[[package]]
 name = "windows-sys"
 version = "0.48.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

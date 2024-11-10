@@ -1,17 +1,46 @@
-#![feature(let_chains)]
+#![feature(let_chains, new_range_api)]
+#![allow(dead_code)]
 
-use std::fs;
+use std::process;
+
+use logger::Location;
 
 #[cfg(test)]
 mod tests;
 
-// mod ast; TODO: Implement AST
+mod ast;
 // mod eval; TODO: Implement interpreter
 mod tokenizer;
 mod utils;
 
 fn main() {
-    let input = fs::read_to_string("main.tl").expect("Failed to read file");
-    let tokens = tokenizer::tokenize(input).expect("Failed to tokenize input");
-    println!("Tokenizer output:\n{tokens:#?}");
+    let path = "main.tl";
+
+    let tokens = match tokenizer::Parser::new(path).tokenize() {
+        Ok(tokens) => tokens,
+        Err(log) => {
+            log.output();
+            process::exit(1);
+        }
+    };
+
+    for token in &tokens {
+        println!(
+            "{} from '{}' to '{}'",
+            token.token_type,
+            Location::new_with_section(path, token.line..=token.line, token.column..=token.column),
+            Location::new_with_section(path, token.line..=token.line, token.column..=token.column + token.len)
+        );
+    }
+
+    let mut ast = ast::Parser::new(tokens, path);
+    let parsed_ast = match ast.parse() {
+        Ok(parsed_ast) => parsed_ast,
+        Err(log) => {
+            log.output();
+            process::exit(1);
+        }
+    };
+
+    println!("{parsed_ast:#?}");
 }

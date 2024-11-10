@@ -2,17 +2,8 @@ use crate::tokenizer::{tokenize, Token};
 
 #[test]
 fn boolean() {
-    let input = "let valid = true";
-    let expected = vec![Token::Let, Token::Identifier("valid".to_string()), Token::Equals, Token::Bool(true)];
-    assert_eq!(tokenize(input).unwrap(), expected);
-
-    let input = "let invalid = false";
-    let expected = vec![
-        Token::Let,
-        Token::Identifier("invalid".to_string()),
-        Token::Equals,
-        Token::Bool(false),
-    ];
+    let input = "true false";
+    let expected = vec![Token::Bool(true), Token::Bool(false)];
     assert_eq!(tokenize(input).unwrap(), expected);
 }
 
@@ -102,7 +93,7 @@ fn curly_brackets() {
         first = "John"
         last = "Doe"
     }"#;
-    let mut expected = vec![
+    let expected = vec![
         Token::LBrace,
         Token::Identifier("first".to_string()),
         Token::Equals,
