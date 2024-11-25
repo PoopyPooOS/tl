@@ -1,6 +1,7 @@
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Statement {
     Let { name: String, value: Expr },
+    Call { name: String, args: Vec<Expr> },
     Expr(Expr),
 }
 
@@ -8,7 +9,11 @@ pub enum Statement {
 pub enum Expr {
     Literal(Literal),
     Identifier(String),
-    BinaryOp(BinaryOp),
+    BinaryOp {
+        left: Box<Expr>,
+        operator: BinaryOperator,
+        right: Box<Expr>,
+    },
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -17,13 +22,6 @@ pub enum Literal {
     Float(f64),
     Bool(bool),
     String(String),
-}
-
-#[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct BinaryOp {
-    left: &'static Expr,
-    operator: BinaryOperator,
-    right: &'static Expr,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]

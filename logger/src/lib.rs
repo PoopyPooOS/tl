@@ -121,7 +121,7 @@ pub fn highlight_source<S: Into<String>>(
                 }
             )?;
         } else {
-            writeln!(f, "{}", line.bold())?;
+            writeln!(f, "{}", line.color(level).bold())?;
         }
     }
 

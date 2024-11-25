@@ -1,8 +1,9 @@
-use std::fmt::Display;
+#![allow(clippy::struct_field_names)]
 
 use logger::Color;
+use std::fmt::Display;
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum TokenType {
     // Literals
     String(String),
@@ -24,39 +25,41 @@ pub enum TokenType {
     Slash,
 
     // Brackets
+    /// (
     LParen,
+    /// )
     RParen,
+    /// [
     LBracket,
+    /// ]
     RBracket,
+    /// {
     LBrace,
+    /// }
     RBrace,
 
     // Misc
     Equals,
+    Comma,
 }
 
 impl TokenType {
+    #[must_use]
     pub fn as_color(&self) -> Option<Color> {
         match self {
             TokenType::String(_) => Some(Color::BrightGreen),
-            TokenType::Number(_) => Some(Color::Yellow),
-            TokenType::Float(_) => Some(Color::Yellow),
-            TokenType::Bool(_) => Some(Color::Yellow),
-            TokenType::Identifier(_) => None,
-            TokenType::Let => Some(Color::Blue),
-            TokenType::Import => Some(Color::Blue),
-            TokenType::Plus => None,
-            TokenType::Minus => None,
-            TokenType::Multiply => None,
-            TokenType::Slash => None,
-            TokenType::LParen => None,
-            TokenType::RParen => None,
-            TokenType::LBracket => None,
-            TokenType::RBracket => None,
-            TokenType::LBrace => None,
-            TokenType::RBrace => None,
-            TokenType::Equals => None,
+            TokenType::Number(_) | TokenType::Float(_) | TokenType::Bool(_) => Some(Color::Yellow),
+            TokenType::Let | TokenType::Import => Some(Color::Blue),
+            _ => None,
         }
+    }
+
+    #[must_use]
+    pub fn is_binary_operator(&self) -> bool {
+        matches!(
+            self,
+            TokenType::Plus | TokenType::Minus | TokenType::Multiply | TokenType::Slash | TokenType::Equals
+        )
     }
 }
 
@@ -67,7 +70,7 @@ impl Display for TokenType {
             TokenType::Number(v) => write!(f, "{v}"),
             TokenType::Float(v) => write!(f, "{v}"),
             TokenType::Bool(v) => write!(f, "{v}"),
-            TokenType::Identifier(v) => write!(f, "{v}"),
+            TokenType::Identifier(v) => write!(f, "identifier: {v}"),
             TokenType::Let => write!(f, "let"),
             TokenType::Import => write!(f, "import"),
             TokenType::Plus => write!(f, "+"),
@@ -81,11 +84,12 @@ impl Display for TokenType {
             TokenType::LBrace => write!(f, "{{"),
             TokenType::RBrace => write!(f, "}}"),
             TokenType::Equals => write!(f, "="),
+            TokenType::Comma => write!(f, ","),
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub line: usize,
@@ -100,6 +104,7 @@ impl PartialEq for Token {
 }
 
 impl Token {
+    #[must_use]
     pub fn new(token_type: TokenType, line: usize, column: usize, len: usize) -> Self {
         Self {
             token_type,

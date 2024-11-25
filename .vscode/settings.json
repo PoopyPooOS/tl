@@ -1,0 +1,10 @@
+{
+    "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.check.extraArgs": [
+        "--tests",
+        "--examples",
+        "--benches",
+        "--",
+        "-Wclippy::pedantic"
+    ]
+}

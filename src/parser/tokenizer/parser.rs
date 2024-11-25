@@ -1,40 +1,33 @@
 use super::types::{Token, TokenType};
-use crate::utils::handle_string_escapes;
-use logger::{error, make_error, Location, Log};
-use std::{fs, path::PathBuf, process};
+use crate::{source::Source, utils::handle_string_escapes};
+use logger::{make_error, Location, Log};
 
-pub struct Parser {
-    pub path: PathBuf,
-    pub input: String,
-    pub line: usize,
-    pub column: usize,
+pub struct Parser<'a> {
+    pub(crate) source: &'a Source,
+    pub(crate) line: usize,
+    pub(crate) column: usize,
 }
 
-impl Parser {
-    pub fn new(path: impl Into<String>) -> Self {
-        let path: String = path.into();
-        let input = match fs::read_to_string(&path) {
-            Ok(input) => input,
-            Err(err) => {
-                error!(format!("Failed to read from file '{}':\n{err:#?}", &path));
-                process::exit(1);
-            }
-        };
-
-        println!("Generating AST from:\n```\n{input}\n```");
-
+impl<'a> Parser<'a> {
+    pub fn new(source: impl Into<&'a Source>) -> Self {
         Self {
-            path: path.into(),
-            input,
+            source: source.into(),
             line: 0,
             column: 0,
         }
     }
 
+    /// Tokenizes the source code inside the [`Parser`] struct.
+    ///
+    /// # Panics
+    /// Panics if a number cannot be parsed.
+    ///
+    /// # Errors
+    /// This function will return an error if a tokenization error occurs.
     #[allow(clippy::too_many_lines)]
-    pub fn tokenize(&mut self) -> Result<Vec<Token>, Log> {
+    pub fn tokenize(&mut self) -> Result<Vec<Token>, Box<Log>> {
         let mut tokens = Vec::new();
-        let mut chars = self.input.chars().peekable();
+        let mut chars = self.source.text.chars().peekable();
 
         macro_rules! push_token {
             ($token:ident, $len:expr) => {{
@@ -61,26 +54,23 @@ impl Parser {
 
                 // Comments / Slash operator
                 '/' => {
-                    if let Some(next_ch) = chars.clone().nth(1) {
-                        if next_ch == '/' {
-                            chars.next();
-                            self.column += 1;
-                            chars.next();
-                            self.column += 1;
+                    if chars.peek() == Some(&'/') {
+                        chars.next();
+                        chars.next();
+                        self.column += 2;
 
-                            while let Some(&ch) = chars.peek() {
-                                if ch == '\n' {
-                                    self.line += 1;
-                                    break;
-                                }
-                                chars.next();
-                                self.column += 1;
+                        while let Some(&ch) = chars.peek() {
+                            if ch == '\n' {
+                                self.line += 1;
+                                break;
                             }
-                            continue;
+                            chars.next();
+                            self.column += 1;
                         }
-
-                        push_token!(Slash, 1);
+                        continue;
                     }
+
+                    push_token!(Slash, 1);
                 }
 
                 // Brackets
@@ -95,7 +85,10 @@ impl Parser {
                 '+' => push_token!(Plus, 1),
                 '-' => push_token!(Minus, 1),
                 '*' => push_token!(Multiply, 1),
+
+                // Misc
                 '=' => push_token!(Equals, 1),
+                ',' => push_token!(Comma, 1),
 
                 // Strings
                 '"' => {
@@ -118,9 +111,13 @@ impl Parser {
                     }
 
                     if !closed {
-                        let location =
-                            Location::new_with_section(&self.path, self.line..=self.line, self.column - value.len()..=self.column);
-                        return Err(make_error!("Unclosed string literal", location: location));
+                        if let Some(path) = &self.source.path {
+                            let location =
+                                Location::new_with_section(path.clone(), self.line..=self.line, self.column - value.len()..=self.column);
+                            return Err(Box::new(make_error!("Unclosed string literal", location: location)));
+                        }
+
+                        return Err(Box::new(make_error!("Unclosed string literal")));
                     }
 
                     tokens.push(Token::new(
@@ -182,7 +179,12 @@ impl Parser {
                 }
 
                 _ => {
-                    return Err(make_error!(format!("Unexpected token: {ch}"), location: Location::new(&self.path, self.line..=self.line)))
+                    if let Some(path) = &self.source.path {
+                        let location = Location::new(path.clone(), self.line..=self.line);
+                        return Err(Box::new(make_error!("Unclosed string literal", location: location)));
+                    }
+
+                    return Err(Box::new(make_error!(format!("Unexpected token: {ch}"))));
                 }
             }
         }
@@ -190,85 +192,3 @@ impl Parser {
         Ok(tokens)
     }
 }
-
-// pub fn tokenize(input: impl Into<String>) -> Result<Vec<Token>, String> {
-//     let input: String = input.into();
-//     let mut tokens = Vec::new();
-//     let mut chars = input.chars().peekable();
-
-//     while let Some(&ch) = chars.peek() {
-//         match ch {
-//             // Whitespace
-//             ' ' | '\t' | '\n' => {
-//                 chars.next();
-//                 continue;
-//             }
-
-//             // Comments / Slash operator
-//             '/' => {
-//                 if let Some(next_ch) = chars.clone().nth(1) {
-//                     if next_ch == '/' {
-//                         chars.next();
-//                         chars.next();
-
-//                         while let Some(&ch) = chars.peek() {
-//                             if ch == '\n' {
-//                                 break;
-//                             }
-//                             chars.next();
-//                         }
-//                         continue;
-//                     }
-//                 }
-
-//                 push_token!(Slash);
-//             }
-
-//             // Do not try to simplify the match arm body, the push_token macro wont work if you do so.
-
-//             // Brackets
-//             '(' => {
-//                 push_token!(LParen);
-//             }
-//             ')' => {
-//                 push_token!(RParen);
-//             }
-//             '[' => {
-//                 push_token!(LBracket);
-//             }
-//             ']' => {
-//                 push_token!(RBracket);
-//             }
-//             '{' => {
-//                 push_token!(LBrace);
-//             }
-//             '}' => {
-//                 push_token!(RBrace);
-//             }
-
-//             // Operators
-//             '+' => {
-//                 push_token!(Plus);
-//             }
-//             '-' => {
-//                 push_token!(Minus);
-//             }
-//             '*' => {
-//                 push_token!(Multiply);
-//             }
-//             '=' => {
-//                 push_token!(Equals);
-//             }
-
-//             // Strings
-//             '"' => tokens.push(tokenize_string(&mut chars)?),
-
-//             // Multi-character tokens (literals, keywords, identifiers)
-//             _ if ch.is_alphanumeric() || ch == '_' => tokens.extend(tokenize_multi_char(&mut chars)),
-
-//             _ => return Err(format!("Unexpected token: {ch}")),
-//         }
-//     }
-
-//     Ok(tokens)
-// }
