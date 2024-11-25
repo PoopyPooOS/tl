@@ -5,6 +5,6 @@
 
 - AST:
     - [] Handle objects, arrays and other more complex expressions.
+    - [] Handle struct and function declarations.
 
-- [] Move tokenizer and AST into 1 struct.
 - [] Fix tests to use new APIs.
