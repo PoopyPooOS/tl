@@ -1,3 +1,3 @@
 use tl::example;
 
-example!(basic);
+example!(object);

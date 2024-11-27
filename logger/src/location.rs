@@ -3,6 +3,8 @@ use std::{fmt::Display, fs, io, ops::RangeInclusive, path::PathBuf};
 #[derive(Debug)]
 pub struct Location {
     pub path: Option<PathBuf>,
+    /// Optional field for builtin sources
+    pub text: Option<String>,
     pub lines: RangeInclusive<usize>,
     pub section: Option<RangeInclusive<usize>>,
 }
@@ -11,6 +13,7 @@ impl Location {
     pub fn new(path: impl Into<Option<PathBuf>>, lines: RangeInclusive<usize>) -> Self {
         Self {
             path: path.into(),
+            text: None,
             lines,
             section: None,
         }
@@ -32,7 +35,11 @@ impl Location {
         if let Some(path) = &self.path {
             fs::read_to_string(path)
         } else {
-            Err(io::ErrorKind::NotFound.into())
+            if let Some(text) = &self.text {
+                return Ok(text.clone());
+            } else {
+                return Err(io::Error::new(io::ErrorKind::NotFound, "Source not found"));
+            }
         }
     }
 }
@@ -53,7 +60,16 @@ impl Display for Location {
                 }
             )
         } else {
-            write!(f, "builtin")
+            write!(
+                f,
+                "unknown:{}{}",
+                self.lines.end() + 1,
+                if let Some(section) = &self.section {
+                    format!(":{}", section.end() + 1)
+                } else {
+                    String::new()
+                }
+            )
         }
     }
 }

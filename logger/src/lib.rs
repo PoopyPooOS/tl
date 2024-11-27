@@ -9,7 +9,7 @@ pub mod utils;
 pub use colored::{Color, Colorize};
 pub use level::LogLevel;
 pub use location::Location;
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 
 pub struct Log {
     pub level: LogLevel,
@@ -90,8 +90,13 @@ impl Display for Log {
     }
 }
 
+impl Debug for Log {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
 /// # Errors
-///
 /// This function will propagate errors from `write! and writeln!`
 pub fn highlight_source<S: Into<String>>(
     f: &mut Formatter<'_>,

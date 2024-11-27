@@ -54,20 +54,22 @@ impl<'a> Parser<'a> {
 
                 // Comments / Slash operator
                 '/' => {
-                    if chars.peek() == Some(&'/') {
-                        chars.next();
-                        chars.next();
-                        self.column += 2;
-
-                        while let Some(&ch) = chars.peek() {
-                            if ch == '\n' {
-                                self.line += 1;
-                                break;
-                            }
+                    if let Some(next_ch) = chars.clone().nth(1) {
+                        if next_ch == '/' {
                             chars.next();
-                            self.column += 1;
+                            chars.next();
+                            self.column += 2;
+
+                            while let Some(&ch) = chars.peek() {
+                                if ch == '\n' {
+                                    self.line += 1;
+                                    break;
+                                }
+                                chars.next();
+                                self.column += 1;
+                            }
+                            continue;
                         }
-                        continue;
                     }
 
                     push_token!(Slash, 1);
@@ -89,6 +91,7 @@ impl<'a> Parser<'a> {
                 // Misc
                 '=' => push_token!(Equals, 1),
                 ',' => push_token!(Comma, 1),
+                ':' => push_token!(Colon, 1),
 
                 // Strings
                 '"' => {
@@ -117,7 +120,14 @@ impl<'a> Parser<'a> {
                             return Err(Box::new(make_error!("Unclosed string literal", location: location)));
                         }
 
-                        return Err(Box::new(make_error!("Unclosed string literal")));
+                        let location = Location {
+                            path: None,
+                            text: Some(self.source.text.clone()),
+                            lines: self.line..=self.line,
+                            section: Some(self.column - value.len()..=self.column),
+                        };
+
+                        return Err(Box::new(make_error!("Unclosed string literal", location: location)));
                     }
 
                     tokens.push(Token::new(
@@ -166,7 +176,7 @@ impl<'a> Parser<'a> {
 
                         // Keywords
                         "let" => tokens.push(Token::new(TokenType::Let, self.line, self.column - value.len(), value.len())),
-                        "import" => tokens.push(Token::new(TokenType::Import, self.line, self.column - value.len(), value.len())),
+                        "fn" => tokens.push(Token::new(TokenType::Fn, self.line, self.column - value.len(), value.len())),
 
                         // Identifier
                         _ => tokens.push(Token::new(
@@ -181,10 +191,17 @@ impl<'a> Parser<'a> {
                 _ => {
                     if let Some(path) = &self.source.path {
                         let location = Location::new(path.clone(), self.line..=self.line);
-                        return Err(Box::new(make_error!("Unclosed string literal", location: location)));
+                        return Err(Box::new(make_error!(format!("Unexpected token: '{ch}'"), location: location)));
                     }
 
-                    return Err(Box::new(make_error!(format!("Unexpected token: {ch}"))));
+                    let location = Location {
+                        path: None,
+                        text: Some(self.source.text.clone()),
+                        lines: self.line..=self.line,
+                        section: None,
+                    };
+
+                    return Err(Box::new(make_error!(format!("Unexpected token: '{ch}'"), location: location)));
                 }
             }
         }

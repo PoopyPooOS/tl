@@ -16,7 +16,7 @@ pub enum TokenType {
 
     // Keywords
     Let,
-    Import,
+    Fn,
 
     // Operators
     Plus,
@@ -41,6 +41,7 @@ pub enum TokenType {
     // Misc
     Equals,
     Comma,
+    Colon,
 }
 
 impl TokenType {
@@ -49,7 +50,7 @@ impl TokenType {
         match self {
             TokenType::String(_) => Some(Color::BrightGreen),
             TokenType::Number(_) | TokenType::Float(_) | TokenType::Bool(_) => Some(Color::Yellow),
-            TokenType::Let | TokenType::Import => Some(Color::Blue),
+            TokenType::Let | TokenType::Fn => Some(Color::Blue),
             _ => None,
         }
     }
@@ -72,7 +73,7 @@ impl Display for TokenType {
             TokenType::Bool(v) => write!(f, "{v}"),
             TokenType::Identifier(v) => write!(f, "identifier: {v}"),
             TokenType::Let => write!(f, "let"),
-            TokenType::Import => write!(f, "import"),
+            TokenType::Fn => write!(f, "fn"),
             TokenType::Plus => write!(f, "+"),
             TokenType::Minus => write!(f, "-"),
             TokenType::Multiply => write!(f, "*"),
@@ -85,6 +86,7 @@ impl Display for TokenType {
             TokenType::RBrace => write!(f, "}}"),
             TokenType::Equals => write!(f, "="),
             TokenType::Comma => write!(f, ","),
+            TokenType::Colon => write!(f, ":"),
         }
     }
 }
