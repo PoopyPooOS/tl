@@ -112,6 +112,32 @@ fn array() {
     assert_eq!(parse(input).unwrap(), expected);
 }
 
+#[test]
+fn function_definition() {
+    let input = r#"
+        fn greet(name) {
+            println("Hello, ${name}")
+        }
+
+        greet("John Doe")
+    "#;
+    let expected = vec![
+        Statement::Fn {
+            name: "greet".to_string(),
+            parameters: vec!["name".to_string()],
+            body: vec![Statement::Call {
+                name: "println".to_string(),
+                args: vec![Expr::Literal(Literal::String("Hello, ${name}".to_string()))],
+            }],
+        },
+        Statement::Call {
+            name: "greet".to_string(),
+            args: vec![Expr::Literal(Literal::String("John Doe".to_string()))],
+        },
+    ];
+    assert_eq!(parse(input).unwrap(), expected);
+}
+
 // TODO: Add support for this case.
 #[ignore = "not implemented yet"]
 #[test]
