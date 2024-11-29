@@ -7,16 +7,17 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'tl'",
+            "name": "Debug unit tests in library 'tl'",
             "cargo": {
                 "args": [
-                    "build",
-                    "--bin=tl",
+                    "test",
+                    "--no-run",
+                    "--lib",
                     "--package=tl"
                 ],
                 "filter": {
                     "name": "tl",
-                    "kind": "bin"
+                    "kind": "lib"
                 }
             },
             "args": [],
@@ -25,17 +26,220 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'tl'",
+            "name": "Debug example 'basic'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=basic",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "basic",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'basic'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=tl",
+                    "--example=basic",
                     "--package=tl"
                 ],
                 "filter": {
-                    "name": "tl",
-                    "kind": "bin"
+                    "name": "basic",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'function_definition'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=function_definition",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "function_definition",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'function_definition'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=function_definition",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "function_definition",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'object'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=object",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "object",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'object'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=object",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "object",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'repl'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=repl",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "repl",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'repl'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=repl",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "repl",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'runtime'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=runtime",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "runtime",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'runtime'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=runtime",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "runtime",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'serde'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=serde",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "serde",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'serde'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=serde",
+                    "--package=tl"
+                ],
+                "filter": {
+                    "name": "serde",
+                    "kind": "example"
                 }
             },
             "args": [],
