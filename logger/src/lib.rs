@@ -4,7 +4,7 @@
 pub mod helpers;
 pub mod level;
 pub mod location;
-pub mod utils;
+pub mod utils; // Sharing is caring
 
 pub use colored::{Color, Colorize};
 pub use level::LogLevel;

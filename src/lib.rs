@@ -6,8 +6,13 @@ mod tests;
 
 // mod eval; TODO: Implement interpreter
 pub mod parser;
+pub mod runtime;
 pub mod source;
 mod utils;
+
+#[cfg(feature = "serde")]
+pub use crate::utils::eval_untyped;
+pub use crate::{parser::parse, source::Source, utils::eval};
 
 /// Macro for defining examples
 #[macro_export]

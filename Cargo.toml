@@ -3,5 +3,10 @@ name = "tl"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["serde"]
+serde = ["dep:serde"]
+
 [dependencies]
 logger = { path = "logger" }
+serde = { version = "1.0.215", features = ["derive"], optional = true }

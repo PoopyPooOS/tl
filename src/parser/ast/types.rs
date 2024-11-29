@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Statement {
@@ -35,6 +35,7 @@ pub enum Literal {
     Float(f64),
     Bool(bool),
     String(String),
+    InterpolatedString(Vec<Expr>),
     Array(Vec<Expr>),
     Object(HashMap<String, Expr>),
 }
@@ -45,4 +46,15 @@ pub enum BinaryOperator {
     Minus,
     Multiply,
     Divide,
+}
+
+impl Display for BinaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BinaryOperator::Plus => write!(f, "+"),
+            BinaryOperator::Minus => write!(f, "-"),
+            BinaryOperator::Multiply => write!(f, "*"),
+            BinaryOperator::Divide => write!(f, "/"),
+        }
+    }
 }

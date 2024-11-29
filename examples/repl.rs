@@ -1,5 +1,5 @@
 use std::{env, io::Write, process::Command, time::Instant};
-use tl::{parser::parse, source::Source};
+use tl::Source;
 
 fn main() {
     println!(
@@ -26,10 +26,15 @@ fn main() {
 
         let source = Source::new(input);
         let now = Instant::now();
-        match parse(source) {
-            Ok(ast) => {
-                println!("Took {:?} to generate AST:", now.elapsed());
-                println!("```\n{ast:#?}\n```");
+        match tl::eval_untyped(source) {
+            Ok(value) => {
+                println!("Took {:?} to evaluate:", now.elapsed());
+
+                if let Some(value) = value {
+                    println!("{value:#?}");
+                } else {
+                    println!("Evaluated to nothing");
+                }
             }
             Err(log) => {
                 log.output();

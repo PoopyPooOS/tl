@@ -53,3 +53,9 @@ impl From<&str> for Source {
         }
     }
 }
+
+impl std::fmt::Display for Source {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.text)
+    }
+}

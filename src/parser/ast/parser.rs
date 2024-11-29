@@ -4,7 +4,10 @@ use std::collections::HashMap;
 
 use super::types::{BinaryOperator, Expr, Literal, Statement};
 use crate::{
-    parser::tokenizer::types::{Token, TokenType},
+    parser::tokenizer::{
+        self,
+        types::{Token, TokenType},
+    },
     source::Source,
 };
 use logger::{make_error, Location, Log};
@@ -334,10 +337,10 @@ impl Parser {
     }
 
     fn parse_literal(&mut self) -> ExprResult {
-        let token = &self.tokens[self.position];
+        let token = self.tokens[self.position].clone();
 
         let expr = match &token.token_type {
-            TokenType::String(v) => Expr::Literal(Literal::String(v.clone())),
+            TokenType::String(v) => self.parse_string(v)?,
             TokenType::Number(v) => Expr::Literal(Literal::Number(*v)),
             TokenType::Float(v) => Expr::Literal(Literal::Float(*v)),
             TokenType::Bool(v) => Expr::Literal(Literal::Bool(*v)),
@@ -363,6 +366,48 @@ impl Parser {
         self.position += 1;
 
         Ok(expr)
+    }
+
+    fn parse_string(&mut self, v: impl Into<String>) -> ExprResult {
+        let v: String = v.into();
+        let mut result = Vec::new();
+        let mut start = 0;
+
+        while let Some(open) = v[start..].find("${") {
+            let open_pos = start + open;
+
+            if open_pos > start {
+                let literal_part = &v[start..open_pos];
+                result.push(Expr::Literal(Literal::String(literal_part.to_string())));
+            }
+
+            if let Some(close) = v[open_pos..].find('}') {
+                let close_pos = open_pos + close;
+                let content = &v[open_pos + 2..close_pos];
+
+                let source = Source::new(content);
+                let tokens = tokenizer::Parser::new(&source).tokenize()?;
+                let expr = Self::new(tokens, source).parse_expr()?;
+                result.push(expr);
+
+                start = close_pos + 1;
+            } else {
+                break;
+            }
+        }
+
+        if start < v.len() {
+            let remaining_part = &v[start..];
+            result.push(Expr::Literal(Literal::String(remaining_part.to_string())));
+        }
+
+        if result.len() == 1 {
+            if let Expr::Literal(Literal::String(s)) = &result[0] {
+                return Ok(Expr::Literal(Literal::String(s.clone())));
+            }
+        }
+
+        Ok(Expr::Literal(Literal::InterpolatedString(result)))
     }
 
     #[allow(clippy::needless_pass_by_value)]
