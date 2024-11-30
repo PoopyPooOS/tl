@@ -1,9 +1,7 @@
 use crate::parser::ast::types::Statement;
-use logger::error;
 use std::{
     collections::HashMap,
     fmt::{self, Display},
-    process,
 };
 
 #[cfg(feature = "serde")]
@@ -13,8 +11,9 @@ use serde::{
     forward_to_deserialize_any, Deserializer,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Value {
+    Null,
     Boolean(bool),
     Number(i64),
     Float(f64),
@@ -31,23 +30,32 @@ pub enum Value {
     },
 }
 
-impl Clone for Value {
-    fn clone(&self) -> Self {
+impl Value {
+    #[must_use]
+    pub fn type_of(&self) -> String {
         match self {
-            Value::Boolean(v) => Value::Boolean(*v),
-            Value::Number(v) => Value::Number(*v),
-            Value::Float(v) => Value::Float(*v),
-            Value::String(v) => Value::String(v.clone()),
-            Value::Array(v) => Value::Array(v.clone()),
-            Value::Object(v) => Value::Object(v.clone()),
-            Value::Function { parameters, body } => Value::Function {
-                parameters: parameters.clone(),
-                body: body.clone(),
-            },
-            Value::NativeFunction { .. } => {
-                error!("Internal error: can not clone a native function");
-                process::exit(1);
-            }
+            Value::Null => "null".to_string(),
+            Value::Boolean(_) => "boolean".to_string(),
+            Value::Number(_) => "number".to_string(),
+            Value::Float(_) => "float".to_string(),
+            Value::String(_) => "string".to_string(),
+            Value::Array(_) => "array".to_string(),
+            Value::Object(_) => "object".to_string(),
+            Value::Function { .. } => "function".to_string(),
+            Value::NativeFunction { .. } => "native function".to_string(),
+        }
+    }
+
+    #[must_use]
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            Value::Boolean(b) => *b,
+            Value::Number(n) => *n != 0,
+            Value::Float(f) => *f != 0.0,
+            Value::String(s) => !s.is_empty(),
+            Value::Array(arr) => !arr.is_empty(),
+            Value::Object(map) => !map.is_empty(),
+            Value::Function { .. } | Value::NativeFunction { .. } | Value::Null => false,
         }
     }
 }
@@ -61,6 +69,7 @@ impl<'de> Deserializer<'de> for Value {
         V: Visitor<'de>,
     {
         match self {
+            Value::Null => visitor.visit_unit(),
             Value::Boolean(b) => visitor.visit_bool(b),
             Value::Number(n) => visitor.visit_i64(n),
             Value::Float(f) => visitor.visit_f64(f),
@@ -217,6 +226,7 @@ impl std::ops::Div<Value> for Value {
 impl Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Value::Null => write!(f, "null"),
             Value::Number(v) => write!(f, "{v}"),
             Value::Float(v) => write!(f, "{v}"),
             Value::String(v) => write!(f, "{v}"),

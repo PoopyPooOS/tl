@@ -11,10 +11,6 @@ pub enum Statement {
         parameters: Vec<String>, // TODO: Parameter struct that contains type information.
         body: Vec<Statement>,
     },
-    Call {
-        name: String,
-        args: Vec<Expr>,
-    },
     Expr(Expr),
 }
 
@@ -26,6 +22,10 @@ pub enum Expr {
         left: Box<Expr>,
         operator: BinaryOperator,
         right: Box<Expr>,
+    },
+    Call {
+        name: String,
+        args: Vec<Expr>,
     },
 }
 

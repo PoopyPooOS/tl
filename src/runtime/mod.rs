@@ -1,3 +1,9 @@
+#![allow(
+    unreachable_patterns,
+    clippy::match_wildcard_for_single_variants,
+    reason = "More expressions/statements may be added soon and im not rewriting the wildcard pattern again when they are added"
+)]
+
 use crate::parser::ast::types::{BinaryOperator, Expr, Literal, Statement};
 use logger::{make_error, Log};
 use std::{collections::HashMap, rc::Rc};
@@ -43,11 +49,6 @@ impl Scope {
                     self.eval_fn(name, parameters.clone(), body.clone());
                     None
                 }
-                Statement::Call { name, args } => self.eval_call(name, args)?,
-                #[allow(
-                    unreachable_patterns,
-                    reason = "More statements may be added soon and im not rewriting this pattern again when they are added"
-                )]
                 _ => return Err(Box::new(make_error!(format!("Can not evaluate statement: {:#?}", node)))),
             };
         }
@@ -118,6 +119,10 @@ impl Scope {
                     BinaryOperator::Divide => Ok(left / right),
                 }
             }
+            Expr::Call { name, args } => match self.eval_call(name, args)? {
+                Some(value) => Ok(value),
+                None => Ok(Value::Null),
+            },
         }
     }
 
@@ -147,10 +152,6 @@ impl Scope {
                                 other => return Err(Box::new(make_error!(format!("Can not use operator '{other}' on a string")))),
                             }
                         }
-                        #[allow(
-                            unreachable_patterns,
-                            reason = "More expressions may be added soon and im not rewriting this pattern again when they are added"
-                        )]
                         _ => {
                             return Err(Box::new(make_error!(format!(
                                 "Can not interpolate string with expression: {:#?}",

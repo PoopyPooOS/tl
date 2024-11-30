@@ -116,7 +116,7 @@ fn array() {
 fn function_definition() {
     let input = r#"
         fn greet(name) {
-            println("Hello, ${name}")
+            println("Hello, ${name}!")
         }
 
         greet("John Doe")
@@ -125,15 +125,19 @@ fn function_definition() {
         Statement::Fn {
             name: "greet".to_string(),
             parameters: vec!["name".to_string()],
-            body: vec![Statement::Call {
+            body: vec![Statement::Expr(Expr::Call {
                 name: "println".to_string(),
-                args: vec![Expr::Literal(Literal::String("Hello, ${name}".to_string()))],
-            }],
+                args: vec![Expr::Literal(Literal::InterpolatedString(vec![
+                    Expr::Literal(Literal::String("Hello, ".to_string())),
+                    Expr::Identifier("name".to_string()),
+                    Expr::Literal(Literal::String("!".to_string())),
+                ]))],
+            })],
         },
-        Statement::Call {
+        Statement::Expr(Expr::Call {
             name: "greet".to_string(),
             args: vec![Expr::Literal(Literal::String("John Doe".to_string()))],
-        },
+        }),
     ];
     assert_eq!(parse(input).unwrap(), expected);
 }

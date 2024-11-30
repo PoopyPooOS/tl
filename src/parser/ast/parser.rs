@@ -51,7 +51,7 @@ impl Parser {
             let parsed = match token.token_type {
                 TokenType::Let => self.parse_let()?,
                 TokenType::Fn => self.parse_fn()?,
-                TokenType::Identifier(_) => self.parse_ident()?,
+                TokenType::Identifier(_) => vec![Statement::Expr(self.parse_ident()?)],
                 TokenType::RBrace if self.context == Context::Function => break,
                 _ => vec![Statement::Expr(self.parse_expr()?)],
             };
@@ -86,8 +86,8 @@ impl Parser {
         } else {
             // Handle 1 argument that doesnt have commas
             let token = self.parse_ident()?;
-            let token = match token.first().unwrap() {
-                Statement::Expr(Expr::Identifier(name)) => name.clone(),
+            let token = match token {
+                Expr::Identifier(name) => name.clone(),
                 _ => return Err(Box::new(make_error!("Expected identifier in 'fn' arguments"))),
             };
 
@@ -103,8 +103,8 @@ impl Parser {
                 self.consume(TokenType::Comma)?;
 
                 let token = self.parse_ident()?;
-                let token = match token.first().unwrap() {
-                    Statement::Expr(Expr::Identifier(name)) => name.clone(),
+                let token = match token {
+                    Expr::Identifier(name) => name.clone(),
                     _ => return Err(Box::new(make_error!("Expected identifier in 'fn' arguments"))),
                 };
 
@@ -142,12 +142,12 @@ impl Parser {
     }
 
     /// Parse function calls and identifiers
-    fn parse_ident(&mut self) -> StatementResult {
+    fn parse_ident(&mut self) -> ExprResult {
         let mut is_call = false;
 
         if let Some(next_token) = self.tokens.get(self.position + 1) {
             if next_token.token_type.is_binary_operator() {
-                return self.parse_binary_op(0).map(|expr| vec![Statement::Expr(expr)]);
+                return self.parse_binary_op(0);
             }
 
             is_call = next_token.token_type == TokenType::LParen;
@@ -165,7 +165,7 @@ impl Parser {
         };
 
         if !is_call {
-            return Ok(vec![Statement::Expr(Expr::Identifier(name))]);
+            return Ok(Expr::Identifier(name));
         }
 
         // Parse args
@@ -176,7 +176,7 @@ impl Parser {
         if let Some(token) = self.tokens.get(self.position) {
             if token.token_type == TokenType::RParen {
                 self.position += 1;
-                return Ok(vec![Statement::Call { name, args: call_args }]);
+                return Ok(Expr::Call { name, args: call_args });
             }
         }
 
@@ -198,7 +198,7 @@ impl Parser {
 
         self.consume(TokenType::RParen)?;
 
-        Ok(vec![Statement::Call { name, args: call_args }])
+        Ok(Expr::Call { name, args: call_args })
     }
 
     fn parse_expr(&mut self) -> ExprResult {
@@ -218,6 +218,7 @@ impl Parser {
         let expr = match &self.tokens[self.position].token_type {
             TokenType::LBrace => Some(self.parse_object()?),
             TokenType::LBracket => Some(self.parse_array()?),
+            TokenType::Identifier(_) => Some(self.parse_ident()?),
             _ => None,
         };
 
