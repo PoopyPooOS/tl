@@ -1,25 +1,6 @@
 use crate::{parser::parse, runtime, source::Source};
 use logger::Log;
 
-pub(crate) fn handle_string_escapes(original: impl Into<String>) -> String {
-    let mut original: String = original.into();
-    let replacements: &[(&str, &str)] = &[
-        (r"\\", "\\"),
-        ("\\\"", "\""),
-        (r"\'", "'"),
-        (r"\n", "\n"),
-        (r"\r", "\r"),
-        (r"\t", "\t"),
-        (r"\0", "\0"),
-    ];
-
-    for replacement in replacements {
-        original = original.replace(replacement.0, replacement.1);
-    }
-
-    original
-}
-
 /// Evaluate a source script and return the result as a deserialized value.
 /// # Errors
 /// This function will return an error if either an evaluation error occurs or a deserialization error occurs.
@@ -62,4 +43,23 @@ pub fn eval(value: impl Into<Source>) -> Result<Option<Value>, Box<Log>> {
     let mut runtime = runtime::Scope::new(ast);
 
     runtime.eval()
+}
+
+pub(crate) fn handle_string_escapes(original: impl Into<String>) -> String {
+    let mut original: String = original.into();
+    let replacements: &[(&str, &str)] = &[
+        (r"\\", "\\"),
+        ("\\\"", "\""),
+        (r"\'", "'"),
+        (r"\n", "\n"),
+        (r"\r", "\r"),
+        (r"\t", "\t"),
+        (r"\0", "\0"),
+    ];
+
+    for replacement in replacements {
+        original = original.replace(replacement.0, replacement.1);
+    }
+
+    original
 }
