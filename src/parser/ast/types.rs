@@ -31,6 +31,7 @@ pub enum Expr {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
+    Null,
     Number(i64),
     Float(f64),
     Bool(bool),

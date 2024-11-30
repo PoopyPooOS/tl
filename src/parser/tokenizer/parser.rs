@@ -151,6 +151,9 @@ impl<'a> Parser<'a> {
 
                     self.column += value.len();
                     match value.as_str() {
+                        // Null
+                        "null" => tokens.push(Token::new(TokenType::Null, self.line, self.column - value.len(), value.len())),
+
                         // Number / Float
                         _ if value.parse::<u64>().is_ok() => tokens.push(Token::new(
                             TokenType::Number(value.parse::<i64>().unwrap()),

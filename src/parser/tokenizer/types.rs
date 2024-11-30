@@ -10,6 +10,7 @@ pub enum TokenType {
     Number(i64),
     Float(f64),
     Bool(bool),
+    Null,
 
     // Identifiers
     Identifier(String),
@@ -71,6 +72,7 @@ impl Display for TokenType {
             TokenType::Number(v) => write!(f, "{v}"),
             TokenType::Float(v) => write!(f, "{v}"),
             TokenType::Bool(v) => write!(f, "{v}"),
+            TokenType::Null => write!(f, "null"),
             TokenType::Identifier(v) => write!(f, "identifier: {v}"),
             TokenType::Let => write!(f, "let"),
             TokenType::Fn => write!(f, "fn"),

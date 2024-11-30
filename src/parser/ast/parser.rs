@@ -341,6 +341,7 @@ impl Parser {
         let token = self.tokens[self.position].clone();
 
         let expr = match &token.token_type {
+            TokenType::Null => Expr::Literal(Literal::Null),
             TokenType::String(v) => self.parse_string(v)?,
             TokenType::Number(v) => Expr::Literal(Literal::Number(*v)),
             TokenType::Float(v) => Expr::Literal(Literal::Float(*v)),

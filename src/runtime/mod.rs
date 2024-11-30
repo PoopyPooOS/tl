@@ -128,6 +128,7 @@ impl Scope {
 
     fn eval_literal(&mut self, literal: &Literal) -> Result<Value, Box<Log>> {
         match literal {
+            Literal::Null => Ok(Value::Null),
             Literal::Number(v) => Ok((*v).into()),
             Literal::Float(v) => Ok((*v).into()),
             Literal::Bool(v) => Ok((*v).into()),
