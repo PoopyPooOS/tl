@@ -4,7 +4,6 @@
 #[cfg(test)]
 mod tests;
 
-// mod eval; TODO: Implement interpreter
 pub mod parser;
 pub mod runtime;
 pub mod source;
