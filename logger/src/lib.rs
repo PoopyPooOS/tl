@@ -9,7 +9,10 @@ pub mod utils; // Sharing is caring
 pub use colored::{Color, Colorize};
 pub use level::LogLevel;
 pub use location::Location;
-use std::fmt::{self, Debug, Display, Formatter};
+use std::{
+    env,
+    fmt::{self, Debug, Display, Formatter},
+};
 
 pub struct Log {
     pub level: LogLevel,
@@ -54,11 +57,17 @@ impl Display for Log {
         let padding_size = last_line_string.len() + 1;
         let padding = " ".repeat(padding_size);
 
+        let app_name = env::var("LOGGER_APP_NAME").unwrap_or(String::new());
+
         // Log level and message
         writeln!(
             f,
             "{}{}",
-            self.level.to_string().color(self.level).bold(),
+            if app_name.is_empty() {
+                self.level.to_string().color(self.level).bold()
+            } else {
+                format!("{}[{}]", self.level.to_string().color(self.level), app_name).bold()
+            },
             format!(": {}", self.message).bold()
         )?;
 
