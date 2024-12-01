@@ -9,15 +9,17 @@ pub fn eval<T>(value: impl Into<Source>) -> Result<Option<T>, Box<Log>>
 where
     T: for<'de> serde::Deserialize<'de>,
 {
-    use logger::make_error;
+    use logger::make_fatal;
 
     let ast = parse(value.into())?;
     let mut runtime = crate::runtime::Scope::new(ast);
 
     match runtime.eval() {
-        Ok(Some(value)) => Ok(Some(
-            serde::Deserialize::deserialize(value).map_err(|_| Box::new(make_error!("Could not deserialize value")))?,
-        )),
+        Ok(Some(value)) => {
+            Ok(Some(serde::Deserialize::deserialize(value).map_err(|err| {
+                Box::new(make_fatal!(format!("Could not deserialize value: {err}")))
+            })?))
+        }
         Ok(None) => Ok(None),
         Err(log) => Err(log),
     }
