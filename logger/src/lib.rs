@@ -141,3 +141,10 @@ pub fn highlight_source<S: Into<String>>(
 
     Ok(())
 }
+
+#[macro_export]
+macro_rules! set_app_name {
+    () => {
+        env::set_var("LOGGER_APP_NAME", env!("CARGO_PKG_NAME"))
+    };
+}
