@@ -8,5 +8,5 @@ default = ["serde"]
 serde = ["dep:serde"]
 
 [dependencies]
-logger = { path = "logger" }
+logger = { path = "../logger" }
 serde = { version = "1.0.215", features = ["derive"], optional = true }

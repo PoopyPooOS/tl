@@ -1,5 +1,5 @@
 #![feature(let_chains, new_range_api)]
-#![allow(dead_code)]
+#![allow(clippy::unused_self)]
 
 #[cfg(test)]
 mod tests;
