@@ -85,7 +85,7 @@ impl<'de> Deserializer<'de> for Value {
                 };
                 visitor.visit_map(map)
             }
-            Value::Function { .. } | Value::NativeFunction { .. } => Err(de::Error::custom("Function types cannot be deserialized")),
+            Value::Function { .. } | Value::NativeFunction { .. } => Err(de::Error::custom("Functions cannot be deserialized")),
         }
     }
 
