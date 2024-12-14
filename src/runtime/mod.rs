@@ -9,6 +9,8 @@ use logger::{make_error, Log};
 use std::{collections::HashMap, rc::Rc};
 use types::Value;
 
+#[cfg(feature = "serde")]
+pub mod serde;
 mod stdlib;
 pub mod types;
 
