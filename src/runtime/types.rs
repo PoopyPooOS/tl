@@ -50,8 +50,8 @@ impl Value {
     pub fn is_truthy(&self) -> bool {
         match self {
             Value::Boolean(b) => *b,
-            Value::Number(n) => *n != 0,
-            Value::Float(f) => *f != 0.0,
+            Value::Number(n) => *n > 0,
+            Value::Float(f) => *f > 0.0,
             Value::String(s) => !s.is_empty(),
             Value::Array(arr) => !arr.is_empty(),
             Value::Object(map) => !map.is_empty(),
