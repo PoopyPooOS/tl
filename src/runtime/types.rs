@@ -32,17 +32,17 @@ pub enum Value {
 
 impl Value {
     #[must_use]
-    pub fn type_of(&self) -> String {
+    pub fn type_of(&self) -> &'static str {
         match self {
-            Value::Null => "null".to_string(),
-            Value::Boolean(_) => "boolean".to_string(),
-            Value::Number(_) => "number".to_string(),
-            Value::Float(_) => "float".to_string(),
-            Value::String(_) => "string".to_string(),
-            Value::Array(_) => "array".to_string(),
-            Value::Object(_) => "object".to_string(),
-            Value::Function { .. } => "function".to_string(),
-            Value::NativeFunction { .. } => "native function".to_string(),
+            Value::Null => "null",
+            Value::Boolean(_) => "boolean",
+            Value::Number(_) => "number",
+            Value::Float(_) => "float",
+            Value::String(_) => "string",
+            Value::Array(_) => "array",
+            Value::Object(_) => "object",
+            Value::Function { .. } => "function",
+            Value::NativeFunction { .. } => "native function",
         }
     }
 

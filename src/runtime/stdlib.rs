@@ -120,7 +120,7 @@ impl super::Scope {
         });
 
         // Other
-        add_native_fn!(typeOf, [value?], { Some(Value::String(value.type_of())) });
+        add_native_fn!(typeOf, [value?], { Some(Value::String(value.type_of().to_string())) });
         add_native_fn!(exit, [code?], {
             std::process::exit(match code {
                 Value::Number(code) => i32::try_from(*code).unwrap_or(0),
