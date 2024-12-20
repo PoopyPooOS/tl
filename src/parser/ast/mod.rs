@@ -269,34 +269,32 @@ impl Parser {
 
     fn parse_binary_op(&mut self, min_precedence: u8) -> ExprResult {
         let start = self.tokens[self.position].clone();
-        let mut left = self.parse_literal()?;
+        let mut left = if self.tokens[self.position].token_type == TokenType::LParen {
+            self.consume(TokenType::LParen)?;
+            let expr = self.parse_binary_op(0)?;
+            self.consume(TokenType::RParen)?;
+            expr
+        } else {
+            self.parse_literal()?
+        };
 
-        while let Some(next_token) = self.tokens.get(self.position)
-            && next_token.token_type.is_binary_operator()
-        {
+        while let Some(next_token) = self.tokens.get(self.position) {
+            if !next_token.token_type.is_binary_operator() {
+                break;
+            }
+
             let precedence = BinaryOperator::from_token(next_token.token_type.clone())?.precedence();
             if precedence < min_precedence {
                 break;
             }
 
-            let operator_token = {
-                if let Some(operator_token) = self.tokens.get(self.position) {
-                    self.position += 1;
-                    operator_token
-                } else {
-                    let location = self.location_from_token(&self.tokens[self.position - 1]);
-
-                    return Err(Box::new(Error::new(
-                        ErrorType::ExpectedToken(next_token.token_type.clone()),
-                        location,
-                    )));
-                }
-            };
-
-            let operator = BinaryOperator::from_token(operator_token.token_type.clone())?;
+            let operator_token = self.tokens[self.position].clone();
+            self.position += 1;
+            let operator = BinaryOperator::from_token(operator_token.token_type)?;
 
             let right = self.parse_binary_op(precedence + 1)?;
 
+            let line = left.line;
             let end = *right.cols.end();
             left = Expr::new(
                 ExprType::BinaryOp {
@@ -304,7 +302,7 @@ impl Parser {
                     operator,
                     right: Box::new(right),
                 },
-                start.line,
+                line,
                 *start.cols.start()..=end,
             );
         }

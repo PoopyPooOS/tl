@@ -149,41 +149,28 @@ fn call() {
 
 #[test]
 fn binary_op() {
-    let input = "1 + 1";
+    let input = "(2 + 3) * 4";
     let expected = vec![Statement::new(
         StatementType::Expr(Expr::new(
             ExprType::BinaryOp {
-                left: box_literal!(Int(1), 0, 0..=1),
-                operator: BinaryOperator::Plus,
-                right: box_literal!(Int(1), 0, 4..=5),
+                left: Box::new(Expr::new(
+                    ExprType::BinaryOp {
+                        left: box_literal!(Int(2), 0, 1..=2),
+                        operator: BinaryOperator::Plus,
+                        right: box_literal!(Int(3), 0, 5..=6),
+                    },
+                    0,
+                    1..=6,
+                )),
+                operator: BinaryOperator::Multiply,
+                right: box_literal!(Int(4), 0, 10..=11),
             },
             0,
-            0..=5,
+            0..=11,
         )),
         0,
-        0..=5,
+        0..=11,
     )];
-    // let expected = vec![Statement::new(
-    //     StatementType::Expr(Expr::new(
-    //         ExprType::BinaryOp {
-    //             left: Box::new(Expr::new(
-    //                 ExprType::BinaryOp {
-    //                     left: box_literal!(Int(2), 0, 1..=2),
-    //                     operator: BinaryOperator::Plus,
-    //                     right: box_literal!(Int(3), 0, 5..=6),
-    //                 },
-    //                 0,
-    //                 0..=7,
-    //             )),
-    //             operator: BinaryOperator::Multiply,
-    //             right: box_literal!(Int(4), 0, 10..=11),
-    //         },
-    //         0,
-    //         0..=11,
-    //     )),
-    //     0,
-    //     0..=11,
-    // )];
     assert_eq!(parse(input).unwrap(), expected);
 }
 
