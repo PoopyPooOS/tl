@@ -1,5 +1,5 @@
 use logger::error;
-use std::{fs, path::PathBuf, process};
+use std::{fmt::Display, fs, path::PathBuf, process};
 
 #[derive(Debug, Clone)]
 pub struct Source {
@@ -54,7 +54,7 @@ impl From<&str> for Source {
     }
 }
 
-impl std::fmt::Display for Source {
+impl Display for Source {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.text)
     }

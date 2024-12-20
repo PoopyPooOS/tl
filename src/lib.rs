@@ -1,41 +1,14 @@
-#![feature(let_chains, new_range_api)]
+#![feature(let_chains, stmt_expr_attributes)]
 #![allow(clippy::unused_self)]
+// Panics are not allowed
+#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+// Tests
 #[cfg(test)]
 mod tests;
 
+// Parsers
 pub mod parser;
-pub mod runtime;
-pub mod source;
-mod utils;
 
-#[cfg(feature = "serde")]
-pub use crate::utils::eval_untyped;
-pub use crate::{parser::parse, source::Source, utils::eval};
-
-/// Macro for defining examples
-#[macro_export]
-macro_rules! example {
-    ($name:ident) => {
-        use std::{path::PathBuf, process, time::Instant};
-        use tl::{parser::parse, source::Source};
-
-        fn main() {
-            let path = PathBuf::from(concat!("examples/", stringify!($name), ".tl"));
-            let source = Source::from(path);
-
-            println!("Parsing:\n```\n{}\n```\n", source.text);
-            let now = Instant::now();
-            match parse(source) {
-                Ok(ast) => {
-                    println!("Took {:?} to generate AST:", now.elapsed());
-                    println!("```\n{ast:#?}\n```");
-                }
-                Err(log) => {
-                    log.output();
-                    process::exit(1);
-                }
-            };
-        }
-    };
-}
+mod source;
+pub use source::Source;
