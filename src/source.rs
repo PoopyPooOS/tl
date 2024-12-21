@@ -31,8 +31,7 @@ impl From<PathBuf> for Source {
                 error!(format!("Failed to read from file '{}':\n{err:#?}", &path.display()));
                 process::exit(1);
             }
-        }
-        .to_string();
+        };
 
         Self { path: Some(path), text }
     }

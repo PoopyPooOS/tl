@@ -68,7 +68,6 @@ impl<'a> Parser<'a> {
 
                             while let Some(&ch) = chars.peek() {
                                 if ch == '\n' {
-                                    self.line += 1;
                                     break;
                                 }
 
@@ -102,20 +101,29 @@ impl<'a> Parser<'a> {
 
                 // Strings
                 '"' => {
+                    let start = self.column;
                     let mut closed: bool = false;
                     let mut value = String::new();
                     chars.next();
                     self.column += 1;
 
+                    let mut prev_char: Option<char> = None;
                     while let Some(&ch) = chars.peek() {
                         if ch == '"' {
-                            chars.next();
-                            self.column += 1;
-                            closed = true;
-                            break;
+                            if prev_char == Some('\\') {
+                                value.pop();
+                                value.push(ch);
+                            } else {
+                                chars.next();
+                                self.column += 1;
+                                closed = true;
+                                break;
+                            }
+                        } else {
+                            value.push(ch);
                         }
 
-                        value.push(ch);
+                        prev_char = Some(ch);
                         chars.next();
                         self.column += 1;
                     }
@@ -130,7 +138,7 @@ impl<'a> Parser<'a> {
                             path: None,
                             text: self.source.text.clone(),
                             lines: self.line..=self.line,
-                            section: Some(self.column.saturating_sub(value.len()) - 2..=self.column),
+                            section: Some(start..=self.column),
                         };
 
                         return Err(Error::new(ErrorType::UnclosedString, Some(location)));
@@ -139,7 +147,7 @@ impl<'a> Parser<'a> {
                     tokens.push(Token::new(
                         TokenType::String(handle_string_escapes(&value)),
                         self.line,
-                        self.column.saturating_sub(value.len()) - 2..=self.column,
+                        start..=self.column,
                     ));
                 }
 
