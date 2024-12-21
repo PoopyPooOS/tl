@@ -32,7 +32,6 @@ impl From<PathBuf> for Source {
                 process::exit(1);
             }
         }
-        .trim()
         .to_string();
 
         Self { path: Some(path), text }
