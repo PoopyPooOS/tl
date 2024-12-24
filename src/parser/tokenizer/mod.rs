@@ -97,6 +97,7 @@ impl Parser {
                 '+' => push_token!(Plus, 1),
                 '-' => push_token!(Minus, 1),
                 '*' => push_token!(Multiply, 1),
+                '%' => push_token!(Modulo, 1),
 
                 // Misc
                 ',' => push_token!(Comma, 1),

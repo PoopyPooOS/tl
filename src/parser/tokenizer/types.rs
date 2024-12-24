@@ -54,6 +54,7 @@ pub enum TokenType {
     Minus,
     Multiply,
     Slash,
+    Modulo,
 
     // Brackets
     /// (
@@ -86,6 +87,7 @@ impl TokenType {
                 | TokenType::Minus
                 | TokenType::Multiply
                 | TokenType::Slash
+                | TokenType::Modulo
 
                 // Logic Operators
                 | TokenType::Eq
@@ -143,6 +145,7 @@ impl Display for TokenType {
             TokenType::Minus => write!(f, "-"),
             TokenType::Multiply => write!(f, "*"),
             TokenType::Slash => write!(f, "/"),
+            TokenType::Modulo => write!(f, "%"),
 
             // Brackets
             TokenType::LParen => write!(f, "("),

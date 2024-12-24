@@ -79,6 +79,7 @@ pub enum BinaryOperator {
     Minus,
     Multiply,
     Divide,
+    Modulo,
 
     // Logic Operators
     /// ==
@@ -118,6 +119,7 @@ impl BinaryOperator {
             TokenType::Minus => Ok(BinaryOperator::Minus),
             TokenType::Multiply => Ok(BinaryOperator::Multiply),
             TokenType::Slash => Ok(BinaryOperator::Divide),
+            TokenType::Modulo => Ok(BinaryOperator::Modulo),
 
             // Logic Operators
             TokenType::Eq => Ok(BinaryOperator::Eq),
@@ -145,6 +147,7 @@ impl Display for BinaryOperator {
                 BinaryOperator::Minus => "-",
                 BinaryOperator::Multiply => "*",
                 BinaryOperator::Divide => "/",
+                BinaryOperator::Modulo => "%",
 
                 // Logic Operators
                 BinaryOperator::Eq => "==",

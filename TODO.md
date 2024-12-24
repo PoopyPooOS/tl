@@ -1,5 +1,5 @@
 - Tokenizer:
-    - [] Add more binary operators.
+    - [x] Add more binary operators.
     - [x] Do string interpolation in the tokenizer rather than in the AST.
 
 - AST:
