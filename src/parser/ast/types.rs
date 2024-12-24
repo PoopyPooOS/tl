@@ -74,10 +74,29 @@ pub enum Literal {
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum BinaryOperator {
+    // Math Operators
     Plus,
     Minus,
     Multiply,
     Divide,
+
+    // Logic Operators
+    /// ==
+    Eq,
+    /// !=
+    NotEq,
+    /// >
+    Gt,
+    /// >=
+    GtEq,
+    /// <
+    Lt,
+    /// <=
+    LtEq,
+    /// &&
+    And,
+    /// ||
+    Or,
 }
 
 impl BinaryOperator {
@@ -86,6 +105,7 @@ impl BinaryOperator {
         match self {
             BinaryOperator::Plus | BinaryOperator::Minus => 1,
             BinaryOperator::Multiply | BinaryOperator::Divide => 2,
+            _ => 0,
         }
     }
 
@@ -93,10 +113,22 @@ impl BinaryOperator {
     /// This function will return an error if the token type is not a binary operator.
     pub fn from_token(token_type: TokenType) -> Result<Self, Box<Error>> {
         match token_type {
+            // Math Operators
             TokenType::Plus => Ok(BinaryOperator::Plus),
             TokenType::Minus => Ok(BinaryOperator::Minus),
             TokenType::Multiply => Ok(BinaryOperator::Multiply),
             TokenType::Slash => Ok(BinaryOperator::Divide),
+
+            // Logic Operators
+            TokenType::Eq => Ok(BinaryOperator::Eq),
+            TokenType::NotEq => Ok(BinaryOperator::NotEq),
+            TokenType::Gt => Ok(BinaryOperator::Gt),
+            TokenType::GtEq => Ok(BinaryOperator::GtEq),
+            TokenType::Lt => Ok(BinaryOperator::Lt),
+            TokenType::LtEq => Ok(BinaryOperator::LtEq),
+            TokenType::And => Ok(BinaryOperator::And),
+            TokenType::Or => Ok(BinaryOperator::Or),
+
             _ => Err(Box::new(Error::new(ErrorType::UnexpectedToken(token_type), None))),
         }
     }
@@ -104,12 +136,27 @@ impl BinaryOperator {
 
 impl Display for BinaryOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BinaryOperator::Plus => write!(f, "+"),
-            BinaryOperator::Minus => write!(f, "-"),
-            BinaryOperator::Multiply => write!(f, "*"),
-            BinaryOperator::Divide => write!(f, "/"),
-        }
+        write!(
+            f,
+            "{}",
+            match self {
+                // Math Operators
+                BinaryOperator::Plus => "+",
+                BinaryOperator::Minus => "-",
+                BinaryOperator::Multiply => "*",
+                BinaryOperator::Divide => "/",
+
+                // Logic Operators
+                BinaryOperator::Eq => "==",
+                BinaryOperator::NotEq => "!=",
+                BinaryOperator::Gt => ">",
+                BinaryOperator::GtEq => ">=",
+                BinaryOperator::Lt => "<",
+                BinaryOperator::LtEq => "<=",
+                BinaryOperator::And => "&&",
+                BinaryOperator::Or => "||",
+            }
+        )
     }
 }
 

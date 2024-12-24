@@ -73,6 +73,21 @@ fn escaped_string() {
 }
 
 #[test]
+fn interpolated_string() {
+    let input = "\"Hello, my name is ${name}!\"";
+    let expected = vec![literal!(
+        InterpolatedString(vec![
+            Expr::new(ExprType::Literal(Literal::String("Hello, my name is ".to_string())), 0, 0..=19),
+            Expr::new(ExprType::Identifier("name".to_string()), 0, 21..=25),
+            Expr::new(ExprType::Literal(Literal::String("!".to_string())), 0, 0..=28),
+        ]),
+        0,
+        0..=28
+    )];
+    assert_eq!(parse(input).unwrap(), expected);
+}
+
+#[test]
 fn object() {
     let input = "{ name: \"John Doe\" age = 42 }";
     let expected = vec![literal!(

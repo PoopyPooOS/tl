@@ -4,14 +4,18 @@ use types::{Error, ErrorType, Token, TokenType};
 
 pub mod types;
 
-pub struct Parser<'a> {
-    pub(crate) source: &'a Source,
+pub struct Parser {
+    pub(crate) source: Source,
     pub(crate) line: usize,
     pub(crate) column: usize,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(source: impl Into<&'a Source>) -> Self {
+impl Parser {
+    pub fn new(source: impl Into<Source>) -> Self {
+        if cfg!(debug_assertions) {
+            logger::set_app_name!("Tokenizer");
+        }
+
         Self {
             source: source.into(),
             line: 0,
@@ -60,22 +64,22 @@ impl<'a> Parser<'a> {
 
                 // Comments / Slash operator
                 '/' => {
-                    if let Some(next_ch) = chars.clone().nth(1) {
-                        if next_ch == '/' {
-                            chars.next();
-                            chars.next();
-                            self.column += 2;
+                    if let Some(next_ch) = chars.clone().nth(1)
+                        && next_ch == '/'
+                    {
+                        chars.next();
+                        chars.next();
+                        self.column += 2;
 
-                            while let Some(&ch) = chars.peek() {
-                                if ch == '\n' {
-                                    break;
-                                }
-
-                                chars.next();
-                                self.column += 1;
+                        while let Some(&ch) = chars.peek() {
+                            if ch == '\n' {
+                                break;
                             }
-                            continue;
+
+                            chars.next();
+                            self.column += 1;
                         }
+                        continue;
                     }
 
                     push_token!(Slash, 1);
@@ -102,53 +106,138 @@ impl<'a> Parser<'a> {
                 // Strings
                 '"' => {
                     let start = self.column;
-                    let mut closed: bool = false;
-                    let mut value = String::new();
+                    let mut closed = false;
+                    let mut values = Vec::new();
+                    let mut buffer = String::new();
+
+                    // Consume the opening quote
                     chars.next();
                     self.column += 1;
 
-                    let mut prev_char: Option<char> = None;
                     while let Some(&ch) = chars.peek() {
-                        if ch == '"' {
-                            if prev_char == Some('\\') {
-                                value.pop();
-                                value.push(ch);
-                            } else {
+                        match ch {
+                            '"' => {
+                                // Closing quote
                                 chars.next();
                                 self.column += 1;
                                 closed = true;
                                 break;
                             }
-                        } else {
-                            value.push(ch);
-                        }
 
-                        prev_char = Some(ch);
-                        chars.next();
-                        self.column += 1;
+                            '\\' => {
+                                // Escape sequences
+                                chars.next();
+                                self.column += 1;
+                                if let Some(&escaped_char) = chars.peek() {
+                                    buffer.push(escape(escaped_char));
+                                    chars.next();
+                                    self.column += 1;
+                                }
+                            }
+
+                            '$' => {
+                                if chars.clone().nth(1) == Some('{') {
+                                    // Flush current buffer to tokens
+                                    if !buffer.is_empty() {
+                                        values.push(Token::new(TokenType::String(buffer.clone()), self.line, start..=self.column));
+                                        buffer.clear();
+                                    }
+
+                                    // Consume `${`
+                                    chars.next();
+                                    chars.next();
+                                    self.column += 2;
+
+                                    // Find the range of the interpolation
+                                    let nested_start = self.column;
+                                    let mut nested_depth = 1;
+                                    let mut nested_content = String::new();
+
+                                    for nested_char in &mut chars {
+                                        self.column += 1;
+
+                                        match nested_char {
+                                            '{' => nested_depth += 1,
+                                            '}' => {
+                                                nested_depth -= 1;
+                                                if nested_depth == 0 {
+                                                    break;
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+
+                                        nested_content.push(nested_char);
+                                    }
+
+                                    // Ensure the interpolation is closed
+                                    if nested_depth != 0 {
+                                        return Err(Error::new(
+                                            ErrorType::UnclosedInterpolation,
+                                            Some(Location {
+                                                path: self.source.path.clone(),
+                                                text: self.source.text.clone(),
+                                                lines: self.line..=self.line,
+                                                section: Some(nested_start..=self.column),
+                                            }),
+                                        ));
+                                    }
+
+                                    let mut nested_tokenizer = Self {
+                                        source: nested_content.into(),
+                                        line: self.line,
+                                        column: nested_start,
+                                    };
+
+                                    let nested_tokens = nested_tokenizer.tokenize()?;
+
+                                    if nested_tokens.len() == 1 {
+                                        values.extend(nested_tokens);
+                                    } else {
+                                        values.push(Token::new(
+                                            TokenType::InterpolatedString(nested_tokens),
+                                            self.line,
+                                            nested_start..=self.column,
+                                        ));
+                                    }
+                                } else {
+                                    buffer.push('$');
+                                    chars.next();
+                                    self.column += 1;
+                                }
+                            }
+
+                            _ => {
+                                // Regular characters
+                                buffer.push(ch);
+                                chars.next();
+                                self.column += 1;
+                            }
+                        }
+                    }
+
+                    // Flush remaining buffer to tokens
+                    if !buffer.is_empty() {
+                        values.push(Token::new(TokenType::String(buffer.clone()), self.line, start..=self.column));
                     }
 
                     if !closed {
-                        if let Some(path) = &self.source.path {
-                            let location = Location::from_path(path, self.line..=self.line)?;
-                            return Err(Error::new(ErrorType::UnclosedString, Some(location)));
-                        }
-
-                        let location = Location {
-                            path: None,
-                            text: self.source.text.clone(),
-                            lines: self.line..=self.line,
-                            section: Some(start..=self.column),
-                        };
-
-                        return Err(Error::new(ErrorType::UnclosedString, Some(location)));
+                        return Err(Error::new(
+                            ErrorType::UnclosedString,
+                            Some(Location {
+                                path: self.source.path.clone(),
+                                text: self.source.text.clone(),
+                                lines: self.line..=self.line,
+                                section: Some(start..=self.column),
+                            }),
+                        ));
                     }
 
-                    tokens.push(Token::new(
-                        TokenType::String(handle_string_escapes(&value)),
-                        self.line,
-                        start..=self.column,
-                    ));
+                    if values.len() <= 1 {
+                        tokens.push(Token::new(TokenType::String(buffer), self.line, start..=self.column));
+                    } else {
+                        tokens.push(Token::new(TokenType::InterpolatedString(values), self.line, start..=self.column));
+                    }
                 }
 
                 // Parse numbers and floats
@@ -273,21 +362,12 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn handle_string_escapes(original: impl Into<String>) -> String {
-    let mut original: String = original.into();
-    let replacements: &[(&str, &str)] = &[
-        (r"\\", "\\"),
-        ("\\\"", "\""),
-        (r"\'", "'"),
-        (r"\n", "\n"),
-        (r"\r", "\r"),
-        (r"\t", "\t"),
-        (r"\0", "\0"),
-    ];
-
-    for replacement in replacements {
-        original = original.replace(replacement.0, replacement.1);
+fn escape(ch: char) -> char {
+    match ch {
+        'n' => '\n',
+        'r' => '\r',
+        't' => '\t',
+        '0' => '\0',
+        _ => ch,
     }
-
-    original
 }

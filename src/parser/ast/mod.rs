@@ -1,10 +1,7 @@
 #![warn(clippy::todo)]
 
 use crate::{
-    parser::tokenizer::{
-        self,
-        types::{Token, TokenType},
-    },
+    parser::tokenizer::types::{Token, TokenType},
     Source,
 };
 use logger::Location;
@@ -37,6 +34,10 @@ pub type StatementResult = Result<Vec<Statement>, Box<Error>>;
 
 impl Parser {
     pub fn new(tokens: Vec<Token>, source: impl Into<Source>) -> Self {
+        if cfg!(debug_assertions) {
+            logger::set_app_name!("AST");
+        }
+
         Self {
             tokens,
             source: source.into(),
@@ -110,7 +111,8 @@ impl Parser {
 
         let expr = match &token.token_type {
             TokenType::Null => Expr::new(ExprType::Literal(Literal::Null), token.line, token.cols),
-            TokenType::String(v) => self.parse_string(v)?,
+            TokenType::String(v) => Expr::new(ExprType::Literal(Literal::String(v.clone())), token.line, token.cols),
+            TokenType::InterpolatedString(v) => self.parse_interpolated_string(v)?,
             TokenType::Int(v) => Expr::new(ExprType::Literal(Literal::Int(*v)), token.line, token.cols),
             TokenType::Float(v) => Expr::new(ExprType::Literal(Literal::Float(*v)), token.line, token.cols),
             TokenType::Bool(v) => Expr::new(ExprType::Literal(Literal::Bool(*v)), token.line, token.cols),
@@ -132,62 +134,47 @@ impl Parser {
         Ok(expr)
     }
 
-    fn parse_string(&mut self, v: impl Into<String>) -> ExprResult {
-        let v: String = v.into();
-        let token = &self.tokens[self.position];
-        let mut result = Vec::new();
-        let mut start = 0;
+    fn parse_interpolated_string(&mut self, v: &[Token]) -> ExprResult {
+        let mut result: Vec<Expr> = Vec::new();
+        let start = self.tokens[self.position].clone();
 
-        while let Some(open) = v[start..].find("${") {
-            let open_pos = start + open;
+        for token in v {
+            match &token.token_type {
+                TokenType::String(v) => {
+                    result.push(Expr::new(
+                        ExprType::Literal(Literal::String(v.clone())),
+                        token.line,
+                        token.cols.clone(),
+                    ));
+                }
+                TokenType::InterpolatedString(v) => {
+                    let ast = Self::new(v.clone(), self.source.clone()).parse()?;
+                    if let Some(first) = ast.first() {
+                        let StatementType::Expr(first) = &first.statement_type else {
+                            unreachable!()
+                        };
 
-            if open_pos > start {
-                let literal_part = &v[start..open_pos];
-                result.push(Expr::new(
-                    ExprType::Literal(Literal::String(literal_part.to_string())),
-                    token.line,
-                    token.cols.clone(),
-                ));
-            }
+                        result.push(first.clone());
+                    }
+                }
+                _ => {
+                    // FIXME: Cloning `self.source` is very inefficient.
+                    let ast = Self::new(vec![token.clone()], self.source.clone()).parse()?;
+                    if let Some(first) = ast.first() {
+                        let StatementType::Expr(first) = &first.statement_type else {
+                            unreachable!()
+                        };
 
-            if let Some(close) = v[open_pos..].find('}') {
-                let close_pos = open_pos + close;
-                let content = &v[open_pos + 2..close_pos];
-
-                let source = Source::new(content);
-                let tokens = tokenizer::Parser::new(&source).tokenize().map_err(Error::from)?;
-                let expr = Self::new(tokens, source).parse_expr()?;
-                result.push(expr);
-
-                start = close_pos + 1;
-            } else {
-                break;
-            }
-        }
-
-        if start < v.len() {
-            let remaining_part = &v[start..];
-            result.push(Expr::new(
-                ExprType::Literal(Literal::String(remaining_part.to_string())),
-                token.line,
-                token.cols.clone(),
-            ));
-        }
-
-        if result.len() == 1 {
-            if let ExprType::Literal(Literal::String(s)) = &result[0].expr_type {
-                return Ok(Expr::new(
-                    ExprType::Literal(Literal::String(s.clone())),
-                    token.line,
-                    token.cols.clone(),
-                ));
+                        result.push(first.clone());
+                    }
+                }
             }
         }
 
         Ok(Expr::new(
             ExprType::Literal(Literal::InterpolatedString(result)),
-            token.line,
-            token.cols.clone(),
+            start.line,
+            start.cols.clone(),
         ))
     }
 

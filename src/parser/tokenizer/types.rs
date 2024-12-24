@@ -1,14 +1,18 @@
 #![allow(clippy::struct_field_names)]
 
 use logger::{Location, Log, LogLevel};
-use std::fmt::Display;
-use std::io;
-use std::num::{ParseFloatError, ParseIntError};
-use std::ops::RangeInclusive;
+use std::{
+    cmp::Ordering,
+    fmt::Display,
+    io,
+    num::{ParseFloatError, ParseIntError},
+    ops::RangeInclusive,
+};
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum TokenType {
     // Literals
+    InterpolatedString(Vec<Token>),
     String(String),
     Int(i64),
     Float(f64),
@@ -75,7 +79,24 @@ pub enum TokenType {
 impl TokenType {
     #[must_use]
     pub fn is_binary_operator(&self) -> bool {
-        matches!(self, TokenType::Plus | TokenType::Minus | TokenType::Multiply | TokenType::Slash)
+        matches!(
+            self,
+            // Math Operators
+            TokenType::Plus
+                | TokenType::Minus
+                | TokenType::Multiply
+                | TokenType::Slash
+
+                // Logic Operators
+                | TokenType::Eq
+                | TokenType::NotEq
+                | TokenType::Gt
+                | TokenType::GtEq
+                | TokenType::Lt
+                | TokenType::LtEq
+                | TokenType::And
+                | TokenType::Or
+        )
     }
 
     #[must_use]
@@ -88,6 +109,7 @@ impl Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             // Literals
+            TokenType::InterpolatedString(v) => write!(f, "\"{v:#?}\""),
             TokenType::String(v) => write!(f, "\"{v}\""),
             TokenType::Int(v) => write!(f, "{v}"),
             TokenType::Float(v) => write!(f, "{v}"),
@@ -111,7 +133,7 @@ impl Display for TokenType {
             TokenType::Gt => write!(f, ">"),
             TokenType::GtEq => write!(f, ">="),
             TokenType::Lt => write!(f, "<"),
-            TokenType::LtEq => write!(f, "=<"),
+            TokenType::LtEq => write!(f, "<="),
             TokenType::And => write!(f, "&&"),
             TokenType::Or => write!(f, "||"),
             TokenType::Not => write!(f, "!"),
@@ -160,6 +182,12 @@ impl PartialEq for Token {
     }
 }
 
+impl PartialOrd for Token {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.token_type.partial_cmp(&other.token_type)
+    }
+}
+
 #[derive(Debug)]
 pub struct Error {
     error_type: ErrorType,
@@ -185,7 +213,11 @@ impl Error {
 #[derive(Debug)]
 pub enum ErrorType {
     UnexpectedToken(char),
+
+    // String errors
     UnclosedString,
+    UnclosedInterpolation,
+
     IOError(io::Error),
     ParseIntError(ParseIntError),
     ParseFloatError(ParseFloatError),
@@ -202,7 +234,11 @@ impl From<Error> for Log {
 
         log.message(match value.error_type {
             ErrorType::UnexpectedToken(token) => format!("Unexpected token: {token}"),
+
+            // String errors
             ErrorType::UnclosedString => "Unclosed string literal".to_string(),
+            ErrorType::UnclosedInterpolation => "Unclosed string interpolation".to_string(),
+
             ErrorType::IOError(error) => format!("IO error: {error}"),
             ErrorType::ParseIntError(error) => format!("Parse int error: {error}"),
             ErrorType::ParseFloatError(error) => format!("Parse float error: {error}"),
