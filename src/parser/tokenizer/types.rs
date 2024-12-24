@@ -35,7 +35,7 @@ pub enum TokenType {
     GtEq,
     /// <
     Lt,
-    /// =<
+    /// <=
     LtEq,
     /// &&
     And,
