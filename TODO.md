@@ -1,11 +1,11 @@
 - Tokenizer:
     - [] Add more binary operators.
-    - [] Do string interpolation in the tokenizer rather than in the AST.
+    - [x] Do string interpolation in the tokenizer rather than in the AST.
 
 - AST:
     - [x] Handle objects, arrays and other more complex expressions.
     - [] Handle struct and function declarations.
-    - [] Add logic operators.
+    - [x] Add logic operators.
     - [x] Use round parenthesis for order of operation in binary operations.
     - [x] Store location data for AST expressions/statements **(very important for error context)**.
 
