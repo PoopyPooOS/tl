@@ -47,8 +47,6 @@ pub enum ExprType {
     Literal(Literal),
     Identifier(String),
     DotAccess(Vec<String>),
-    // TODO: Logic operators
-    // TODO: For binary operations, make sure to support order of operations with parenthesis
     BinaryOp {
         left: Box<Expr>,
         operator: BinaryOperator,
