@@ -83,10 +83,13 @@ impl Parser {
             TokenType::Identifier(_) => Some(self.parse_ident()?),
             TokenType::LParen => {
                 if let Some(next_token) = self.tokens.get(self.position + 1) {
-                    if next_token.token_type.is_number() {
+                    let next_next_token = self.tokens.get(self.position + 2);
+
+                    if next_token.token_type.is_number() || next_next_token.is_some_and(|token| token.token_type.is_binary_operator()) {
                         return self.parse_binary_op(0);
                     }
                 }
+
                 None
             }
             TokenType::Not => {
