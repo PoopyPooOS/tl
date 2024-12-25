@@ -259,7 +259,8 @@ impl Parser {
 
     fn parse_binary_op(&mut self, min_precedence: u8) -> ExprResult {
         let start = self.tokens[self.position].clone();
-        let mut left = if self.tokens[self.position].token_type == TokenType::LParen {
+
+        let mut left = if start.token_type == TokenType::LParen {
             self.consume(TokenType::LParen)?;
             let expr = self.parse_binary_op(0)?;
             self.consume(TokenType::RParen)?;
@@ -280,7 +281,14 @@ impl Parser {
 
             let operator_token = self.tokens[self.position].clone();
             self.position += 1;
-            let operator = BinaryOperator::from_token(operator_token.token_type)?;
+            let operator = BinaryOperator::from_token(operator_token.token_type.clone())?;
+
+            if self.tokens.get(self.position).is_none() {
+                return Err(Box::new(Error::new(
+                    ErrorType::MissingRightSide,
+                    self.location_from_token(&operator_token),
+                )));
+            }
 
             let right = self.parse_binary_op(precedence + 1)?;
 

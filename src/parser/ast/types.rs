@@ -187,6 +187,9 @@ impl Error {
 
 #[derive(Debug)]
 pub enum ErrorType {
+    /// When the right side of a binary operation is missing.
+    MissingRightSide,
+
     /// When a binary operator is expected but another token type was found.
     InvalidBinaryOperator(TokenType),
 
@@ -219,6 +222,7 @@ impl From<Error> for Log {
         };
 
         log.message(match value.error_type {
+            ErrorType::MissingRightSide => "Missing right side of binary operation".to_string(),
             ErrorType::InvalidBinaryOperator(token) => format!("Invalid binary operator: {token}"),
             ErrorType::ExpectedSeperatorInObjectKV => "Expected ':' or '=' after object key".to_string(),
             ErrorType::NoIdentifierAfterLet => "Expected identifier after 'let' keyword".to_string(),
