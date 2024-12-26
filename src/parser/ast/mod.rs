@@ -1,5 +1,3 @@
-#![warn(clippy::todo)]
-
 use crate::{
     parser::tokenizer::types::{Token, TokenType},
     Source,
@@ -83,7 +81,7 @@ impl Parser {
         let next_token = {
             let token = self.tokens.get(self.position);
             if token.is_some() {
-                self.position += 1;
+                self.position = self.position.saturating_add(1);
             }
             token
         };

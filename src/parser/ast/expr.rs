@@ -7,19 +7,24 @@ use logger::Location;
 
 impl super::Parser {
     pub(super) fn parse_expr(&mut self) -> ExprResult {
-        if let Some(next_token) = self.tokens.get(self.position + 1) {
+        if let Some(next_token) = self.tokens.get(self.position.saturating_add(1)) {
             if next_token.token_type.is_binary_operator() {
                 return self.parse_binary_op(0);
             }
         }
 
-        let expr = match &self.tokens[self.position].token_type {
+        let token = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?;
+
+        let expr = match token.token_type {
             TokenType::LBrace => Some(self.parse_object()?),
             TokenType::LBracket => Some(self.parse_array()?),
             TokenType::Identifier(_) => Some(self.parse_ident()?),
             TokenType::LParen => {
-                if let Some(next_token) = self.tokens.get(self.position + 1) {
-                    let next_next_token = self.tokens.get(self.position + 2);
+                if let Some(next_token) = self.tokens.get(self.position.saturating_add(1)) {
+                    let next_next_token = self.tokens.get(self.position.saturating_add(2));
 
                     // Function Declaration
                     if matches!(next_token.token_type, TokenType::Identifier(_) | TokenType::RParen) {
@@ -35,7 +40,12 @@ impl super::Parser {
                 None
             }
             TokenType::Not => {
-                let token = self.tokens[self.position].clone();
+                let token = self
+                    .tokens
+                    .get(self.position)
+                    .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?
+                    .clone();
+
                 self.consume(TokenType::Not)?;
                 let expr = self.parse_expr()?;
                 let end = *expr.cols.end();
@@ -52,7 +62,11 @@ impl super::Parser {
     }
 
     pub(super) fn parse_literal(&mut self) -> ExprResult {
-        let token = self.tokens[self.position].clone();
+        let token = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?
+            .clone();
 
         let expr = match &token.token_type {
             TokenType::Null => Expr::new(ExprType::Literal(Literal::Null), token.line, token.cols),
@@ -62,14 +76,14 @@ impl super::Parser {
             TokenType::Float(v) => Expr::new(ExprType::Literal(Literal::Float(*v)), token.line, token.cols),
             TokenType::Bool(v) => Expr::new(ExprType::Literal(Literal::Bool(*v)), token.line, token.cols),
             TokenType::Identifier(v) => {
-                if let Some(next_token) = self.tokens.get(self.position + 1)
+                if let Some(next_token) = self.tokens.get(self.position.saturating_add(1))
                     && next_token.token_type == TokenType::LParen
                 {
                     let expr = self.parse_ident()?;
 
                     if matches!(expr.expr_type, ExprType::Call { .. }) {
                         // This is to not skip tokens.
-                        self.position -= 1;
+                        self.position = self.position.saturating_sub(1);
                     }
 
                     expr
@@ -89,7 +103,7 @@ impl super::Parser {
             }
         };
 
-        self.position += 1;
+        self.position = self.position.saturating_add(1);
 
         Ok(expr)
     }

@@ -6,13 +6,18 @@ use crate::parser::tokenizer::types::TokenType;
 
 impl super::Parser {
     pub(super) fn parse_let(&mut self) -> StatementResult {
-        let start = self.tokens[self.position].clone();
+        let start = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?
+            .clone();
+
         self.consume(TokenType::Let)?;
 
         let next_token = {
             let token = self.tokens.get(self.position);
             if token.is_some() {
-                self.position += 1;
+                self.position = self.position.saturating_add(1);
             }
             token
         };
@@ -31,7 +36,11 @@ impl super::Parser {
             _ => {
                 return Err(Box::new(Error::new(
                     ErrorType::NoIdentifierAfterLet,
-                    self.location_from_token(&self.tokens[self.position - 1]),
+                    self.location_from_token(
+                        self.tokens
+                            .get(self.position.saturating_sub(1))
+                            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?,
+                    ),
                 )))
             }
         };

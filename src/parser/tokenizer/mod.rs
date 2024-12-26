@@ -33,8 +33,12 @@ impl Parser {
 
         macro_rules! push_token {
             ($token:ident, $len:expr) => {{
-                tokens.push(Token::new(TokenType::$token, self.line, self.column..=self.column + $len));
-                self.column += $len;
+                tokens.push(Token::new(
+                    TokenType::$token,
+                    self.line,
+                    self.column..=self.column.saturating_add($len),
+                ));
+                self.column = self.column.saturating_add($len);
                 chars.next();
             }};
         }
@@ -52,12 +56,12 @@ impl Parser {
                 // Whitespace
                 ' ' | '\t' => {
                     chars.next();
-                    self.column += 1;
+                    self.column = self.column.saturating_add(1);
                     continue;
                 }
                 '\n' => {
                     chars.next();
-                    self.line += 1;
+                    self.line = self.line.saturating_add(1);
                     self.column = 0;
                     continue;
                 }
@@ -69,7 +73,7 @@ impl Parser {
                     {
                         chars.next();
                         chars.next();
-                        self.column += 2;
+                        self.column = self.column.saturating_add(2);
 
                         while let Some(&ch) = chars.peek() {
                             if ch == '\n' {
@@ -77,7 +81,7 @@ impl Parser {
                             }
 
                             chars.next();
-                            self.column += 1;
+                            self.column = self.column.saturating_add(1);
                         }
                         continue;
                     }
@@ -115,14 +119,14 @@ impl Parser {
 
                     // Consume the opening quote
                     chars.next();
-                    self.column += 1;
+                    self.column = self.column.saturating_add(1);
 
                     while let Some(&ch) = chars.peek() {
                         match ch {
                             '"' => {
                                 // Closing quote
                                 chars.next();
-                                self.column += 1;
+                                self.column = self.column.saturating_add(1);
                                 closed = true;
                                 break;
                             }
@@ -130,11 +134,11 @@ impl Parser {
                             '\\' => {
                                 // Escape sequences
                                 chars.next();
-                                self.column += 1;
+                                self.column = self.column.saturating_add(1);
                                 if let Some(&escaped_char) = chars.peek() {
                                     buffer.push(escape(escaped_char));
                                     chars.next();
-                                    self.column += 1;
+                                    self.column = self.column.saturating_add(1);
                                 }
                             }
 
@@ -142,27 +146,31 @@ impl Parser {
                                 if chars.clone().nth(1) == Some('{') {
                                     // Flush current buffer to tokens
                                     if !buffer.is_empty() {
-                                        values.push(Token::new(TokenType::String(buffer.clone()), self.line, start + 1..=self.column));
+                                        values.push(Token::new(
+                                            TokenType::String(buffer.clone()),
+                                            self.line,
+                                            start.saturating_add(1)..=self.column,
+                                        ));
                                         buffer.clear();
                                     }
 
                                     // Consume `${`
                                     chars.next();
                                     chars.next();
-                                    self.column += 2;
+                                    self.column = self.column.saturating_add(2);
 
                                     // Find the range of the interpolation
                                     let nested_start = self.column;
-                                    let mut nested_depth = 1;
+                                    let mut nested_depth: i32 = 1;
                                     let mut nested_content = String::new();
 
                                     for nested_char in &mut chars {
-                                        self.column += 1;
+                                        self.column = self.column.saturating_add(1);
 
                                         match nested_char {
-                                            '{' => nested_depth += 1,
+                                            '{' => nested_depth = nested_depth.saturating_add(1),
                                             '}' => {
-                                                nested_depth -= 1;
+                                                nested_depth = nested_depth.saturating_sub(1);
                                                 if nested_depth == 0 {
                                                     start = self.column;
                                                     break;
@@ -207,7 +215,7 @@ impl Parser {
                                 } else {
                                     buffer.push('$');
                                     chars.next();
-                                    self.column += 1;
+                                    self.column = self.column.saturating_add(1);
                                 }
                             }
 
@@ -215,14 +223,18 @@ impl Parser {
                                 // Regular characters
                                 buffer.push(ch);
                                 chars.next();
-                                self.column += 1;
+                                self.column = self.column.saturating_add(1);
                             }
                         }
                     }
 
                     // Flush remaining buffer to tokens
                     if !buffer.is_empty() {
-                        values.push(Token::new(TokenType::String(buffer.clone()), self.line, start..=self.column - 1));
+                        values.push(Token::new(
+                            TokenType::String(buffer.clone()),
+                            self.line,
+                            start..=self.column.saturating_sub(1),
+                        ));
                     }
 
                     if !closed {
@@ -265,7 +277,7 @@ impl Parser {
                         }
                     }
 
-                    self.column += value.len();
+                    self.column = self.column.saturating_add(value.len());
                     match value.as_str() {
                         _ if value.parse::<i64>().is_ok() => {
                             tokens.push(Token::new(
@@ -319,7 +331,7 @@ impl Parser {
                         }};
                     }
 
-                    self.column += value.len();
+                    self.column = self.column.saturating_add(value.len());
                     match value.as_str() {
                         // Null
                         "null" => push_long_token!(Null),

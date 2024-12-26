@@ -211,6 +211,9 @@ pub enum ErrorType {
     /// Very rare edge case in which a token can not be parsed by the AST regardless of the context its in.
     UnexpectedToken(TokenType),
 
+    /// Occurs when no tokens are left.
+    NoTokensLeft,
+
     /// An error that may occur when parsing interpolated strings.
     TokenizationError(tokenizer::types::Error),
     IOError(io::Error),
@@ -230,10 +233,11 @@ impl From<Error> for Log {
             ErrorType::InvalidBinaryOperator(token) => format!("Invalid binary operator: {token}"),
             ErrorType::ExpectedSeperatorInObjectKV => "Expected ':' or '=' after object key".to_string(),
             ErrorType::NoIdentifierAfterLet => "Expected identifier after 'let' keyword".to_string(),
-            ErrorType::TokenizationError(error) => format!("Tokenization error: {error}"),
             ErrorType::ExpectedTokenGot(expected, found) => format!("Expected token '{expected}' found '{found}'"),
             ErrorType::ExpectedToken(expected) => format!("Expected token '{expected}', but no tokens are left"),
             ErrorType::UnexpectedToken(token) => format!("Unexpected token: {token}"),
+            ErrorType::NoTokensLeft => "No tokens left".to_string(),
+            ErrorType::TokenizationError(error) => format!("Tokenization error: {error}"),
             ErrorType::IOError(error) => format!("IO error: {error}"),
         })
     }

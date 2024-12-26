@@ -1,5 +1,5 @@
 use super::{
-    types::{Expr, ExprType, Literal, StatementType},
+    types::{Error, ErrorType, Expr, ExprType, Literal, StatementType},
     ExprResult,
 };
 use crate::parser::tokenizer::types::{Token, TokenType};
@@ -7,7 +7,10 @@ use crate::parser::tokenizer::types::{Token, TokenType};
 impl super::Parser {
     pub(super) fn parse_interpolated_string(&mut self, v: &[Token]) -> ExprResult {
         let mut result: Vec<Expr> = Vec::new();
-        let start = self.tokens[self.position].clone();
+        let start = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| Box::new(Error::new(ErrorType::ExpectedToken(TokenType::InterpolatedString(vec![])), None)))?;
 
         for token in v {
             match &token.token_type {
@@ -22,7 +25,7 @@ impl super::Parser {
                     let ast = Self::new(v.clone(), self.source.clone()).parse()?;
                     if let Some(first) = ast.first() {
                         let StatementType::Expr(first) = &first.statement_type else {
-                            unreachable!()
+                            unreachable!("Interpolated strings can only contain expressions");
                         };
 
                         result.push(first.clone());
@@ -33,7 +36,7 @@ impl super::Parser {
                     let ast = Self::new(vec![token.clone()], self.source.clone()).parse()?;
                     if let Some(first) = ast.first() {
                         let StatementType::Expr(first) = &first.statement_type else {
-                            unreachable!()
+                            unreachable!("Interpolated strings can only contain expressions");
                         };
 
                         result.push(first.clone());

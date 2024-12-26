@@ -1,5 +1,5 @@
 use super::{
-    types::{Expr, ExprType},
+    types::{Error, ErrorType, Expr, ExprType},
     ExprResult,
 };
 use crate::parser::tokenizer::types::TokenType;
@@ -9,7 +9,7 @@ impl super::Parser {
         let mut is_call = false;
         let mut is_access = false;
 
-        if let Some(next_token) = self.tokens.get(self.position + 1) {
+        if let Some(next_token) = self.tokens.get(self.position.saturating_add(1)) {
             if next_token.token_type.is_binary_operator() {
                 return self.parse_binary_op(0);
             }
@@ -21,7 +21,7 @@ impl super::Parser {
         let next_token = {
             let token = self.tokens.get(self.position);
             if token.is_some() {
-                self.position += 1;
+                self.position = self.position.saturating_add(1);
             }
             token
         };
@@ -49,7 +49,7 @@ impl super::Parser {
             // Empty args
             if let Some(token) = self.tokens.get(self.position) {
                 if token.token_type == TokenType::RParen {
-                    self.position += 1;
+                    self.position = self.position.saturating_add(1);
                     let start = *name.0.cols.start();
 
                     return Ok(Expr::new(
@@ -84,7 +84,11 @@ impl super::Parser {
             let start = &name.0;
             let end = &self.tokens.iter().filter(|token| token.line == start.line).collect::<Vec<_>>();
             end.clone().sort_by(|a, b| a.cols.end().cmp(b.cols.end()));
-            let end = end.last().copied().unwrap_or(&self.tokens[self.position - 1]);
+            let end = end.last().copied().unwrap_or(
+                self.tokens
+                    .get(self.position.saturating_sub(1))
+                    .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?,
+            );
 
             return Ok(Expr::new(
                 ExprType::Call {
@@ -103,7 +107,7 @@ impl super::Parser {
         let next_token = {
             let token = self.tokens.get(self.position);
             if token.is_some() {
-                self.position += 1;
+                self.position = self.position.saturating_add(1);
             }
             token
         };
@@ -115,7 +119,10 @@ impl super::Parser {
         }
 
         let line = name_token.line;
-        let token = &self.tokens[self.position];
+        let token = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?;
 
         Ok(Expr::new(
             ExprType::DotAccess(paths),

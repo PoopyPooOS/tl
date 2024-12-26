@@ -6,7 +6,11 @@ use crate::parser::tokenizer::types::TokenType;
 
 impl super::Parser {
     pub(super) fn parse_fn_decl(&mut self) -> ExprResult {
-        let start = self.tokens[self.position].clone();
+        let start = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?
+            .clone();
 
         // Args
         self.consume(TokenType::LParen)?;
@@ -30,12 +34,16 @@ impl super::Parser {
                 _ => {
                     return Err(Box::new(Error::new(
                         ErrorType::ExpectedToken(TokenType::Identifier("identifier".to_string())),
-                        self.location_from_token(&self.tokens[self.position]),
+                        self.location_from_token(
+                            self.tokens
+                                .get(self.position)
+                                .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?,
+                        ),
                     )))
                 }
             };
 
-            self.position += 1;
+            self.position = self.position.saturating_add(1);
 
             self.consume(TokenType::Colon)?;
             let arg_type = match self.tokens.get(self.position) {
@@ -51,12 +59,16 @@ impl super::Parser {
                 _ => {
                     return Err(Box::new(Error::new(
                         ErrorType::ExpectedToken(TokenType::Identifier("identifier".to_string())),
-                        self.location_from_token(&self.tokens[self.position]),
+                        self.location_from_token(
+                            self.tokens
+                                .get(self.position)
+                                .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?,
+                        ),
                     )))
                 }
             };
 
-            self.position += 1;
+            self.position = self.position.saturating_add(1);
 
             args.push((name, arg_type));
 
@@ -64,7 +76,7 @@ impl super::Parser {
             if let Some(token) = self.tokens.get(self.position)
                 && token.token_type == TokenType::Comma
             {
-                self.position += 1;
+                self.position = self.position.saturating_add(1);
             }
         }
 
@@ -79,12 +91,12 @@ impl super::Parser {
             {
                 None
             } else {
-                self.position += 1;
+                self.position = self.position.saturating_add(1);
 
                 match self.tokens.get(self.position) {
                     Some(token) => match &token.token_type {
                         TokenType::Identifier(arg_type) => {
-                            self.position += 1;
+                            self.position = self.position.saturating_add(1);
                             Some(arg_type.clone())
                         }
                         _ => {
@@ -113,7 +125,11 @@ impl super::Parser {
         // But at the end of the day it's way more flexible and I wouldn't have to do this garbage.
         let end = &self.tokens.iter().filter(|token| token.line == start.line).collect::<Vec<_>>();
         end.clone().sort_by(|a, b| a.cols.end().cmp(b.cols.end()));
-        let end = end.last().copied().unwrap_or(&self.tokens[self.position - 1]);
+        let end = end.last().copied().unwrap_or(
+            self.tokens
+                .get(self.position.saturating_sub(1))
+                .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?,
+        );
 
         Ok(Expr::new(
             ExprType::FnDecl { args, return_type, body },

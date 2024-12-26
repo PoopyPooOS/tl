@@ -7,7 +7,12 @@ use std::collections::BTreeMap;
 
 impl super::Parser {
     pub(super) fn parse_object(&mut self) -> ExprResult {
-        let start = self.tokens[self.position].clone();
+        let start = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?
+            .clone();
+
         self.consume(TokenType::LBrace)?;
         let last_context = self.context.clone();
         self.context = Context::Object;
@@ -15,7 +20,12 @@ impl super::Parser {
         let mut fields = BTreeMap::new();
 
         loop {
-            if self.tokens[self.position].token_type == TokenType::RBrace {
+            let token = self
+                .tokens
+                .get(self.position)
+                .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?;
+
+            if token.token_type == TokenType::RBrace {
                 self.consume(TokenType::RBrace)?;
                 break;
             }
@@ -23,7 +33,7 @@ impl super::Parser {
             let next_token = {
                 let token = self.tokens.get(self.position);
                 if token.is_some() {
-                    self.position += 1;
+                    self.position = self.position.saturating_add(1);
                 }
                 token
             };
@@ -42,7 +52,11 @@ impl super::Parser {
                 _ => {
                     return Err(Box::new(Error::new(
                         ErrorType::ExpectedToken(TokenType::Identifier(String::new())),
-                        self.location_from_token(&self.tokens[self.position]),
+                        self.location_from_token(
+                            self.tokens
+                                .get(self.position)
+                                .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?,
+                        ),
                     )))
                 }
             };
@@ -50,7 +64,7 @@ impl super::Parser {
             let next_token = {
                 let token = self.tokens.get(self.position);
                 if token.is_some() {
-                    self.position += 1;
+                    self.position = self.position.saturating_add(1);
                 }
                 token
             };
@@ -73,12 +87,17 @@ impl super::Parser {
         }
 
         self.context = last_context;
-        let end = &self.tokens[self.position - 1].cols.end();
+        let end = self
+            .tokens
+            .get(self.position.saturating_sub(1))
+            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?
+            .cols
+            .end();
 
         Ok(Expr::new(
             ExprType::Literal(Literal::Object(fields)),
             start.line,
-            *start.cols.start()..=**end,
+            *start.cols.start()..=*end,
         ))
     }
 }

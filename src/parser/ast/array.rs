@@ -1,12 +1,16 @@
 use super::{
-    types::{Expr, ExprType, Literal},
+    types::{Error, ErrorType, Expr, ExprType, Literal},
     ExprResult,
 };
 use crate::parser::tokenizer::types::TokenType;
 
 impl super::Parser {
     pub(super) fn parse_array(&mut self) -> ExprResult {
-        let start = self.tokens[self.position].clone();
+        let start = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| Box::new(Error::new(ErrorType::ExpectedToken(TokenType::LBracket), None)))?
+            .clone();
         self.consume(TokenType::LBracket)?;
 
         let mut array = Vec::new();
@@ -20,11 +24,11 @@ impl super::Parser {
             array.push(expr);
         }
 
-        let end = &self.tokens[self.position - 1].cols.end();
+        let end = self.tokens.get(self.position.saturating_sub(1)).unwrap_or(&start).cols.end();
         Ok(Expr::new(
             ExprType::Literal(Literal::Array(array)),
             start.line,
-            *start.cols.start()..=**end,
+            *start.cols.start()..=*end,
         ))
     }
 }
