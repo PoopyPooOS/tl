@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used, reason = "Panics automatically invalidate tests")]
+#![allow(clippy::too_many_lines, reason = "Some tests can get very long")]
 
 use crate::{
     parser::{
@@ -77,9 +78,9 @@ fn interpolated_string() {
     let input = "\"Hello, my name is ${name}!\"";
     let expected = vec![literal!(
         InterpolatedString(vec![
-            Expr::new(ExprType::Literal(Literal::String("Hello, my name is ".to_string())), 0, 0..=19),
+            Expr::new(ExprType::Literal(Literal::String("Hello, my name is ".to_string())), 0, 1..=19),
             Expr::new(ExprType::Identifier("name".to_string()), 0, 21..=25),
-            Expr::new(ExprType::Literal(Literal::String("!".to_string())), 0, 0..=28),
+            Expr::new(ExprType::Literal(Literal::String("!".to_string())), 0, 26..=27),
         ]),
         0,
         0..=28
@@ -141,7 +142,229 @@ fn not() {
 }
 
 #[test]
+fn function_declaration() {
+    // No arguments
+    #[rustfmt::skip]
+    let input = r#"let do_thing = () {
+    println("Hello!")
+}"#;
+    let expected = vec![Statement::new(
+        StatementType::Let {
+            name: "do_thing".into(),
+            value: Expr::new(
+                ExprType::FnDecl {
+                    args: vec![],
+                    return_type: None,
+                    body: vec![Statement::new(
+                        StatementType::Expr(Expr::new(
+                            ExprType::Call {
+                                name: "println".into(),
+                                args: vec![Expr::new(ExprType::Literal(Literal::String("Hello!".into())), 1, 12..=20)],
+                            },
+                            1,
+                            4..=21,
+                        )),
+                        1,
+                        4..=21,
+                    )],
+                },
+                0,
+                15..=19,
+            ),
+        },
+        0,
+        0..=19,
+    )];
+    assert_eq!(parse(input).unwrap(), expected);
+
+    // Single argument
+    #[rustfmt::skip]
+    let input = r#"let greet = (name: str): str {
+    "Hello, ${name}!"
+}"#;
+    let expected = vec![Statement::new(
+        StatementType::Let {
+            name: "greet".into(),
+            value: Expr::new(
+                ExprType::FnDecl {
+                    args: vec![("name".into(), "str".into())],
+                    return_type: Some("str".into()),
+                    body: vec![literal!(
+                        InterpolatedString(vec![
+                            Expr::new(ExprType::Literal(Literal::String("Hello, ".into())), 1, 5..=12),
+                            Expr::new(ExprType::Identifier("name".into()), 1, 14..=18),
+                            Expr::new(ExprType::Literal(Literal::String("!".into())), 1, 19..=20),
+                        ]),
+                        1,
+                        4..=21
+                    )],
+                },
+                0,
+                12..=30,
+            ),
+        },
+        0,
+        0..=30,
+    )];
+    assert_eq!(parse(input).unwrap(), expected);
+
+    // Multiple arguments
+    #[rustfmt::skip]
+    let input = r#"let do_thing = () {
+    println("Hello!")
+}"#;
+    let expected = vec![Statement::new(
+        StatementType::Let {
+            name: "do_thing".into(),
+            value: Expr::new(
+                ExprType::FnDecl {
+                    args: vec![],
+                    return_type: None,
+                    body: vec![Statement::new(
+                        StatementType::Expr(Expr::new(
+                            ExprType::Call {
+                                name: "println".into(),
+                                args: vec![Expr::new(ExprType::Literal(Literal::String("Hello!".into())), 1, 12..=20)],
+                            },
+                            1,
+                            4..=21,
+                        )),
+                        1,
+                        4..=21,
+                    )],
+                },
+                0,
+                15..=19,
+            ),
+        },
+        0,
+        0..=19,
+    )];
+    assert_eq!(parse(input).unwrap(), expected);
+
+    // Complex
+    #[rustfmt::skip]
+    let input = r"let pow = (base: int, exponent: int): int {
+    if(
+        exponent == 0,
+        1,
+        base * pow(base, exponent - 1)
+    )
+}
+
+pow(2, 10)";
+    let expected = vec![
+        Statement::new(
+            StatementType::Let {
+                name: "pow".into(),
+                value: Expr::new(
+                    ExprType::FnDecl {
+                        args: vec![("base".into(), "int".into()), ("exponent".into(), "int".into())],
+                        return_type: Some("int".into()),
+                        body: vec![Statement::new(
+                            StatementType::Expr(Expr::new(
+                                ExprType::Call {
+                                    name: "if".into(),
+                                    args: vec![
+                                        Expr::new(
+                                            ExprType::BinaryOp {
+                                                left: Box::new(Expr::new(ExprType::Identifier("exponent".into()), 2, 8..=16)),
+                                                operator: BinaryOperator::Eq,
+                                                right: Box::new(Expr::new(ExprType::Literal(Literal::Int(0)), 2, 20..=21)),
+                                            },
+                                            2,
+                                            8..=21,
+                                        ),
+                                        Expr::new(ExprType::Literal(Literal::Int(1)), 3, 8..=9),
+                                        Expr::new(
+                                            ExprType::BinaryOp {
+                                                left: Box::new(Expr::new(ExprType::Identifier("base".into()), 4, 8..=12)),
+                                                operator: BinaryOperator::Multiply,
+                                                right: Box::new(Expr::new(
+                                                    ExprType::Call {
+                                                        name: "pow".into(),
+                                                        args: vec![
+                                                            Expr::new(ExprType::Identifier("base".into()), 4, 19..=23),
+                                                            Expr::new(
+                                                                ExprType::BinaryOp {
+                                                                    left: Box::new(Expr::new(
+                                                                        ExprType::Identifier("exponent".into()),
+                                                                        4,
+                                                                        25..=33,
+                                                                    )),
+                                                                    operator: BinaryOperator::Minus,
+                                                                    right: Box::new(Expr::new(
+                                                                        ExprType::Literal(Literal::Int(1)),
+                                                                        4,
+                                                                        36..=37,
+                                                                    )),
+                                                                },
+                                                                4,
+                                                                25..=37,
+                                                            ),
+                                                        ],
+                                                    },
+                                                    4,
+                                                    15..=38,
+                                                )),
+                                            },
+                                            4,
+                                            8..=38,
+                                        ),
+                                    ],
+                                },
+                                1,
+                                4..=7,
+                            )),
+                            1,
+                            4..=7,
+                        )],
+                    },
+                    0,
+                    10..=43,
+                ),
+            },
+            0,
+            0..=43,
+        ),
+        Statement::new(
+            StatementType::Expr(Expr::new(
+                ExprType::Call {
+                    name: "pow".into(),
+                    args: vec![
+                        Expr::new(ExprType::Literal(Literal::Int(2)), 8, 4..=5),
+                        Expr::new(ExprType::Literal(Literal::Int(10)), 8, 7..=9),
+                    ],
+                },
+                8,
+                0..=10,
+            )),
+            8,
+            0..=10,
+        ),
+    ];
+    assert_eq!(parse(input).unwrap(), expected);
+}
+
+#[test]
 fn call() {
+    // No arguments
+    let input = "exit()";
+    let expected = vec![Statement::new(
+        StatementType::Expr(Expr::new(
+            ExprType::Call {
+                name: "exit".to_string(),
+                args: vec![],
+            },
+            0,
+            0..=6,
+        )),
+        0,
+        0..=6,
+    )];
+    assert_eq!(parse(input).unwrap(), expected);
+
+    // Single argument
     let input = "println(\"Hello, world!\")";
     let expected = vec![Statement::new(
         StatementType::Expr(Expr::new(
@@ -158,6 +381,42 @@ fn call() {
         )),
         0,
         0..=24,
+    )];
+    assert_eq!(parse(input).unwrap(), expected);
+
+    // Multiple arguments
+    let input = r#"if(
+    password == "strongpassoword123",
+    "Password is correct",
+    "Password is incorrect"
+)"#;
+    let expected = vec![Statement::new(
+        StatementType::Expr(Expr::new(
+            ExprType::Call {
+                name: "if".to_string(),
+                args: vec![
+                    Expr::new(
+                        ExprType::BinaryOp {
+                            left: Box::new(Expr::new(ExprType::Identifier("password".to_string()), 1, 4..=12)),
+                            operator: BinaryOperator::Eq,
+                            right: Box::new(Expr::new(
+                                ExprType::Literal(Literal::String("strongpassoword123".to_string())),
+                                1,
+                                16..=36,
+                            )),
+                        },
+                        1,
+                        4..=36,
+                    ),
+                    Expr::new(ExprType::Literal(Literal::String("Password is correct".to_string())), 2, 4..=25),
+                    Expr::new(ExprType::Literal(Literal::String("Password is incorrect".to_string())), 3, 4..=27),
+                ],
+            },
+            0,
+            0..=3,
+        )),
+        0,
+        0..=3,
     )];
     assert_eq!(parse(input).unwrap(), expected);
 }

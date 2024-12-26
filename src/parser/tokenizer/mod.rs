@@ -105,8 +105,10 @@ impl Parser {
                 '.' => push_token!(Dot, 1),
 
                 // Strings
+                #[allow(clippy::range_minus_one, reason = "Exclusive ranges can not be used")]
                 '"' => {
-                    let start = self.column;
+                    let original_start = self.column;
+                    let mut start = self.column;
                     let mut closed = false;
                     let mut values = Vec::new();
                     let mut buffer = String::new();
@@ -140,7 +142,7 @@ impl Parser {
                                 if chars.clone().nth(1) == Some('{') {
                                     // Flush current buffer to tokens
                                     if !buffer.is_empty() {
-                                        values.push(Token::new(TokenType::String(buffer.clone()), self.line, start..=self.column));
+                                        values.push(Token::new(TokenType::String(buffer.clone()), self.line, start + 1..=self.column));
                                         buffer.clear();
                                     }
 
@@ -162,6 +164,7 @@ impl Parser {
                                             '}' => {
                                                 nested_depth -= 1;
                                                 if nested_depth == 0 {
+                                                    start = self.column;
                                                     break;
                                                 }
                                             }
@@ -219,7 +222,7 @@ impl Parser {
 
                     // Flush remaining buffer to tokens
                     if !buffer.is_empty() {
-                        values.push(Token::new(TokenType::String(buffer.clone()), self.line, start..=self.column));
+                        values.push(Token::new(TokenType::String(buffer.clone()), self.line, start..=self.column - 1));
                     }
 
                     if !closed {
@@ -229,7 +232,7 @@ impl Parser {
                                 path: self.source.path.clone(),
                                 text: self.source.text.clone(),
                                 lines: self.line..=self.line,
-                                section: Some(start..=self.column),
+                                section: Some(original_start..=self.column),
                             }),
                         ));
                     }
@@ -237,7 +240,11 @@ impl Parser {
                     if values.len() <= 1 {
                         tokens.push(Token::new(TokenType::String(buffer), self.line, start..=self.column));
                     } else {
-                        tokens.push(Token::new(TokenType::InterpolatedString(values), self.line, start..=self.column));
+                        tokens.push(Token::new(
+                            TokenType::InterpolatedString(values),
+                            self.line,
+                            original_start..=self.column,
+                        ));
                     }
                 }
 

@@ -52,6 +52,12 @@ pub enum ExprType {
         operator: BinaryOperator,
         right: Box<Expr>,
     },
+    FnDecl {
+        /// Arguments are `(name, type)`
+        args: Vec<(String, String)>,
+        return_type: Option<String>,
+        body: Vec<Statement>,
+    },
     Call {
         name: String,
         args: Vec<Expr>,
