@@ -174,7 +174,6 @@ pub struct Token {
 impl Token {
     #[must_use]
     pub fn new(token_type: TokenType, line: usize, cols: RangeInclusive<usize>) -> Self {
-        // dbg!(&token_type, &cols);
         Self { token_type, line, cols }
     }
 }
