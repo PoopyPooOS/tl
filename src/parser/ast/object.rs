@@ -70,7 +70,16 @@ impl super::Parser {
             };
 
             match next_token {
-                Some(token) if token.token_type == TokenType::Equals => (),
+                Some(token) => match token.token_type {
+                    TokenType::Equals => (),
+                    TokenType::Colon => {
+                        return Err(Box::new(Error::new(
+                            ErrorType::UnexpectedColonInObjectKV,
+                            self.location_from_token(token),
+                        )))
+                    }
+                    _ => {}
+                },
                 _ => {
                     return Err(Box::new(Error::new(
                         ErrorType::ExpectedSeperatorInObjectKV,

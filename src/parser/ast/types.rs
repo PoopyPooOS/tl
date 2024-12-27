@@ -197,6 +197,9 @@ pub enum ErrorType {
     /// When a binary operator is expected but another token type was found.
     InvalidBinaryOperator(TokenType),
 
+    /// When a colon is found between object key-value pairs.
+    UnexpectedColonInObjectKV,
+
     /// When no seperator is found between object key-value pairs.
     ExpectedSeperatorInObjectKV,
 
@@ -221,16 +224,25 @@ pub enum ErrorType {
 
 impl From<Error> for Log {
     fn from(value: Error) -> Self {
-        let log = Log {
+        let mut log = Log {
             level: LogLevel::Error,
             message: "Unknown AST parsing error".into(),
             location: value.location,
             hint: None,
         };
 
+        #[allow(clippy::single_match)]
+        match value.error_type {
+            ErrorType::UnexpectedColonInObjectKV => {
+                log.hint = Some("Use '=' instead".into());
+            }
+            _ => {}
+        }
+
         log.message(match value.error_type {
             ErrorType::MissingRightSide => "Missing right side of binary operation".to_string(),
             ErrorType::InvalidBinaryOperator(token) => format!("Invalid binary operator: {token}"),
+            ErrorType::UnexpectedColonInObjectKV => "Unexpected ':' between object key-value pairs".to_string(),
             ErrorType::ExpectedSeperatorInObjectKV => "Expected ':' or '=' after object key".to_string(),
             ErrorType::NoIdentifierAfterLet => "Expected identifier after 'let' keyword".to_string(),
             ErrorType::ExpectedTokenGot(expected, found) => format!("Expected token '{expected}' found '{found}'"),
