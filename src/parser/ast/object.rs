@@ -70,12 +70,11 @@ impl super::Parser {
             };
 
             match next_token {
-                Some(token) => if matches!(token.token_type, TokenType::Colon | TokenType::Equals) {},
-                None =>
-                {
-                    #[allow(clippy::unwrap_used, reason = "`location_from_token` always returns `Some`")]
+                Some(token) if token.token_type == TokenType::Equals => (),
+                _ => {
                     return Err(Box::new(Error::new(
                         ErrorType::ExpectedSeperatorInObjectKV,
+                        #[allow(clippy::unwrap_used, reason = "`location_from_token` always returns `Some`")]
                         self.tokens.get(self.position).map(|token| self.location_from_token(token).unwrap()),
                     )))
                 }

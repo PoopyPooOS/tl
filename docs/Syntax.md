@@ -9,12 +9,10 @@ Basic literals like numbers, strings, floats, booleans are the same as in every 
 <br>
 Arrays are the same as other languages except they dont have comma seperators, like in Nix.  
 <br>
-Objects can use both an equals or a colon to seperate the key and value, there's also no commas seperating key-value pairs:
+Objects use an equals sign to seperate the key and value, there's also no commas seperating key-value pairs:
 ```tl
 {
     key = value
-    // or
-    key: value
 }
 ```
 

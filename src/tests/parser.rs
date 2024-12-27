@@ -90,23 +90,23 @@ fn interpolated_string() {
 
 #[test]
 fn object() {
-    let input = "{ name: \"John Doe\" age = 42 }";
+    let input = "{ name = \"John Doe\" age = 42 }";
     let expected = vec![literal!(
         Object(
             #[rustfmt::skip]
             BTreeMap::from([
             (
                 "name".to_string(),
-                Expr::new(ExprType::Literal(Literal::String("John Doe".to_string())), 0, 8..=18)
+                Expr::new(ExprType::Literal(Literal::String("John Doe".to_string())), 0, 9..=19)
             ),
             (
                 "age".to_string(), 
-                Expr::new(ExprType::Literal(Literal::Int(42)), 0, 25..=27)
+                Expr::new(ExprType::Literal(Literal::Int(42)), 0, 26..=28)
             ),
         ])
         ),
         0,
-        0..=29
+        0..=30
     )];
     assert_eq!(parse(input).unwrap(), expected);
 }
