@@ -1,9 +1,5 @@
-let pow = (base: int, exponent: int): int {
-    if(
-        exponent == 0,
-        1,
-        base * pow(base, exponent - 1)
-    )
+let greet = (name: str): str {
+    "Hello, ${name}!"
 }
 
-pow(2, 10)
+greet("John Doe")
