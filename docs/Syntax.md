@@ -10,7 +10,7 @@ Basic literals like numbers, strings, floats, booleans are the same as in every 
 Arrays are the same as other languages except they dont have comma seperators, like in Nix.  
 <br>
 Objects can use both an equals or a colon to seperate the key and value, there's also no commas seperating key-value pairs:
-```
+```tl
 {
     key = value
     // or
@@ -20,13 +20,13 @@ Objects can use both an equals or a colon to seperate the key and value, there's
 
 ## Variables
 Variables can be defined with the `let` keyword:  
-```
+```tl
 let x = 42
 ```
 
 ## String Interpolation
 String interpolation can be done by using `${}` in any string:
-```
+```tl
 let name = "John Doe"
 let age = 42
 let full_info = "My name is ${name} and I am ${age} year${if(age == 1, "", "s")} old."
@@ -34,7 +34,7 @@ let full_info = "My name is ${name} and I am ${age} year${if(age == 1, "", "s")}
 
 ## Functions
 Functions are variables that have a value with the following syntax:
-```
+```tl
 let greet = (name: str): str {
     "Hello, my name is ${name}!"
 }
@@ -44,7 +44,7 @@ greet("John Doe") // "Hello, my name is John Doe!"
 
 ## Logic & Branching
 Branching is handled using functions:
-```
+```tl
 let num = 10
 
 if(
