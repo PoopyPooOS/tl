@@ -210,35 +210,34 @@ fn function_declaration() {
 
     // Multiple arguments
     #[rustfmt::skip]
-    let input = r#"let do_thing = () {
-    println("Hello!")
+    let input = r#"let do_thing = (name: str, age: int): str {
+    "Hello, ${name}! You are ${age} years old."
 }"#;
     let expected = vec![Statement::new(
         StatementType::Let {
             name: "do_thing".into(),
             value: Expr::new(
                 ExprType::FnDecl {
-                    args: vec![],
-                    return_type: None,
-                    body: vec![Statement::new(
-                        StatementType::Expr(Expr::new(
-                            ExprType::Call {
-                                name: "println".into(),
-                                args: vec![Expr::new(ExprType::Literal(Literal::String("Hello!".into())), 1, 12..=20)],
-                            },
-                            1,
-                            4..=21,
-                        )),
+                    args: vec![("name".into(), "str".into()), ("age".into(), "int".into())],
+                    return_type: Some("str".into()),
+                    body: vec![literal!(
+                        InterpolatedString(vec![
+                            Expr::new(ExprType::Literal(Literal::String("Hello, ".into())), 1, 5..=12),
+                            Expr::new(ExprType::Identifier("name".into()), 1, 14..=18),
+                            Expr::new(ExprType::Literal(Literal::String("! You are ".into())), 1, 20..=29),
+                            Expr::new(ExprType::Identifier("age".into()), 1, 31..=34),
+                            Expr::new(ExprType::Literal(Literal::String(" years old.".into())), 1, 35..=46),
+                        ]),
                         1,
-                        4..=21,
+                        4..=47
                     )],
                 },
                 0,
-                15..=19,
+                15..=43,
             ),
         },
         0,
-        0..=19,
+        0..=43,
     )];
     assert_eq!(parse(input).unwrap(), expected);
 
