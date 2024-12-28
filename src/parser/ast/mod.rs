@@ -101,6 +101,14 @@ impl Parser {
         }
     }
 
+    fn advance(&mut self) -> Option<&Token> {
+        let token = self.tokens.get(self.position);
+        if token.is_some() {
+            self.position = self.position.saturating_add(1);
+        }
+        token
+    }
+
     #[allow(
         clippy::unnecessary_wraps,
         reason = "`Option<Location>` is more commonly used, this simplifies things"

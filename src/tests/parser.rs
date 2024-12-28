@@ -112,6 +112,21 @@ fn object() {
 }
 
 #[test]
+fn dot_access() {
+    let input = "package.dependencies";
+    let expected = vec![Statement::new(
+        StatementType::Expr(Expr::new(
+            ExprType::DotAccess(vec!["package".into(), "dependencies".into()]),
+            0,
+            0..=20,
+        )),
+        0,
+        0..=20,
+    )];
+    assert_eq!(parse(input).unwrap(), expected);
+}
+
+#[test]
 fn array() {
     let input = "[ 1 2 3 ]";
     let expected = vec![literal!(

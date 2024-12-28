@@ -104,24 +104,16 @@ impl super::Parser {
         let name_token = name.0.clone();
         let mut paths: Vec<String> = vec![name.1];
 
-        let next_token = {
-            let token = self.tokens.get(self.position);
-            if token.is_some() {
-                self.position = self.position.saturating_add(1);
-            }
-            token
-        };
-
-        while let Some(token) = next_token {
-            if let TokenType::Identifier(ident) = &token.token_type {
-                paths.push(ident.clone());
+        while let Some(token) = self.advance() {
+            if let TokenType::Identifier(v) = &token.token_type {
+                paths.push(v.clone());
             }
         }
 
         let line = name_token.line;
         let token = self
             .tokens
-            .get(self.position)
+            .get(self.position.saturating_sub(1))
             .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?;
 
         Ok(Expr::new(

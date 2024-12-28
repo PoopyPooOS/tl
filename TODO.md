@@ -8,6 +8,7 @@
         - Function declarations implemented.
     - [x] Add logic operators.
     - [] Fix dot access parsing.
+    - [] Add array indexing.
     - [x] Use round parenthesis for order of operation in binary operations.
     - [x] Store location data for AST expressions/statements **(very important for error context)**.
 
