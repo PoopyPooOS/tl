@@ -29,7 +29,6 @@ pub struct Parser {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-#[allow(dead_code)]
 enum Context {
     TopLevel,
     Function,
