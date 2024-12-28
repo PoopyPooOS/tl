@@ -51,6 +51,16 @@
 				{
 					"name": "constant.character.escape.tl",
 					"match": "\\\\."
+				},
+				{
+					"name": "string.interpolated.tl",
+					"begin": "\\$\\{",
+					"end": "\\}",
+					"patterns": [
+						{
+							"include": "#expression"
+						}
+					]
 				}
 			]
 		},
@@ -91,5 +101,14 @@
 			"match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
 		}
 	],
+	"repository": {
+		"expression": {
+			"patterns": [
+				{
+					"include": "$self"
+				}
+			]
+		}
+	},
 	"scopeName": "source.tl"
 }
