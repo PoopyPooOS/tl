@@ -281,7 +281,7 @@ impl Parser {
                     match value.as_str() {
                         _ if value.parse::<i64>().is_ok() => {
                             tokens.push(Token::new(
-                                TokenType::Int(value.parse::<i64>()?),
+                                TokenType::Int(value.parse::<isize>()?),
                                 self.line,
                                 self.column.saturating_sub(value.len())..=self.column,
                             ));

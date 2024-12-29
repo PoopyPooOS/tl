@@ -14,7 +14,7 @@ pub enum TokenType {
     // Literals
     InterpolatedString(Vec<Token>),
     String(String),
-    Int(i64),
+    Int(isize),
     Float(f64),
     Bool(bool),
     // TODO: Make this an enum similar to `Option`, `null` is not going to work well with the type checker.

@@ -1,6 +1,7 @@
 - Tokenizer:
     - [x] Add more binary operators.
     - [x] Do string interpolation in the tokenizer rather than in the AST.
+    - [] Add proper support for negative numbers.
 
 - AST:
     - [x] Handle objects, arrays and other more complex expressions.

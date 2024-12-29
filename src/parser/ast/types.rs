@@ -47,6 +47,8 @@ pub enum ExprType {
     Literal(Literal),
     Identifier(String),
     DotAccess(Vec<String>),
+    /// ident, index
+    ArrayIndex(String, usize),
     BinaryOp {
         left: Box<Expr>,
         operator: BinaryOperator,
@@ -67,7 +69,7 @@ pub enum ExprType {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
     Null,
-    Int(i64),
+    Int(isize),
     Float(f64),
     Bool(bool),
     String(String),
@@ -197,6 +199,9 @@ pub enum ErrorType {
     /// When a binary operator is expected but another token type was found.
     InvalidBinaryOperator(TokenType),
 
+    /// When an array index is negative.
+    NegativeArrayIndex,
+
     /// When a colon is found between object key-value pairs.
     UnexpectedColonInObjectKV,
 
@@ -242,6 +247,7 @@ impl From<Error> for Log {
         log.message(match value.error_type {
             ErrorType::MissingRightSide => "Missing right side of binary operation".to_string(),
             ErrorType::InvalidBinaryOperator(token) => format!("Invalid binary operator: {token}"),
+            ErrorType::NegativeArrayIndex => "Can not index array with negative index".to_string(),
             ErrorType::UnexpectedColonInObjectKV => "Unexpected ':' between object key-value pairs".to_string(),
             ErrorType::ExpectedSeperatorInObjectKV => "Expected ':' or '=' after object key".to_string(),
             ErrorType::NoIdentifierAfterLet => "Expected identifier after 'let' keyword".to_string(),
