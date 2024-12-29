@@ -4,7 +4,7 @@
 - AST:
     - [-] Handle struct and function declarations.
         - Function declarations implemented.
-    - [] Add array indexing.
+    - [x] Add array indexing.
 
 - Type Checker:
     - [] Implement static type checking before evaluation.
