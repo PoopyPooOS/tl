@@ -1,17 +1,10 @@
 - Tokenizer:
-    - [x] Add more binary operators.
-    - [x] Do string interpolation in the tokenizer rather than in the AST.
     - [] Add proper support for negative numbers.
 
 - AST:
-    - [x] Handle objects, arrays and other more complex expressions.
     - [-] Handle struct and function declarations.
         - Function declarations implemented.
-    - [x] Add logic operators.
-    - [x] Fix dot access parsing.
     - [] Add array indexing.
-    - [x] Use round parenthesis for order of operation in binary operations.
-    - [x] Store location data for AST expressions/statements **(very important for error context)**.
 
 - Type Checker:
     - [] Implement static type checking before evaluation.
