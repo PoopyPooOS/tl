@@ -99,7 +99,6 @@ impl Parser {
 
                 // Binary operators
                 '+' => push_token!(Plus, 1),
-                '-' => push_token!(Minus, 1),
                 '*' => push_token!(Multiply, 1),
                 '%' => push_token!(Modulo, 1),
 
@@ -261,11 +260,11 @@ impl Parser {
                 }
 
                 // Parse numbers and floats
-                _ if ch.is_ascii_digit() || ch == '.' => {
+                _ if ch.is_ascii_digit() || ch == '.' || ch == '-' => {
                     let mut value = String::new();
 
                     while let Some(&ch) = chars.peek()
-                        && (ch.is_ascii_digit() || ch == '.')
+                        && (ch.is_ascii_digit() || ch == '.' || ch == '-')
                     {
                         value.push(ch);
                         chars.next();
@@ -279,6 +278,7 @@ impl Parser {
 
                     self.column = self.column.saturating_add(value.len());
                     match value.as_str() {
+                        "-" => push_token!(Minus, 1),
                         _ if value.parse::<i64>().is_ok() => {
                             tokens.push(Token::new(
                                 TokenType::Int(value.parse::<isize>()?),

@@ -1,5 +1,5 @@
 - Tokenizer:
-    - [] Add proper support for negative numbers.
+    - [x] Add proper support for negative numbers.
 
 - AST:
     - [-] Handle struct and function declarations.

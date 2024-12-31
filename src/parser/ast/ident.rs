@@ -138,20 +138,16 @@ impl super::Parser {
         };
 
         let index = match next_token {
-            Some(token) => {
-                dbg!(&token.token_type);
-                match &token.token_type {
-                    TokenType::Int(v) => {
-                        if *v < 0 {
-                            return Err(Box::new(Error::new(ErrorType::NegativeArrayIndex, self.location_from_token(token))));
-                        }
-
-                        usize::try_from(*v)
-                            .map_err(|_| Box::new(Error::new(ErrorType::NegativeArrayIndex, self.location_from_token(token))))?
+            Some(token) => match &token.token_type {
+                TokenType::Int(v) => {
+                    if *v < 0 {
+                        return Err(Box::new(Error::new(ErrorType::NegativeArrayIndex, self.location_from_token(token))));
                     }
-                    _ => return Err(Box::new(Error::new(ErrorType::ExpectedToken(TokenType::Int(0)), None))),
+
+                    usize::try_from(*v).map_err(|_| Box::new(Error::new(ErrorType::NegativeArrayIndex, self.location_from_token(token))))?
                 }
-            }
+                _ => return Err(Box::new(Error::new(ErrorType::ExpectedToken(TokenType::Int(0)), None))),
+            },
             None => return Err(Box::new(Error::new(ErrorType::NoTokensLeft, None))),
         };
 
