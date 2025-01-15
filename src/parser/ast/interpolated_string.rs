@@ -1,5 +1,6 @@
 use super::{
-    types::{Error, ErrorType, Expr, ExprType, Literal, StatementType},
+    raw_err,
+    types::{Expr, ExprType, Literal, StatementType},
     ExprResult,
 };
 use crate::parser::tokenizer::types::{Token, TokenType};
@@ -10,7 +11,7 @@ impl super::Parser {
         let start = self
             .tokens
             .get(self.position)
-            .ok_or_else(|| Box::new(Error::new(ErrorType::ExpectedToken(TokenType::InterpolatedString(vec![])), None)))?;
+            .ok_or_else(|| raw_err!(ExpectedToken(TokenType::InterpolatedString(vec![])), None))?;
 
         for token in v {
             match &token.token_type {
@@ -44,6 +45,9 @@ impl super::Parser {
                 }
             }
         }
+
+        // Consume the interpolated string
+        self.position = self.position.saturating_add(1);
 
         Ok(Expr::new(
             ExprType::Literal(Literal::InterpolatedString(result)),

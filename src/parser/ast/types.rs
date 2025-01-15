@@ -2,6 +2,8 @@ use crate::parser::tokenizer::{self, types::TokenType};
 use logger::{Location, Log, LogLevel};
 use std::{collections::BTreeMap, fmt::Display, io, ops::RangeInclusive};
 
+use super::err;
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Statement {
     pub statement_type: StatementType,
@@ -23,7 +25,6 @@ impl Statement {
 #[derive(Debug, PartialEq, Clone)]
 pub enum StatementType {
     Let { name: String, value: Expr },
-    Struct { name: String, fields: Vec<String> },
     Expr(Expr),
 }
 
@@ -37,7 +38,11 @@ pub struct Expr {
 impl Expr {
     #[must_use]
     pub fn new(expr_type: ExprType, line: usize, cols: RangeInclusive<usize>) -> Self {
-        Self { expr_type, line, cols }
+        Self {
+            expr_type,
+            line,
+            cols,
+        }
     }
 }
 
@@ -46,7 +51,10 @@ pub enum ExprType {
     Not(Box<Expr>),
     Literal(Literal),
     Identifier(String),
-    DotAccess(Vec<String>),
+    DotAccess {
+        base: String,
+        paths: Vec<Expr>,
+    },
     /// ident, index
     ArrayIndex(String, usize),
     BinaryOp {
@@ -55,9 +63,7 @@ pub enum ExprType {
         right: Box<Expr>,
     },
     FnDecl {
-        /// Arguments are `(name, type)`
-        args: Vec<(String, String)>,
-        return_type: Option<String>,
+        args: Vec<String>,
         body: Vec<Statement>,
     },
     Call {
@@ -137,7 +143,7 @@ impl BinaryOperator {
             TokenType::And => Ok(BinaryOperator::And),
             TokenType::Or => Ok(BinaryOperator::Or),
 
-            _ => Err(Box::new(Error::new(ErrorType::UnexpectedToken(token_type), None))),
+            _ => err!(UnexpectedToken(token_type)),
         }
     }
 }
@@ -175,8 +181,7 @@ pub struct Error {
     location: Option<Location>,
 }
 
-impl std::error::Error for Error {
-}
+impl std::error::Error for Error {}
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -187,7 +192,10 @@ impl Display for Error {
 impl Error {
     #[must_use]
     pub fn new(error_type: ErrorType, location: Option<Location>) -> Self {
-        Self { error_type, location }
+        Self {
+            error_type,
+            location,
+        }
     }
 }
 
@@ -248,11 +256,21 @@ impl From<Error> for Log {
             ErrorType::MissingRightSide => "Missing right side of binary operation".to_string(),
             ErrorType::InvalidBinaryOperator(token) => format!("Invalid binary operator: {token}"),
             ErrorType::NegativeArrayIndex => "Can not index array with negative index".to_string(),
-            ErrorType::UnexpectedColonInObjectKV => "Unexpected ':' between object key-value pairs".to_string(),
-            ErrorType::ExpectedSeperatorInObjectKV => "Expected ':' or '=' after object key".to_string(),
-            ErrorType::NoIdentifierAfterLet => "Expected identifier after 'let' keyword".to_string(),
-            ErrorType::ExpectedTokenGot(expected, found) => format!("Expected token '{expected}' found '{found}'"),
-            ErrorType::ExpectedToken(expected) => format!("Expected token '{expected}', but no tokens are left"),
+            ErrorType::UnexpectedColonInObjectKV => {
+                "Unexpected ':' between object key-value pairs".to_string()
+            }
+            ErrorType::ExpectedSeperatorInObjectKV => {
+                "Expected ':' or '=' after object key".to_string()
+            }
+            ErrorType::NoIdentifierAfterLet => {
+                "Expected identifier after 'let' keyword".to_string()
+            }
+            ErrorType::ExpectedTokenGot(expected, found) => {
+                format!("Expected token '{expected}' found '{found}'")
+            }
+            ErrorType::ExpectedToken(expected) => {
+                format!("Expected token '{expected}', but no tokens are left")
+            }
             ErrorType::UnexpectedToken(token) => format!("Unexpected token: {token}"),
             ErrorType::NoTokensLeft => "No tokens left".to_string(),
             ErrorType::TokenizationError(error) => format!("Tokenization error: {error}"),

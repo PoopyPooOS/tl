@@ -33,7 +33,7 @@ let full_info = "My name is ${name} and I am ${age} year${if(age == 1, "", "s")}
 ## Functions
 Functions are variables that have a value with the following syntax:
 ```tl
-let greet = (name: str): str {
+let greet = (name) {
     "Hello, my name is ${name}!"
 }
 
@@ -60,8 +60,25 @@ if(
 ```
 This requires a value to be explicitly defined on both branch sides.  
 If the else branch doesn't return a value, `null` can be used instead but its recommended to have a proper value instead.
-> **Note:** The `null` value will be deprecated soon in favor of an enum similar to `Option` in Rust as it is more friendly to the type system.
 
+## Modules
+Other files can be evaluated and imported with the `import` function:
+```tl
+// math.tl
+{
+    add = (a b) {
+        a + b
+    }
 
-## Note
-If anything wasn't mentioned here, just assume it's like most other languages.
+    sub = (a b) {
+        a - b
+    }
+}
+```
+```tl
+// main.tl
+let math = import("math.tl")
+
+println(math.add(3, 5)) // 8
+println(math.sub(5, 3)) // 2
+```

@@ -1,8 +1,11 @@
 use super::{
-    types::{Error, ErrorType, Expr, ExprType},
+    types::{Expr, ExprType},
     ExprResult,
 };
-use crate::parser::tokenizer::types::TokenType;
+use crate::parser::{
+    ast::{advance, consume, err, raw_err, Context},
+    tokenizer::types::TokenType,
+};
 
 impl super::Parser {
     pub(super) fn parse_ident(&mut self) -> ExprResult {
@@ -10,25 +13,19 @@ impl super::Parser {
         let mut is_access = false;
         let mut is_index = false;
 
-        if let Some(next_token) = self.tokens.get(self.position.saturating_add(1)) {
-            if next_token.token_type.is_binary_operator() {
-                return self.parse_binary_op(0);
-            }
+        let last_context = self.context.clone();
 
-            is_call = next_token.token_type == TokenType::LParen;
-            is_access = next_token.token_type == TokenType::Dot;
+        if let Some(next_token) = self.tokens.get(self.position.saturating_add(1)) {
+            if next_token.token_type == TokenType::LParen {
+                is_call = true;
+                self.context = Context::CallArgs;
+            }
+            is_access =
+                next_token.token_type == TokenType::Dot && self.context != Context::DotAccessPath;
             is_index = next_token.token_type == TokenType::LBracket;
         }
 
-        let next_token = {
-            let token = self.tokens.get(self.position).cloned();
-            if token.is_some() {
-                self.position = self.position.saturating_add(1);
-            }
-            token
-        };
-
-        let name = match next_token {
+        let name = match advance!(self) {
             Some(token) => {
                 if let TokenType::Identifier(name) = &token.token_type {
                     (token.clone(), name.clone())
@@ -40,13 +37,17 @@ impl super::Parser {
         };
 
         if !is_call && !is_access && !is_index {
-            return Ok(Expr::new(ExprType::Identifier(name.1), name.0.line, name.0.cols.clone()));
+            return Ok(Expr::new(
+                ExprType::Identifier(name.1),
+                name.0.line,
+                name.0.cols.clone(),
+            ));
         }
 
         if is_call {
             let name = (name.0.clone(), name.1);
             let mut call_args = Vec::new();
-            self.consume(TokenType::LParen)?;
+            consume!(self, LParen);
 
             // Empty args
             if let Some(token) = self.tokens.get(self.position) {
@@ -66,8 +67,8 @@ impl super::Parser {
             }
 
             // 1 argument with no commas
-            let token = self.parse_expr()?;
-            call_args.push(token);
+            let expr = self.parse_expr()?;
+            call_args.push(expr);
 
             // Handle multiple args
             while let Some(next_token) = self.tokens.get(self.position) {
@@ -75,22 +76,28 @@ impl super::Parser {
                     break;
                 }
 
-                self.consume(TokenType::Comma)?;
+                consume!(self, Comma);
 
                 let token = self.parse_expr()?;
                 call_args.push(token);
             }
 
-            self.consume(TokenType::RParen)?;
+            consume!(self, RParen);
 
             let start = &name.0;
-            let end = &self.tokens.iter().filter(|token| token.line == start.line).collect::<Vec<_>>();
+            let end = &self
+                .tokens
+                .iter()
+                .filter(|token| token.line == start.line)
+                .collect::<Vec<_>>();
             end.clone().sort_by(|a, b| a.cols.end().cmp(b.cols.end()));
             let end = end.last().copied().unwrap_or(
                 self.tokens
                     .get(self.position.saturating_sub(1))
-                    .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?,
+                    .ok_or_else(|| raw_err!(NoTokensLeft))?,
             );
+
+            self.context = last_context;
 
             return Ok(Expr::new(
                 ExprType::Call {
@@ -105,59 +112,69 @@ impl super::Parser {
         if is_access {
             // Clone otherwise it would require 2 mutable borrows.
             let name_token = name.0.clone();
-            let mut paths: Vec<String> = vec![name.1];
+            let base = name.1;
+            let mut paths: Vec<Expr> = vec![];
 
-            while let Some(token) = self.advance() {
-                if let TokenType::Identifier(v) = &token.token_type {
-                    paths.push(v.clone());
+            let mut dot = true;
+
+            let last_context = self.context.clone();
+            self.context = Context::DotAccessPath;
+
+            while let Some(token) = advance!(self) {
+                match &token.token_type {
+                    TokenType::Identifier(_) if dot => {
+                        self.position = self.position.saturating_sub(1);
+                        paths.push(self.parse_ident()?);
+                        dot = false;
+                    }
+                    TokenType::Dot => dot = true,
+                    _ => {
+                        self.position = self.position.saturating_sub(1);
+                        break;
+                    }
                 }
             }
+            self.context = last_context;
 
-            let line = name_token.line;
             let token = self
                 .tokens
                 .get(self.position.saturating_sub(1))
-                .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?;
+                .ok_or_else(|| raw_err!(NoTokensLeft))?;
 
+            let line = name_token.line;
             return Ok(Expr::new(
-                ExprType::DotAccess(paths),
+                ExprType::DotAccess { base, paths },
                 line,
                 *name_token.cols.start()..=*token.cols.end(),
             ));
         }
 
         let name_token = name.0.clone();
-        self.consume(TokenType::LBracket)?;
+        consume!(self, LBracket);
 
-        let next_token = {
-            let token = self.tokens.get(self.position);
-            if token.is_some() {
-                self.position = self.position.saturating_add(1);
-            }
-            token
-        };
-
-        let index = match next_token {
+        let index = match advance!(self) {
             Some(token) => match &token.token_type {
                 TokenType::Int(v) => {
                     if *v < 0 {
-                        return Err(Box::new(Error::new(ErrorType::NegativeArrayIndex, self.location_from_token(token))));
+                        return err!(NegativeArrayIndex, self.location_from_token(token));
                     }
 
-                    usize::try_from(*v).map_err(|_| Box::new(Error::new(ErrorType::NegativeArrayIndex, self.location_from_token(token))))?
+                    usize::try_from(*v).map_err(|_| {
+                        raw_err!(NegativeArrayIndex, self.location_from_token(token))
+                    })?
                 }
-                _ => return Err(Box::new(Error::new(ErrorType::ExpectedToken(TokenType::Int(0)), None))),
+                _ => return err!(ExpectedToken(TokenType::Int(0))),
             },
-            None => return Err(Box::new(Error::new(ErrorType::NoTokensLeft, None))),
+            _ => return err!(NoTokensLeft),
         };
 
-        self.consume(TokenType::RBracket)?;
+        consume!(self, RBracket);
 
         let line = name_token.line;
         let token = self
             .tokens
             .get(self.position.saturating_sub(1))
-            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?;
+            .ok_or_else(|| raw_err!(NoTokensLeft))?;
 
         Ok(Expr::new(
             ExprType::ArrayIndex(name.1, index),

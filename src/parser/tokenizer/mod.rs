@@ -57,15 +57,12 @@ impl Parser {
                 ' ' | '\t' => {
                     chars.next();
                     self.column = self.column.saturating_add(1);
-                    continue;
                 }
                 '\n' => {
                     chars.next();
                     self.line = self.line.saturating_add(1);
                     self.column = 0;
-                    continue;
                 }
-
                 // Comments / Slash operator
                 '/' => {
                     if let Some(next_ch) = chars.clone().nth(1)
@@ -249,7 +246,11 @@ impl Parser {
                     }
 
                     if values.len() <= 1 {
-                        tokens.push(Token::new(TokenType::String(buffer), self.line, start..=self.column));
+                        tokens.push(Token::new(
+                            TokenType::String(buffer),
+                            self.line,
+                            start..=self.column,
+                        ));
                     } else {
                         tokens.push(Token::new(
                             TokenType::InterpolatedString(values),
@@ -341,8 +342,6 @@ impl Parser {
                         "false" => push_long_token!(Bool(false)),
 
                         // Keywords
-                        "struct" => push_long_token!(Struct),
-                        "enum" => push_long_token!(Enum),
                         "let" => push_long_token!(Let),
 
                         // Operators

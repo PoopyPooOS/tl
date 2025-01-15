@@ -1,4 +1,4 @@
-let greet = (name: str): str {
+let greet = (name) {
     "Hello, ${name}!"
 }
 

@@ -17,6 +17,6 @@ fn main() {
     });
     let elapsed = now.elapsed();
 
-    dbg!(&ast);
+    dbg!(ast);
     println!("Took {elapsed:?}");
 }

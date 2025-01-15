@@ -24,8 +24,6 @@ pub enum TokenType {
     Identifier(String),
 
     // Keywords
-    Struct,
-    Enum,
     Let,
 
     // Logic Operators
@@ -125,8 +123,6 @@ impl Display for TokenType {
             TokenType::Identifier(v) => write!(f, "{v}"),
 
             // Keywords
-            TokenType::Struct => write!(f, "struct"),
-            TokenType::Enum => write!(f, "enum"),
             TokenType::Let => write!(f, "let"),
 
             // Logic Operators
@@ -174,7 +170,11 @@ pub struct Token {
 impl Token {
     #[must_use]
     pub fn new(token_type: TokenType, line: usize, cols: RangeInclusive<usize>) -> Self {
-        Self { token_type, line, cols }
+        Self {
+            token_type,
+            line,
+            cols,
+        }
     }
 }
 
@@ -196,8 +196,7 @@ pub struct Error {
     location: Option<Location>,
 }
 
-impl std::error::Error for Error {
-}
+impl std::error::Error for Error {}
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -208,7 +207,10 @@ impl Display for Error {
 impl Error {
     #[must_use]
     pub fn new(error_type: ErrorType, location: Option<Location>) -> Self {
-        Self { error_type, location }
+        Self {
+            error_type,
+            location,
+        }
     }
 }
 

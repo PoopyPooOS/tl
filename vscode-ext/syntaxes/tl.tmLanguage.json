@@ -89,12 +89,20 @@
 			"match": "\\b[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\\:)"
 		},
 		{
+			"name": "variable.parameter.tl",
+			"match": "self"
+		},
+		{
 			"name": "variable.function.call.tl",
 			"match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\s*(?=\\()"
 		},
 		{
+			"name": "keyword.control.tl",
+			"match": "bool|uint|int|float|str|vec|obj"
+		},
+		{
 			"name": "support.type.tl",
-			"match": "(?<=\\:)\\s*[a-zA-Z_][a-zA-Z0-9_]*"
+			"match": "(?<=\\:|<)\\s*(?!\\b(bool|uint|int|float|str|vec|obj)\\b)[a-zA-Z_][a-zA-Z0-9_]*"
 		},
 		{
 			"name": "support.type.tl",

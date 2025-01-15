@@ -1,4 +1,4 @@
-let pow = (base: int, exponent: int): int {
+let pow = (base exponent) {
     if(
         exponent == 0,
         1,

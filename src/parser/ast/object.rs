@@ -1,91 +1,64 @@
 use super::{
-    types::{Error, ErrorType, Expr, ExprType, Literal},
+    types::{Expr, ExprType, Literal},
     Context, ExprResult,
 };
-use crate::parser::tokenizer::types::TokenType;
+use crate::parser::{
+    ast::{advance, consume, err, raw_err},
+    tokenizer::types::TokenType,
+};
 use std::collections::BTreeMap;
 
 impl super::Parser {
     pub(super) fn parse_object(&mut self) -> ExprResult {
-        let start = self
-            .tokens
-            .get(self.position)
-            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?
-            .clone();
+        let start = self.tokens.get(self.position).ok_or_else(|| raw_err!(NoTokensLeft))?.clone();
 
-        self.consume(TokenType::LBrace)?;
+        consume!(self, LBrace);
         let last_context = self.context.clone();
         self.context = Context::Object;
 
         let mut fields = BTreeMap::new();
 
         loop {
-            let token = self
-                .tokens
-                .get(self.position)
-                .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?;
+            let token = self.tokens.get(self.position).ok_or_else(|| raw_err!(NoTokensLeft))?;
 
             if token.token_type == TokenType::RBrace {
-                self.consume(TokenType::RBrace)?;
+                consume!(self, RBrace);
                 break;
             }
 
-            let next_token = {
-                let token = self.tokens.get(self.position);
-                if token.is_some() {
-                    self.position = self.position.saturating_add(1);
-                }
-                token
-            };
-
-            let key = match next_token {
+            let key = match advance!(self) {
                 Some(token) => {
                     if let TokenType::Identifier(name) = &token.token_type {
                         name.clone()
                     } else {
-                        return Err(Box::new(Error::new(
-                            ErrorType::ExpectedTokenGot(TokenType::Identifier(String::new()), token.token_type.clone()),
-                            self.location_from_token(token),
-                        )));
+                        return err!(
+                            ExpectedTokenGot(TokenType::Identifier(String::new()), token.token_type.clone()),
+                            self.location_from_token(token)
+                        );
                     }
                 }
                 _ => {
-                    return Err(Box::new(Error::new(
-                        ErrorType::ExpectedToken(TokenType::Identifier(String::new())),
-                        self.location_from_token(
-                            self.tokens
-                                .get(self.position)
-                                .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?,
-                        ),
-                    )))
+                    return err!(
+                        ExpectedToken(TokenType::Identifier(String::new())),
+                        self.location_from_token(self.tokens.get(self.position).ok_or_else(|| raw_err!(NoTokensLeft))?,)
+                    );
                 }
             };
 
-            let next_token = {
-                let token = self.tokens.get(self.position);
-                if token.is_some() {
-                    self.position = self.position.saturating_add(1);
-                }
-                token
-            };
-
-            match next_token {
+            match advance!(self) {
                 Some(token) => match token.token_type {
                     TokenType::Equals => (),
                     TokenType::Colon => {
-                        return Err(Box::new(Error::new(
-                            ErrorType::UnexpectedColonInObjectKV,
-                            self.location_from_token(token),
-                        )))
+                        return err!(UnexpectedColonInObjectKV, self.location_from_token(token));
                     }
                     _ => {}
                 },
                 _ => {
-                    return Err(Box::new(Error::new(
-                        ErrorType::ExpectedSeperatorInObjectKV,
+                    return err!(
+                        ExpectedSeperatorInObjectKV,
                         #[allow(clippy::unwrap_used, reason = "`location_from_token` always returns `Some`")]
-                        self.tokens.get(self.position).map(|token| self.location_from_token(token).unwrap()),
-                    )))
+                        self.tokens.get(self.position).map(|token| self.location_from_token(token).unwrap())
+                    );
                 }
             }
 
@@ -98,7 +71,7 @@ impl super::Parser {
         let end = self
             .tokens
             .get(self.position.saturating_sub(1))
-            .ok_or_else(|| Box::new(Error::new(ErrorType::NoTokensLeft, None)))?
+            .ok_or_else(|| raw_err!(NoTokensLeft))?
             .cols
             .end();
 
