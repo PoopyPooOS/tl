@@ -2,7 +2,7 @@
     - [x] Add proper support for negative numbers.
 
 - AST:
-    - [X] Handle function declarations.
+    - [x] Handle function declarations.
     - [x] Add array indexing.
     - [x] Make dot accesses binary operations so that they can be applied on any expression instead of just identifiers.
 
