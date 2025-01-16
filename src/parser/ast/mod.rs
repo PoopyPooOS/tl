@@ -33,7 +33,6 @@ enum Context {
     TopLevel,
     Function,
     Object,
-    DotAccessPath,
     CallArgs,
 }
 

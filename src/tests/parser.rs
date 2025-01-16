@@ -132,13 +132,14 @@ fn dot_access() {
     let input = "package.dependencies";
     let expected = vec![Statement::new(
         StatementType::Expr(Expr::new(
-            ExprType::DotAccess {
-                base: "package".into(),
-                paths: vec![Expr::new(
+            ExprType::BinaryOp {
+                left: Box::new(Expr::new(ExprType::Identifier("package".into()), 0, 0..=7)),
+                operator: BinaryOperator::Dot,
+                right: Box::new(Expr::new(
                     ExprType::Identifier("dependencies".into()),
                     0,
                     8..=20,
-                )],
+                )),
             },
             0,
             0..=20,

@@ -10,7 +10,6 @@ use crate::parser::{
 impl super::Parser {
     pub(super) fn parse_ident(&mut self) -> ExprResult {
         let mut is_call = false;
-        let mut is_access = false;
         let mut is_index = false;
 
         let last_context = self.context.clone();
@@ -20,8 +19,6 @@ impl super::Parser {
                 is_call = true;
                 self.context = Context::CallArgs;
             }
-            is_access =
-                next_token.token_type == TokenType::Dot && self.context != Context::DotAccessPath;
             is_index = next_token.token_type == TokenType::LBracket;
         }
 
@@ -36,7 +33,7 @@ impl super::Parser {
             _ => unreachable!(),
         };
 
-        if !is_call && !is_access && !is_index {
+        if !is_call && !is_index {
             return Ok(Expr::new(
                 ExprType::Identifier(name.1),
                 name.0.line,
@@ -106,46 +103,6 @@ impl super::Parser {
                 },
                 name.0.line,
                 *start.cols.start()..=*end.cols.end(),
-            ));
-        }
-
-        if is_access {
-            // Clone otherwise it would require 2 mutable borrows.
-            let name_token = name.0.clone();
-            let base = name.1;
-            let mut paths: Vec<Expr> = vec![];
-
-            let mut dot = true;
-
-            let last_context = self.context.clone();
-            self.context = Context::DotAccessPath;
-
-            while let Some(token) = advance!(self) {
-                match &token.token_type {
-                    TokenType::Identifier(_) if dot => {
-                        self.position = self.position.saturating_sub(1);
-                        paths.push(self.parse_ident()?);
-                        dot = false;
-                    }
-                    TokenType::Dot => dot = true,
-                    _ => {
-                        self.position = self.position.saturating_sub(1);
-                        break;
-                    }
-                }
-            }
-            self.context = last_context;
-
-            let token = self
-                .tokens
-                .get(self.position.saturating_sub(1))
-                .ok_or_else(|| raw_err!(NoTokensLeft))?;
-
-            let line = name_token.line;
-            return Ok(Expr::new(
-                ExprType::DotAccess { base, paths },
-                line,
-                *name_token.cols.start()..=*token.cols.end(),
             ));
         }
 

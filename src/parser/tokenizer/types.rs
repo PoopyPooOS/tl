@@ -96,6 +96,9 @@ impl TokenType {
                 | TokenType::LtEq
                 | TokenType::And
                 | TokenType::Or
+
+                // Logical Operator
+                | TokenType::Dot
         )
     }
 
