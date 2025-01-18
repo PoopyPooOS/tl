@@ -1,7 +1,7 @@
 use logger::error;
 use std::{fmt::Display, fs, path::PathBuf, process};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Source {
     pub path: Option<PathBuf>,
     pub text: String,
@@ -28,12 +28,18 @@ impl From<PathBuf> for Source {
         let text = match fs::read_to_string(&path) {
             Ok(text) => text,
             Err(err) => {
-                error!(format!("Failed to read from file '{}':\n{err:#?}", &path.display()));
+                error!(format!(
+                    "Failed to read from file '{}':\n{err:#?}",
+                    &path.display()
+                ));
                 process::exit(1);
             }
         };
 
-        Self { path: Some(path), text }
+        Self {
+            path: Some(path),
+            text,
+        }
     }
 }
 

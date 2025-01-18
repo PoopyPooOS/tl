@@ -16,8 +16,13 @@
 #[cfg(test)]
 mod tests;
 
+mod error;
+mod source;
+pub use error::Error;
+pub use source::Source;
+
 // Parsers
 pub mod parser;
 
-mod source;
-pub use source::Source;
+// Runtime
+pub mod runtime;

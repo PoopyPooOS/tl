@@ -1,5 +1,5 @@
 use crate::parser::tokenizer::{self, types::TokenType};
-use logger::{Location, Log, LogLevel};
+use logger::{Log, LogLevel};
 use std::{collections::BTreeMap, fmt::Display, io, ops::RangeInclusive};
 
 use super::err;
@@ -73,7 +73,7 @@ pub enum Literal {
     Null,
     Int(isize),
     Float(f64),
-    Bool(bool),
+    Boolean(bool),
     String(String),
     InterpolatedString(Vec<Expr>),
     Array(Vec<Expr>),
@@ -115,8 +115,8 @@ impl BinaryOperator {
     #[must_use]
     pub fn precedence(&self) -> u8 {
         match self {
-            BinaryOperator::Plus | BinaryOperator::Minus => 1,
-            BinaryOperator::Multiply | BinaryOperator::Divide => 2,
+            Self::Plus | Self::Minus => 1,
+            Self::Multiply | Self::Divide => 2,
             _ => 0,
         }
     }
@@ -126,24 +126,24 @@ impl BinaryOperator {
     pub fn from_token(token_type: TokenType) -> Result<Self, Box<Error>> {
         match token_type {
             // Math Operators
-            TokenType::Plus => Ok(BinaryOperator::Plus),
-            TokenType::Minus => Ok(BinaryOperator::Minus),
-            TokenType::Multiply => Ok(BinaryOperator::Multiply),
-            TokenType::Slash => Ok(BinaryOperator::Divide),
-            TokenType::Modulo => Ok(BinaryOperator::Modulo),
+            TokenType::Plus => Ok(Self::Plus),
+            TokenType::Minus => Ok(Self::Minus),
+            TokenType::Multiply => Ok(Self::Multiply),
+            TokenType::Slash => Ok(Self::Divide),
+            TokenType::Modulo => Ok(Self::Modulo),
 
             // Logic Operators
-            TokenType::Eq => Ok(BinaryOperator::Eq),
-            TokenType::NotEq => Ok(BinaryOperator::NotEq),
-            TokenType::Gt => Ok(BinaryOperator::Gt),
-            TokenType::GtEq => Ok(BinaryOperator::GtEq),
-            TokenType::Lt => Ok(BinaryOperator::Lt),
-            TokenType::LtEq => Ok(BinaryOperator::LtEq),
-            TokenType::And => Ok(BinaryOperator::And),
-            TokenType::Or => Ok(BinaryOperator::Or),
+            TokenType::Eq => Ok(Self::Eq),
+            TokenType::NotEq => Ok(Self::NotEq),
+            TokenType::Gt => Ok(Self::Gt),
+            TokenType::GtEq => Ok(Self::GtEq),
+            TokenType::Lt => Ok(Self::Lt),
+            TokenType::LtEq => Ok(Self::LtEq),
+            TokenType::And => Ok(Self::And),
+            TokenType::Or => Ok(Self::Or),
 
             // Access Operators
-            TokenType::Dot => Ok(BinaryOperator::Dot),
+            TokenType::Dot => Ok(Self::Dot),
 
             _ => err!(UnexpectedToken(token_type)),
         }
@@ -157,52 +157,30 @@ impl Display for BinaryOperator {
             "{}",
             match self {
                 // Math Operators
-                BinaryOperator::Plus => "+",
-                BinaryOperator::Minus => "-",
-                BinaryOperator::Multiply => "*",
-                BinaryOperator::Divide => "/",
-                BinaryOperator::Modulo => "%",
+                Self::Plus => "+",
+                Self::Minus => "-",
+                Self::Multiply => "*",
+                Self::Divide => "/",
+                Self::Modulo => "%",
 
                 // Logic Operators
-                BinaryOperator::Eq => "==",
-                BinaryOperator::NotEq => "!=",
-                BinaryOperator::Gt => ">",
-                BinaryOperator::GtEq => ">=",
-                BinaryOperator::Lt => "<",
-                BinaryOperator::LtEq => "<=",
-                BinaryOperator::And => "&&",
-                BinaryOperator::Or => "||",
+                Self::Eq => "==",
+                Self::NotEq => "!=",
+                Self::Gt => ">",
+                Self::GtEq => ">=",
+                Self::Lt => "<",
+                Self::LtEq => "<=",
+                Self::And => "&&",
+                Self::Or => "||",
 
                 // Access Operators
-                BinaryOperator::Dot => ".",
+                Self::Dot => ".",
             }
         )
     }
 }
 
-#[derive(Debug)]
-pub struct Error {
-    error_type: ErrorType,
-    location: Option<Location>,
-}
-
-impl std::error::Error for Error {}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.error_type)
-    }
-}
-
-impl Error {
-    #[must_use]
-    pub fn new(error_type: ErrorType, location: Option<Location>) -> Self {
-        Self {
-            error_type,
-            location,
-        }
-    }
-}
+pub type Error = crate::Error<ErrorType>;
 
 #[derive(Debug)]
 pub enum ErrorType {
@@ -254,22 +232,19 @@ impl From<Error> for Log {
             ErrorType::UnexpectedColonInObjectKV => {
                 log.hint = Some("Use '=' instead".into());
             }
+            ErrorType::TokenizationError(error) => return Self::from(error),
             _ => {}
         }
 
         log.message(match value.error_type {
-            ErrorType::MissingRightSide => "Missing right side of binary operation".to_string(),
+            ErrorType::MissingRightSide => "Missing right side of binary operation".into(),
             ErrorType::InvalidBinaryOperator(token) => format!("Invalid binary operator: {token}"),
-            ErrorType::NegativeArrayIndex => "Can not index array with negative index".to_string(),
+            ErrorType::NegativeArrayIndex => "Can not index array with negative index".into(),
             ErrorType::UnexpectedColonInObjectKV => {
-                "Unexpected ':' between object key-value pairs".to_string()
+                "Unexpected ':' between object key-value pairs".into()
             }
-            ErrorType::ExpectedSeperatorInObjectKV => {
-                "Expected ':' or '=' after object key".to_string()
-            }
-            ErrorType::NoIdentifierAfterLet => {
-                "Expected identifier after 'let' keyword".to_string()
-            }
+            ErrorType::ExpectedSeperatorInObjectKV => "Expected ':' or '=' after object key".into(),
+            ErrorType::NoIdentifierAfterLet => "Expected identifier after 'let' keyword".into(),
             ErrorType::ExpectedTokenGot(expected, found) => {
                 format!("Expected token '{expected}' found '{found}'")
             }
@@ -277,7 +252,7 @@ impl From<Error> for Log {
                 format!("Expected token '{expected}', but no tokens are left")
             }
             ErrorType::UnexpectedToken(token) => format!("Unexpected token: {token}"),
-            ErrorType::NoTokensLeft => "No tokens left".to_string(),
+            ErrorType::NoTokensLeft => "No tokens left".into(),
             ErrorType::TokenizationError(error) => format!("Tokenization error: {error}"),
             ErrorType::IOError(error) => format!("IO error: {error}"),
         })

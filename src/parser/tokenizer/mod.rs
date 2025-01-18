@@ -48,7 +48,7 @@ impl Parser {
                 return false;
             }
 
-            ch.is_alphanumeric() || matches!(ch, '_' | '.' | '=' | '!' | '<' | '>')
+            ch.is_alphanumeric() || matches!(ch, '_' | '.' | '=' | '!' | '<' | '>' | '&' | '|')
         };
 
         while let Some(&ch) = chars.peek() {
@@ -344,7 +344,7 @@ impl Parser {
                         // Keywords
                         "let" => push_long_token!(Let),
 
-                        // Operators
+                        // Logic operators
                         "==" => push_long_token!(Eq),
                         "=" => push_long_token!(Equals),
                         "!=" => push_long_token!(NotEq),
@@ -353,6 +353,8 @@ impl Parser {
                         ">" => push_long_token!(Gt),
                         "<=" => push_long_token!(LtEq),
                         "<" => push_long_token!(Lt),
+                        "&&" => push_long_token!(And),
+                        "||" => push_long_token!(Or),
 
                         // Identifier
                         _ => push_long_token!(Identifier(value.to_string())),

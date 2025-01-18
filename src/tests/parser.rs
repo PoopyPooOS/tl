@@ -13,7 +13,7 @@ use pretty_assertions::assert_eq;
 use std::collections::BTreeMap;
 
 fn parse(text: impl Into<String>) -> Result<Vec<Statement>, Box<Log>> {
-    Ok(full_parse(Source::new(text)).map_err(|err| Log::from(*err))?)
+    Ok(full_parse(&Source::new(text)).map_err(|err| Log::from(*err))?)
 }
 
 macro_rules! literal {
@@ -44,11 +44,11 @@ macro_rules! box_literal {
 #[test]
 fn boolean() {
     let input = "true";
-    let expected = vec![literal!(Bool(true), 0, 0..=4)];
+    let expected = vec![literal!(Boolean(true), 0, 0..=4)];
     assert_eq!(parse(input).unwrap(), expected);
 
     let input = "false";
-    let expected = vec![literal!(Bool(false), 0, 0..=5)];
+    let expected = vec![literal!(Boolean(false), 0, 0..=5)];
     assert_eq!(parse(input).unwrap(), expected);
 }
 
@@ -128,7 +128,7 @@ fn object() {
 }
 
 #[test]
-fn dot_access() {
+fn field_access() {
     let input = "package.dependencies";
     let expected = vec![Statement::new(
         StatementType::Expr(Expr::new(
@@ -171,7 +171,7 @@ fn not() {
     let expected = vec![Statement::new(
         StatementType::Expr(Expr::new(
             ExprType::Not(Box::new(Expr::new(
-                ExprType::Literal(Literal::Bool(true)),
+                ExprType::Literal(Literal::Boolean(true)),
                 0,
                 1..=5,
             ))),
@@ -305,13 +305,13 @@ fn function_declaration() {
     #[rustfmt::skip]
     let input = r"let pow = (base exponent) {
     if(
-        exponent == 0,
-        1,
-        base * pow(base, exponent - 1)
+        exponent == 0
+        1
+        base * pow(base exponent - 1)
     )
 }
 
-pow(2, 10)";
+pow(2 10)";
     let expected = vec![
         Statement::new(
             StatementType::Let {
@@ -366,7 +366,7 @@ pow(2, 10)";
                                                                             "exponent".into(),
                                                                         ),
                                                                         4,
-                                                                        25..=33,
+                                                                        24..=32,
                                                                     )),
                                                                     operator: BinaryOperator::Minus,
                                                                     right: Box::new(Expr::new(
@@ -374,20 +374,20 @@ pow(2, 10)";
                                                                             Literal::Int(1),
                                                                         ),
                                                                         4,
-                                                                        36..=37,
+                                                                        35..=36,
                                                                     )),
                                                                 },
                                                                 4,
-                                                                25..=37,
+                                                                24..=36,
                                                             ),
                                                         ],
                                                     },
                                                     4,
-                                                    15..=38,
+                                                    15..=37,
                                                 )),
                                             },
                                             4,
-                                            8..=38,
+                                            8..=37,
                                         ),
                                     ],
                                 },
@@ -411,14 +411,14 @@ pow(2, 10)";
                     name: "pow".into(),
                     args: vec![
                         Expr::new(ExprType::Literal(Literal::Int(2)), 8, 4..=5),
-                        Expr::new(ExprType::Literal(Literal::Int(10)), 8, 7..=9),
+                        Expr::new(ExprType::Literal(Literal::Int(10)), 8, 6..=8),
                     ],
                 },
                 8,
-                0..=10,
+                0..=9,
             )),
             8,
-            0..=10,
+            0..=9,
         ),
     ];
     assert_eq!(parse(input).unwrap(), expected);
@@ -464,8 +464,8 @@ fn call() {
 
     // Multiple arguments
     let input = r#"if(
-    password == "strongpassoword123",
-    "Password is correct",
+    password == "strongpassoword123"
+    "Password is correct"
     "Password is incorrect"
 )"#;
     let expected = vec![Statement::new(
@@ -516,27 +516,6 @@ fn call() {
 #[test]
 fn binary_op() {
     let input = "2 + 3 * 4";
-    /* let expected = vec![Statement::new(
-        StatementType::Expr(Expr::new(
-            ExprType::BinaryOp {
-                left: Box::new(Expr::new(
-                    ExprType::BinaryOp {
-                        left: box_literal!(Int(2), 0, 1..=2),
-                        operator: BinaryOperator::Plus,
-                        right: box_literal!(Int(3), 0, 5..=6),
-                    },
-                    0,
-                    1..=6,
-                )),
-                operator: BinaryOperator::Multiply,
-                right: box_literal!(Int(4), 0, 10..=11),
-            },
-            0,
-            0..=11,
-        )),
-        0,
-        0..=11,
-    )]; */
     let expected = vec![Statement::new(
         StatementType::Expr(Expr::new(
             ExprType::BinaryOp {

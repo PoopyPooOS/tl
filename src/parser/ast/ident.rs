@@ -46,37 +46,13 @@ impl super::Parser {
             let mut call_args = Vec::new();
             consume!(self, LParen);
 
-            // Empty args
-            if let Some(token) = self.tokens.get(self.position) {
-                if token.token_type == TokenType::RParen {
-                    self.position = self.position.saturating_add(1);
-                    let start = *name.0.cols.start();
-
-                    return Ok(Expr::new(
-                        ExprType::Call {
-                            name: name.1,
-                            args: call_args,
-                        },
-                        name.0.line,
-                        start..=*token.cols.end(),
-                    ));
-                }
-            }
-
-            // 1 argument with no commas
-            let expr = self.parse_expr()?;
-            call_args.push(expr);
-
-            // Handle multiple args
             while let Some(next_token) = self.tokens.get(self.position) {
                 if next_token.token_type == TokenType::RParen {
                     break;
                 }
 
-                consume!(self, Comma);
-
-                let token = self.parse_expr()?;
-                call_args.push(token);
+                let expr = self.parse_expr()?;
+                call_args.push(expr);
             }
 
             consume!(self, RParen);

@@ -27,7 +27,7 @@ String interpolation can be done by using `${}` in any string:
 ```tl
 let name = "John Doe"
 let age = 42
-let full_info = "My name is ${name} and I am ${age} year${if(age == 1, "", "s")} old."
+let full_info = "My name is ${name} and I am ${age} year${if(age == 1 "" "s")} old."
 ```
 
 ## Functions
@@ -47,13 +47,13 @@ let num = 10
 
 if(
     // Condition
-    num > 5,
+    num > 5
     // Then
-    "Number is bigger than 5",
+    "Number is bigger than 5"
     // Else branch, another if statement (else if)
     if(
-        num == 5,
-        "Number is exactly 5",
+        num == 5
+        "Number is exactly 5"
         "Number is less than 5"
     )
 )
@@ -79,6 +79,6 @@ Other files can be evaluated and imported with the `import` function:
 // main.tl
 let math = import("math.tl")
 
-println(math.add(3, 5)) // 8
-println(math.sub(5, 3)) // 2
+println(math.add(3 5)) // 8
+println(math.sub(5 3)) // 2
 ```

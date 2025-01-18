@@ -8,7 +8,10 @@ use logger::Location;
 
 impl super::Parser {
     pub(super) fn parse_expr(&mut self) -> ExprResult {
-        let token = self.tokens.get(self.position).ok_or_else(|| raw_err!(NoTokensLeft))?;
+        let token = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| raw_err!(NoTokensLeft))?;
 
         let expr = match token.token_type {
             TokenType::LBrace => Some(self.parse_object()?),
@@ -16,7 +19,10 @@ impl super::Parser {
             TokenType::LParen => {
                 // Function Declaration
                 if let Some(next_token) = self.tokens.get(self.position.saturating_add(1))
-                    && matches!(next_token.token_type, TokenType::Identifier(_) | TokenType::RParen)
+                    && matches!(
+                        next_token.token_type,
+                        TokenType::Identifier(_) | TokenType::RParen
+                    )
                 {
                     return self.parse_fn_decl();
                 }
@@ -24,12 +30,20 @@ impl super::Parser {
                 None
             }
             TokenType::Not => {
-                let token = self.tokens.get(self.position).ok_or_else(|| raw_err!(NoTokensLeft))?.clone();
+                let token = self
+                    .tokens
+                    .get(self.position)
+                    .ok_or_else(|| raw_err!(NoTokensLeft))?
+                    .clone();
 
                 consume!(self, Not);
                 let expr = self.parse_expr()?;
                 let end = *expr.cols.end();
-                Some(Expr::new(ExprType::Not(Box::new(expr)), token.line, *token.cols.start()..=end))
+                Some(Expr::new(
+                    ExprType::Not(Box::new(expr)),
+                    token.line,
+                    *token.cols.start()..=end,
+                ))
             }
             _ => None,
         };
@@ -42,7 +56,11 @@ impl super::Parser {
     }
 
     pub(super) fn parse_literal(&mut self) -> ExprResult {
-        let token = self.tokens.get(self.position).ok_or_else(|| raw_err!(NoTokensLeft))?.clone();
+        let token = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| raw_err!(NoTokensLeft))?
+            .clone();
 
         macro_rules! literal {
             ($variant:ident) => {{
@@ -51,7 +69,11 @@ impl super::Parser {
             }};
             ($variant:ident($value:expr)) => {{
                 self.position = self.position.saturating_add(1);
-                Expr::new(ExprType::Literal(Literal::$variant($value)), token.line, token.cols)
+                Expr::new(
+                    ExprType::Literal(Literal::$variant($value)),
+                    token.line,
+                    token.cols,
+                )
             }};
         }
 
@@ -61,7 +83,7 @@ impl super::Parser {
             TokenType::InterpolatedString(v) => self.parse_interpolated_string(v)?,
             TokenType::Int(v) => literal!(Int(*v)),
             TokenType::Float(v) => literal!(Float(*v)),
-            TokenType::Bool(v) => literal!(Bool(*v)),
+            TokenType::Bool(v) => literal!(Boolean(*v)),
             TokenType::Identifier(_) => self.parse_ident()?,
             other => {
                 let location = Location {

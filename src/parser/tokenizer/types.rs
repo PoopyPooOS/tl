@@ -1,9 +1,7 @@
-#![allow(clippy::struct_field_names)]
-
-use logger::{Location, Log, LogLevel};
+use logger::{Log, LogLevel};
 use std::{
     cmp::Ordering,
-    fmt::Display,
+    fmt::{self, Display},
     io,
     num::{ParseFloatError, ParseIntError},
     ops::RangeInclusive,
@@ -17,7 +15,6 @@ pub enum TokenType {
     Int(isize),
     Float(f64),
     Bool(bool),
-    // TODO: Make this an enum similar to `Option`, `null` is not going to work well with the type checker.
     Null,
 
     // Identifiers
@@ -81,84 +78,84 @@ impl TokenType {
         matches!(
             self,
             // Math Operators
-            TokenType::Plus
-                | TokenType::Minus
-                | TokenType::Multiply
-                | TokenType::Slash
-                | TokenType::Modulo
+            Self::Plus
+                | Self::Minus
+                | Self::Multiply
+                | Self::Slash
+                | Self::Modulo
 
                 // Logic Operators
-                | TokenType::Eq
-                | TokenType::NotEq
-                | TokenType::Gt
-                | TokenType::GtEq
-                | TokenType::Lt
-                | TokenType::LtEq
-                | TokenType::And
-                | TokenType::Or
+                | Self::Eq
+                | Self::NotEq
+                | Self::Gt
+                | Self::GtEq
+                | Self::Lt
+                | Self::LtEq
+                | Self::And
+                | Self::Or
 
                 // Logical Operator
-                | TokenType::Dot
+                | Self::Dot
         )
     }
 
     #[must_use]
     pub fn is_number(&self) -> bool {
-        matches!(self, TokenType::Int(_) | TokenType::Float(_))
+        matches!(self, Self::Int(_) | Self::Float(_))
     }
 }
 
 impl Display for TokenType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             // Literals
-            TokenType::InterpolatedString(_) => write!(f, "interpolated string"),
-            TokenType::String(v) => write!(f, "\"{v}\""),
-            TokenType::Int(v) => write!(f, "{v}"),
-            TokenType::Float(v) => write!(f, "{v}"),
-            TokenType::Bool(v) => write!(f, "{v}"),
-            TokenType::Null => write!(f, "null"),
+            Self::InterpolatedString(_) => write!(f, "interpolated string"),
+            Self::String(v) => write!(f, "\"{v}\""),
+            Self::Int(v) => write!(f, "{v}"),
+            Self::Float(v) => write!(f, "{v}"),
+            Self::Bool(v) => write!(f, "{v}"),
+            Self::Null => write!(f, "null"),
 
             // Identifiers
             #[cfg(debug_assertions)]
-            TokenType::Identifier(v) => write!(f, "identifier: {v}"),
+            Self::Identifier(v) => write!(f, "identifier: {v}"),
             #[cfg(not(debug_assertions))]
-            TokenType::Identifier(v) => write!(f, "{v}"),
+            Self::Identifier(v) => write!(f, "{v}"),
 
             // Keywords
-            TokenType::Let => write!(f, "let"),
+            Self::Let => write!(f, "let"),
 
             // Logic Operators
-            TokenType::Eq => write!(f, "=="),
-            TokenType::NotEq => write!(f, "!="),
-            TokenType::Gt => write!(f, ">"),
-            TokenType::GtEq => write!(f, ">="),
-            TokenType::Lt => write!(f, "<"),
-            TokenType::LtEq => write!(f, "<="),
-            TokenType::And => write!(f, "&&"),
-            TokenType::Or => write!(f, "||"),
-            TokenType::Not => write!(f, "!"),
+            Self::Eq => write!(f, "=="),
+            Self::NotEq => write!(f, "!="),
+            Self::Gt => write!(f, ">"),
+            Self::GtEq => write!(f, ">="),
+            Self::Lt => write!(f, "<"),
+            Self::LtEq => write!(f, "<="),
+            Self::And => write!(f, "&&"),
+            Self::Or => write!(f, "||"),
+            Self::Not => write!(f, "!"),
 
             // Binary Operators
-            TokenType::Plus => write!(f, "+"),
-            TokenType::Minus => write!(f, "-"),
-            TokenType::Multiply => write!(f, "*"),
-            TokenType::Slash => write!(f, "/"),
-            TokenType::Modulo => write!(f, "%"),
+            Self::Plus => write!(f, "+"),
+            Self::Minus => write!(f, "-"),
+            Self::Multiply => write!(f, "*"),
+            Self::Slash => write!(f, "/"),
+            Self::Modulo => write!(f, "%"),
 
             // Brackets
-            TokenType::LParen => write!(f, "("),
-            TokenType::RParen => write!(f, ")"),
-            TokenType::LBracket => write!(f, "["),
-            TokenType::RBracket => write!(f, "]"),
-            TokenType::LBrace => write!(f, "{{"),
-            TokenType::RBrace => write!(f, "}}"),
+            Self::LParen => write!(f, "("),
+            Self::RParen => write!(f, ")"),
+            Self::LBracket => write!(f, "["),
+            Self::RBracket => write!(f, "]"),
+            Self::LBrace => write!(f, "{{"),
+            Self::RBrace => write!(f, "}}"),
 
             // Misc Symbols
-            TokenType::Equals => write!(f, "="),
-            TokenType::Comma => write!(f, ","),
-            TokenType::Colon => write!(f, ":"),
-            TokenType::Dot => write!(f, "."),
+            Self::Equals => write!(f, "="),
+            Self::Comma => write!(f, ","),
+            Self::Colon => write!(f, ":"),
+            Self::Dot => write!(f, "."),
         }
     }
 }
@@ -193,41 +190,20 @@ impl PartialOrd for Token {
     }
 }
 
-#[derive(Debug)]
-pub struct Error {
-    error_type: ErrorType,
-    location: Option<Location>,
-}
-
-impl std::error::Error for Error {}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.error_type)
-    }
-}
-
-impl Error {
-    #[must_use]
-    pub fn new(error_type: ErrorType, location: Option<Location>) -> Self {
-        Self {
-            error_type,
-            location,
-        }
-    }
-}
+pub type Error = crate::Error<ErrorType>;
 
 #[derive(Debug)]
 pub enum ErrorType {
-    UnexpectedToken(char),
+    // Number errors
+    ParseIntError(ParseIntError),
+    ParseFloatError(ParseFloatError),
 
     // String errors
     UnclosedString,
     UnclosedInterpolation,
 
+    UnexpectedToken(char),
     IOError(io::Error),
-    ParseIntError(ParseIntError),
-    ParseFloatError(ParseFloatError),
 }
 
 impl From<Error> for Log {
@@ -240,15 +216,16 @@ impl From<Error> for Log {
         };
 
         log.message(match value.error_type {
-            ErrorType::UnexpectedToken(token) => format!("Unexpected token: {token}"),
+            // Number errors
+            ErrorType::ParseIntError(error) => format!("Failed to parse int: {error}"),
+            ErrorType::ParseFloatError(error) => format!("Failed to parse float: {error}"),
 
             // String errors
             ErrorType::UnclosedString => "Unclosed string literal".to_string(),
             ErrorType::UnclosedInterpolation => "Unclosed string interpolation".to_string(),
 
+            ErrorType::UnexpectedToken(token) => format!("Unexpected token: {token}"),
             ErrorType::IOError(error) => format!("IO error: {error}"),
-            ErrorType::ParseIntError(error) => format!("Parse int error: {error}"),
-            ErrorType::ParseFloatError(error) => format!("Parse float error: {error}"),
         })
     }
 }
