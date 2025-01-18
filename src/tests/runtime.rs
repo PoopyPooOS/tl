@@ -144,3 +144,19 @@ fn variable() {
         Some(&Value::String("John Doe".into()))
     );
 }
+
+#[test]
+fn recursion() {
+    let input = r"
+    let pow = (base exponent) {
+        if(
+            exponent == 0
+            1
+            base * pow(base exponent - 1)
+        )
+    }
+
+    pow(2 10)";
+    let expected = Value::Int(1024);
+    assert_eq!(run(input).unwrap(), expected);
+}

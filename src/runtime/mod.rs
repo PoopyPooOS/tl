@@ -53,10 +53,6 @@ impl Scope {
     /// Evaluates a list of statements (an AST).
     /// # Errors
     /// This function will return an error if an evaluation error occurs.
-    #[allow(
-        clippy::missing_panics_doc,
-        reason = "Clippy bug as the panic is in a closure"
-    )]
     pub fn eval(&mut self) -> ValueResult {
         let mut value = None;
 
@@ -65,24 +61,6 @@ impl Scope {
             reason = "The length of `args` is checked before by `eval_call`"
         )]
         {
-            self.native_functions.insert(
-                "if".into(),
-                NativeFunction::Strict {
-                    params: 3,
-                    func: Box::new(|args| {
-                        let cond = args.first().unwrap();
-                        let then_branch = args.get(1).unwrap();
-                        let else_branch = args.get(2).unwrap();
-
-                        if cond.is_truthy() {
-                            Some(then_branch.clone())
-                        } else {
-                            Some(else_branch.clone())
-                        }
-                    }),
-                },
-            );
-
             self.native_functions.insert(
                 "println".into(),
                 NativeFunction::Loose(Box::new(|args| {
@@ -118,15 +96,16 @@ impl Scope {
         Ok(value.unwrap_or_default())
     }
 
-    pub(crate) fn fetch_var(&self, name: &impl ToString) -> Option<&Value> {
+    pub fn fetch_var(&self, name: &impl ToString) -> Option<&Value> {
         self.variables.get(&name.to_string())
     }
 
     #[allow(
         clippy::unwrap_used,
+        clippy::missing_panics_doc,
         reason = "Value that is unwraped is inserted before in the same function."
     )]
-    pub(crate) fn create_scope(&mut self, ast: Vec<Statement>) -> &mut Scope {
+    pub fn create_scope(&mut self, ast: Vec<Statement>) -> &mut Scope {
         let scope_id = self.scopes.len();
         self.scopes
             .insert(scope_id, Scope::new(self.source.clone(), ast));
@@ -138,7 +117,7 @@ impl Scope {
         reason = "`Option<Location>` is more commonly used, this simplifies things"
     )]
     /// Always returns `Some`, safe to unwrap if needed.
-    pub(crate) fn location_from_expr(&self, expr: &Expr) -> Option<Location> {
+    fn location_from_expr(&self, expr: &Expr) -> Option<Location> {
         Some(Location {
             path: self.source.path.clone(),
             text: self.source.text.clone(),

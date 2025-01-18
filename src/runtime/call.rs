@@ -8,6 +8,39 @@ impl super::Scope {
     pub(super) fn eval_call(&mut self, name: &impl ToString, args: &[Expr]) -> ValueResult {
         let name = name.to_string();
 
+        #[allow(clippy::unwrap_used, clippy::single_match)]
+        match name.as_str() {
+            "if" => {
+                let cond = args.first().ok_or_else(|| {
+                    Error::new(
+                        ErrorType::ArgsMismatch("if".into(), 3, args.len()),
+                        self.location_from_exprs(args),
+                    )
+                })?;
+                let then_branch = args.get(1).ok_or_else(|| {
+                    Error::new(
+                        ErrorType::ArgsMismatch("if".into(), 3, args.len()),
+                        self.location_from_exprs(args),
+                    )
+                })?;
+                let else_branch = args.get(2).ok_or_else(|| {
+                    Error::new(
+                        ErrorType::ArgsMismatch("if".into(), 3, args.len()),
+                        self.location_from_exprs(args),
+                    )
+                })?;
+
+                let cond = self.eval_expr(cond)?;
+
+                if cond.is_truthy() {
+                    return self.eval_expr(then_branch);
+                }
+
+                return self.eval_expr(else_branch);
+            }
+            _ => (),
+        }
+
         let mut evaluated_args = Vec::new();
         for expr in args {
             evaluated_args.push(self.eval_expr(expr)?);
@@ -42,8 +75,8 @@ impl super::Scope {
 
             match function {
                 Value::Function {
-                    args: parameters,
-                    body,
+                    args: ref parameters,
+                    ref body,
                 } => {
                     if args.len() != parameters.len() {
                         return Err(Box::new(Error::new(
@@ -54,9 +87,13 @@ impl super::Scope {
 
                     let scope = self.create_scope(body.clone());
 
+                    // Add arguments into scope
                     for (param, arg) in parameters.iter().zip(evaluated_args) {
                         scope.add_variable(&param, arg);
                     }
+
+                    // Add the function itself into scope
+                    scope.add_variable(&name, function);
 
                     scope.eval()
                 }
