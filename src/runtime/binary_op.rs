@@ -12,7 +12,10 @@ impl super::Scope {
         let left = self.eval_expr(left)?;
         let right = self.eval_expr(right)?;
 
-        #[allow(clippy::arithmetic_side_effects)]
+        #[allow(
+            clippy::arithmetic_side_effects,
+            reason = "Arthimetic operation implementations for `Value` uses saturating ops where it can."
+        )]
         Ok(match operator {
             BinaryOperator::Plus => left + right,
             BinaryOperator::Minus => left - right,

@@ -99,7 +99,7 @@ impl Add for Value {
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             // Numbers
-            (Self::Int(lhs), Self::Int(rhs)) => Self::Int(lhs + rhs),
+            (Self::Int(lhs), Self::Int(rhs)) => Self::Int(lhs.saturating_add(rhs)),
             (Self::Float(lhs), Self::Float(rhs)) => Self::Float(lhs + rhs),
             (Self::Int(lhs), Self::Float(rhs)) => Self::Float(lhs as f64 + rhs),
             (Self::Float(lhs), Self::Int(rhs)) => Self::Float(lhs + rhs as f64),
@@ -130,7 +130,7 @@ impl Sub for Value {
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             // Numbers
-            (Self::Int(lhs), Self::Int(rhs)) => Self::Int(lhs - rhs),
+            (Self::Int(lhs), Self::Int(rhs)) => Self::Int(lhs.saturating_sub(rhs)),
             (Self::Float(lhs), Self::Float(rhs)) => Self::Float(lhs - rhs),
             (Self::Int(lhs), Self::Float(rhs)) => Self::Float(lhs as f64 - rhs),
             (Self::Float(lhs), Self::Int(rhs)) => Self::Float(lhs - rhs as f64),
@@ -146,7 +146,7 @@ impl Mul for Value {
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             // Numbers
-            (Self::Int(lhs), Self::Int(rhs)) => Self::Int(lhs * rhs),
+            (Self::Int(lhs), Self::Int(rhs)) => Self::Int(lhs.saturating_mul(rhs)),
             (Self::Float(lhs), Self::Float(rhs)) => Self::Float(lhs * rhs),
             (Self::Int(lhs), Self::Float(rhs)) => Self::Float(lhs as f64 * rhs),
             (Self::Float(lhs), Self::Int(rhs)) => Self::Float(lhs * rhs as f64),
@@ -176,7 +176,7 @@ impl Div for Value {
                 if rhs == 0 {
                     Self::Null
                 } else {
-                    Self::Int(lhs / rhs)
+                    Self::Int(lhs.saturating_div(rhs))
                 }
             }
             (Self::Float(lhs), Self::Float(rhs)) => {
