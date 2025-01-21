@@ -1,7 +1,8 @@
 - [x] Make location information more descriptive, instead of `line` and `start..=end` have `(line, start)..=(line, end)` (like tree-sitter) or similar.
 
 - Tree-sitter grammar:
-    - [] Update function call rules to not require commas.
+    - [x] Update function call rules to not require commas.
+    - [] Make it so that there can be multiple expressions without any errors.
 
 - Runtime:
     - [] Implement field access.
