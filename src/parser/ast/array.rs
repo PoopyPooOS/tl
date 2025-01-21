@@ -6,6 +6,7 @@ use crate::parser::{
     ast::{consume, raw_err},
     tokenizer::types::TokenType,
 };
+use logger::location::Section;
 
 impl super::Parser {
     pub(super) fn parse_array(&mut self) -> ExprResult {
@@ -27,11 +28,14 @@ impl super::Parser {
             array.push(expr);
         }
 
-        let end = self.tokens.get(self.position.saturating_sub(1)).unwrap_or(&start).cols.end();
+        let end = self
+            .tokens
+            .get(self.position.saturating_sub(1))
+            .unwrap_or(&start);
+
         Ok(Expr::new(
             ExprType::Literal(Literal::Array(array)),
-            start.line,
-            *start.cols.start()..=*end,
+            Section::merge_start_end(&start.section, &end.section),
         ))
     }
 }

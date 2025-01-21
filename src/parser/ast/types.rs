@@ -1,23 +1,20 @@
-use crate::parser::tokenizer::{self, types::TokenType};
-use logger::{Log, LogLevel};
-use std::{collections::BTreeMap, fmt::Display, io, ops::RangeInclusive};
-
 use super::err;
+use crate::parser::tokenizer::{self, types::TokenType};
+use logger::{location::Section, Log, LogLevel};
+use std::{collections::BTreeMap, fmt::Display, io};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Statement {
     pub statement_type: StatementType,
-    pub line: usize,
-    pub cols: RangeInclusive<usize>,
+    pub section: Section,
 }
 
 impl Statement {
     #[must_use]
-    pub fn new(statement_type: StatementType, line: usize, cols: RangeInclusive<usize>) -> Self {
+    pub fn new(statement_type: StatementType, section: Section) -> Self {
         Self {
             statement_type,
-            line,
-            cols,
+            section,
         }
     }
 }
@@ -31,18 +28,13 @@ pub enum StatementType {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Expr {
     pub expr_type: ExprType,
-    pub line: usize,
-    pub cols: RangeInclusive<usize>,
+    pub section: Section,
 }
 
 impl Expr {
     #[must_use]
-    pub fn new(expr_type: ExprType, line: usize, cols: RangeInclusive<usize>) -> Self {
-        Self {
-            expr_type,
-            line,
-            cols,
-        }
+    pub fn new(expr_type: ExprType, section: Section) -> Self {
+        Self { expr_type, section }
     }
 }
 

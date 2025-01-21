@@ -66,8 +66,8 @@ impl Parser {
                 TokenType::RBrace if self.context == Context::Function => break,
                 _ => {
                     let expr = self.parse_expr()?;
-                    let (line, cols) = (expr.line, expr.cols.clone());
-                    vec![Statement::new(StatementType::Expr(expr), line, cols)]
+                    let section = expr.section.clone();
+                    vec![Statement::new(StatementType::Expr(expr), section)]
                 }
             };
 
@@ -86,8 +86,7 @@ impl Parser {
         Some(Location {
             path: self.source.path.clone(),
             text: self.source.text.clone(),
-            lines: token.line..=token.line,
-            section: Some(token.cols.clone()),
+            section: Some(token.section.clone()),
         })
     }
 }

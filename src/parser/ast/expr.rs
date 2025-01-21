@@ -4,7 +4,7 @@ use super::{
     ExprResult,
 };
 use crate::parser::{ast::consume, tokenizer::types::TokenType};
-use logger::Location;
+use logger::{location::Section, Location};
 
 impl super::Parser {
     pub(super) fn parse_expr(&mut self) -> ExprResult {
@@ -38,12 +38,9 @@ impl super::Parser {
 
                 consume!(self, Not);
                 let expr = self.parse_expr()?;
-                let end = *expr.cols.end();
-                Some(Expr::new(
-                    ExprType::Not(Box::new(expr)),
-                    token.line,
-                    *token.cols.start()..=end,
-                ))
+                let section = Section::merge_start_end(&token.section, &expr.section);
+
+                Some(Expr::new(ExprType::Not(Box::new(expr)), section))
             }
             _ => None,
         };
@@ -65,15 +62,11 @@ impl super::Parser {
         macro_rules! literal {
             ($variant:ident) => {{
                 self.position = self.position.saturating_add(1);
-                Expr::new(ExprType::Literal(Literal::$variant), token.line, token.cols)
+                Expr::new(ExprType::Literal(Literal::$variant), token.section)
             }};
             ($variant:ident($value:expr)) => {{
                 self.position = self.position.saturating_add(1);
-                Expr::new(
-                    ExprType::Literal(Literal::$variant($value)),
-                    token.line,
-                    token.cols,
-                )
+                Expr::new(ExprType::Literal(Literal::$variant($value)), token.section)
             }};
         }
 
@@ -89,8 +82,7 @@ impl super::Parser {
                 let location = Location {
                     path: self.source.path.clone(),
                     text: self.source.text.clone(),
-                    lines: token.line..=token.line,
-                    section: Some(token.cols),
+                    section: Some(token.section),
                 };
 
                 return err!(UnexpectedToken(other.clone()), Some(location));

@@ -3,6 +3,7 @@ use super::{
     types::{BinaryOperator, Expr, ExprType},
     ExprResult,
 };
+use logger::location::Section;
 
 impl super::Parser {
     pub(super) fn parse_binary_op_with_left(
@@ -42,18 +43,15 @@ impl super::Parser {
             }
 
             let right = self.parse_binary_op(precedence.saturating_add(1))?;
+            let section = Section::merge_start_end(&left.section, &right.section);
 
-            let start = *left.cols.start();
-            let line = left.line;
-            let end = *right.cols.end();
             left = Expr::new(
                 ExprType::BinaryOp {
                     left: Box::new(left),
                     operator,
                     right: Box::new(right),
                 },
-                line,
-                start..=end,
+                section,
             );
         }
 
@@ -101,17 +99,15 @@ impl super::Parser {
             }
 
             let right = self.parse_binary_op(precedence.saturating_add(1))?;
+            let section = Section::merge_start_end(&start.section, &right.section);
 
-            let line = left.line;
-            let end = *right.cols.end();
             left = Expr::new(
                 ExprType::BinaryOp {
                     left: Box::new(left),
                     operator,
                     right: Box::new(right),
                 },
-                line,
-                *start.cols.start()..=end,
+                section,
             );
         }
 

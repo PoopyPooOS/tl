@@ -331,7 +331,7 @@ impl From<Error> for Log {
                 format!("The function '{name}' does not exist.")
             }
             ErrorType::ArgsMismatch(name, params_len, args_len) => {
-                format!("Function '{name}' has {params_len} parameter{}, but {args_len} argument{} were provided", if params_len == 1 { "" } else { "s" }, if args_len == 1 { "" } else { "s" })
+                format!("Function '{name}' has {params_len} parameter{}, but {args_len} argument{} {} provided", if params_len == 1 { "" } else { "s" }, if args_len == 1 { "" } else { "s" }, if args_len == 1 { "was" } else { "were" })
             },
             ErrorType::IOError(error) => format!("IO error: {error}"),
         })

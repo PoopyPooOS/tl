@@ -6,6 +6,7 @@ use crate::parser::{
     ast::{advance, consume, err, raw_err, Context},
     tokenizer::types::TokenType,
 };
+use logger::location::Section;
 
 impl super::Parser {
     pub(super) fn parse_ident(&mut self) -> ExprResult {
@@ -34,11 +35,7 @@ impl super::Parser {
         };
 
         if !is_call && !is_index {
-            return Ok(Expr::new(
-                ExprType::Identifier(name.1),
-                name.0.line,
-                name.0.cols.clone(),
-            ));
+            return Ok(Expr::new(ExprType::Identifier(name.1), name.0.section));
         }
 
         if is_call {
@@ -55,21 +52,8 @@ impl super::Parser {
                 call_args.push(expr);
             }
 
-            consume!(self, RParen);
-
+            let end = consume!(self, RParen);
             let start = &name.0;
-            let end = &self
-                .tokens
-                .iter()
-                .filter(|token| token.line == start.line)
-                .collect::<Vec<_>>();
-            end.clone().sort_by(|a, b| a.cols.end().cmp(b.cols.end()));
-            let end = end.last().copied().unwrap_or(
-                self.tokens
-                    .get(self.position.saturating_sub(1))
-                    .ok_or_else(|| raw_err!(NoTokensLeft))?,
-            );
-
             self.context = last_context;
 
             return Ok(Expr::new(
@@ -77,8 +61,7 @@ impl super::Parser {
                     name: name.1,
                     args: call_args,
                 },
-                name.0.line,
-                *start.cols.start()..=*end.cols.end(),
+                Section::merge_start_end(&start.section, &end.section),
             ));
         }
 
@@ -101,18 +84,11 @@ impl super::Parser {
             _ => return err!(NoTokensLeft),
         };
 
-        consume!(self, RBracket);
-
-        let line = name_token.line;
-        let token = self
-            .tokens
-            .get(self.position.saturating_sub(1))
-            .ok_or_else(|| raw_err!(NoTokensLeft))?;
+        let end = consume!(self, RBracket);
 
         Ok(Expr::new(
             ExprType::ArrayIndex(name.1, index),
-            line,
-            *name_token.cols.start()..=*token.cols.end(),
+            Section::merge_start_end(&name_token.section, &end.section),
         ))
     }
 }

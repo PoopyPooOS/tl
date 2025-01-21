@@ -7,7 +7,7 @@ use crate::parser::tokenizer::types::{Token, TokenType};
 
 impl super::Parser {
     pub(super) fn parse_interpolated_string(&mut self, v: &[Token]) -> ExprResult {
-        let mut result: Vec<Expr> = Vec::new();
+        let mut result = Vec::new();
         let start = self
             .tokens
             .get(self.position)
@@ -18,8 +18,7 @@ impl super::Parser {
                 TokenType::String(v) => {
                     result.push(Expr::new(
                         ExprType::Literal(Literal::String(v.clone())),
-                        token.line,
-                        token.cols.clone(),
+                        token.section.clone(),
                     ));
                 }
                 TokenType::InterpolatedString(v) => {
@@ -51,8 +50,7 @@ impl super::Parser {
 
         Ok(Expr::new(
             ExprType::Literal(Literal::InterpolatedString(result)),
-            start.line,
-            start.cols.clone(),
+            start.section.clone(),
         ))
     }
 }

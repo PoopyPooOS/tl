@@ -6,10 +6,15 @@ use crate::parser::{
     ast::{advance, consume, err, raw_err},
     tokenizer::types::TokenType,
 };
+use logger::location::Section;
 
 impl super::Parser {
     pub(super) fn parse_let(&mut self) -> StatementResult {
-        let start = self.tokens.get(self.position).ok_or_else(|| raw_err!(NoTokensLeft))?.clone();
+        let start = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| raw_err!(NoTokensLeft))?
+            .clone();
 
         consume!(self, Let);
 
@@ -35,13 +40,14 @@ impl super::Parser {
 
         consume!(self, Equals);
         let value = self.parse_expr()?;
+        let end_section = value.section.clone();
 
-        let line = value.line;
-        let end = *value.cols.end();
         Ok(vec![Statement::new(
-            StatementType::Let { name: name.1, value },
-            line,
-            *start.cols.start()..=end,
+            StatementType::Let {
+                name: name.1,
+                value,
+            },
+            Section::merge_start_end(&start.section, &end_section),
         )])
     }
 }

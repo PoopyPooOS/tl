@@ -1,10 +1,9 @@
-use logger::{Log, LogLevel};
+use logger::{location::Section, Log, LogLevel};
 use std::{
     cmp::Ordering,
     fmt::{self, Display},
     io,
     num::{ParseFloatError, ParseIntError},
-    ops::RangeInclusive,
 };
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -163,17 +162,15 @@ impl Display for TokenType {
 #[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
-    pub line: usize,
-    pub cols: RangeInclusive<usize>,
+    pub section: Section,
 }
 
 impl Token {
     #[must_use]
-    pub fn new(token_type: TokenType, line: usize, cols: RangeInclusive<usize>) -> Self {
+    pub fn new(token_type: TokenType, section: Section) -> Self {
         Self {
             token_type,
-            line,
-            cols,
+            section,
         }
     }
 }

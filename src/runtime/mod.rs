@@ -1,13 +1,22 @@
 use crate::{
-    parser::ast::types::{Expr, Statement, StatementType},
+    parser::{
+        ast::types::{Expr, Statement, StatementType},
+        parse,
+    },
     Source,
 };
-use logger::Location;
-use std::{collections::HashMap, fmt::Debug, rc::Rc};
+use logger::{error, Location};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug},
+    path::PathBuf,
+    rc::Rc,
+};
 use types::{Error, NativeFunction, Value};
 
 pub mod types;
 
+// Runtime Implementations
 mod binary_op;
 mod call;
 mod expr;
@@ -23,7 +32,7 @@ pub struct Scope {
 }
 
 impl Debug for Scope {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Scope")
             .field("variables", &self.variables)
             .field("native_functions", &self.native_functions.keys())
@@ -46,13 +55,20 @@ impl Scope {
         }
     }
 
-    pub fn add_variable(&mut self, name: &impl ToString, value: Value) {
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn add_variable(&mut self, name: impl ToString, value: Value) {
         self.variables.insert(name.to_string(), value);
+    }
+
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn add_native_fn(&mut self, name: impl ToString, native_fn: NativeFunction) {
+        self.native_functions.insert(name.to_string(), native_fn);
     }
 
     /// Evaluates a list of statements (an AST).
     /// # Errors
     /// This function will return an error if an evaluation error occurs.
+    #[allow(clippy::missing_panics_doc)]
     pub fn eval(&mut self) -> ValueResult {
         let mut value = None;
 
@@ -78,6 +94,23 @@ impl Scope {
                     }
                     None
                 })),
+            );
+
+            self.add_native_fn(
+                "import",
+                NativeFunction::Strict {
+                    params: 1,
+                    func: Box::new(|args| {
+                        let Value::String(path) = args.first().unwrap() else {
+                            error!("`import` requires a path string as input");
+                            return None;
+                        };
+                        let source = Source::from(PathBuf::from(path));
+                        let ast = parse(&source).unwrap();
+
+                        Some(Scope::new(source, ast).eval().unwrap())
+                    }),
+                },
             );
         }
 
@@ -121,41 +154,7 @@ impl Scope {
         Some(Location {
             path: self.source.path.clone(),
             text: self.source.text.clone(),
-            lines: expr.line..=expr.line,
-            section: Some(expr.cols.clone()),
+            section: Some(expr.section.clone()),
         })
-    }
-
-    /// Returns `None` if `args` is empty.
-    fn location_from_exprs(&self, args: &[Expr]) -> Option<Location> {
-        let mut line_start: Option<usize> = None;
-        let mut line_end: Option<usize> = None;
-        let mut start: Option<usize> = None;
-        let mut end: Option<usize> = None;
-
-        if let Some(first) = args.first() {
-            line_start = Some(first.line);
-            start = Some(*first.cols.start());
-        }
-
-        if let Some(last) = args.last() {
-            line_end = Some(last.line);
-            end = Some(*last.cols.end());
-        }
-
-        if [line_start, line_end, start, end]
-            .iter()
-            .all(Option::is_some)
-        {
-            #[allow(clippy::unwrap_used, reason = "Checked before")]
-            Some(Location {
-                path: self.source.path.clone(),
-                text: self.source.text.clone(),
-                lines: line_start.unwrap()..=line_end.unwrap(),
-                section: Some(start.unwrap()..=end.unwrap()),
-            })
-        } else {
-            None
-        }
     }
 }

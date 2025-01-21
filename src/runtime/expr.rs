@@ -31,7 +31,7 @@ impl super::Scope {
                 args: args.clone(),
                 body: body.clone(),
             }),
-            ExprType::Call { name, args } => self.eval_call(name, args),
+            ExprType::Call { .. } => self.eval_call(expr),
         }
     }
 

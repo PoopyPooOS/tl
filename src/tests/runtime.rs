@@ -1,8 +1,6 @@
 #![allow(clippy::unwrap_used, reason = "Panics automatically invalidate tests")]
 #![allow(clippy::too_many_lines, reason = "Some tests can get very long")]
 
-use std::collections::BTreeMap;
-
 use crate::{
     parser::parse,
     runtime::{types::Value, Scope},
@@ -10,6 +8,7 @@ use crate::{
 };
 use logger::Log;
 use pretty_assertions::assert_eq;
+use std::collections::BTreeMap;
 
 fn run(text: impl Into<String>) -> Result<Value, Box<Log>> {
     let source = Source::new(text);

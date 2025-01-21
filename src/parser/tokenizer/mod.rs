@@ -1,5 +1,5 @@
 use crate::source::Source;
-use logger::Location;
+use logger::{location::Section, Location};
 use types::{Error, ErrorType, Token, TokenType};
 
 pub mod types;
@@ -35,8 +35,10 @@ impl Parser {
             ($token:ident, $len:expr) => {{
                 tokens.push(Token::new(
                     TokenType::$token,
-                    self.line,
-                    self.column..=self.column.saturating_add($len),
+                    Section::new(
+                        self.line..=self.line,
+                        self.column..=self.column.saturating_add($len),
+                    ),
                 ));
                 self.column = self.column.saturating_add($len);
                 chars.next();
@@ -107,8 +109,8 @@ impl Parser {
                 // Strings
                 #[allow(clippy::range_minus_one, reason = "Exclusive ranges can not be used")]
                 '"' => {
-                    let original_start = self.column;
-                    let mut start = self.column;
+                    let original_start = (self.line, self.column);
+                    let mut start = (self.line, self.column);
                     let mut closed = false;
                     let mut values = Vec::new();
                     let mut buffer = String::new();
@@ -144,8 +146,10 @@ impl Parser {
                                     if !buffer.is_empty() {
                                         values.push(Token::new(
                                             TokenType::String(buffer.clone()),
-                                            self.line,
-                                            start.saturating_add(1)..=self.column,
+                                            Section::new(
+                                                start.0..=self.line,
+                                                start.1.saturating_add(1)..=self.column,
+                                            ),
                                         ));
                                         buffer.clear();
                                     }
@@ -156,7 +160,7 @@ impl Parser {
                                     self.column = self.column.saturating_add(2);
 
                                     // Find the range of the interpolation
-                                    let nested_start = self.column;
+                                    let nested_start = (self.line, self.column);
                                     let mut nested_depth: i32 = 1;
                                     let mut nested_content = String::new();
 
@@ -168,7 +172,7 @@ impl Parser {
                                             '}' => {
                                                 nested_depth = nested_depth.saturating_sub(1);
                                                 if nested_depth == 0 {
-                                                    start = self.column;
+                                                    start.1 = self.column;
                                                     break;
                                                 }
                                             }
@@ -185,8 +189,10 @@ impl Parser {
                                             Some(Location {
                                                 path: self.source.path.clone(),
                                                 text: self.source.text.clone(),
-                                                lines: self.line..=self.line,
-                                                section: Some(nested_start..=self.column),
+                                                section: Some(Section::new(
+                                                    nested_start.0..=self.line,
+                                                    nested_start.1..=self.column,
+                                                )),
                                             }),
                                         ));
                                     }
@@ -194,7 +200,7 @@ impl Parser {
                                     let mut nested_tokenizer = Self {
                                         source: nested_content.into(),
                                         line: self.line,
-                                        column: nested_start,
+                                        column: nested_start.1,
                                     };
 
                                     let nested_tokens = nested_tokenizer.tokenize()?;
@@ -204,8 +210,10 @@ impl Parser {
                                     } else {
                                         values.push(Token::new(
                                             TokenType::InterpolatedString(nested_tokens),
-                                            self.line,
-                                            nested_start..=self.column,
+                                            Section::new(
+                                                nested_start.0..=self.line,
+                                                nested_start.1..=self.column,
+                                            ),
                                         ));
                                     }
                                 } else {
@@ -228,8 +236,10 @@ impl Parser {
                     if !buffer.is_empty() {
                         values.push(Token::new(
                             TokenType::String(buffer.clone()),
-                            self.line,
-                            start..=self.column.saturating_sub(1),
+                            Section::new(
+                                start.0..=self.line,
+                                start.1..=self.column.saturating_sub(1),
+                            ),
                         ));
                     }
 
@@ -239,8 +249,10 @@ impl Parser {
                             Some(Location {
                                 path: self.source.path.clone(),
                                 text: self.source.text.clone(),
-                                lines: self.line..=self.line,
-                                section: Some(original_start..=self.column),
+                                section: Some(Section::new(
+                                    original_start.0..=self.line,
+                                    original_start.1..=self.column,
+                                )),
                             }),
                         ));
                     }
@@ -248,20 +260,22 @@ impl Parser {
                     if values.len() <= 1 {
                         tokens.push(Token::new(
                             TokenType::String(buffer),
-                            self.line,
-                            start..=self.column,
+                            Section::new(start.0..=self.line, start.1..=self.column),
                         ));
                     } else {
                         tokens.push(Token::new(
                             TokenType::InterpolatedString(values),
-                            self.line,
-                            original_start..=self.column,
+                            Section::new(
+                                original_start.0..=self.line,
+                                original_start.1..=self.column,
+                            ),
                         ));
                     }
                 }
 
                 // Parse numbers and floats
                 _ if ch.is_ascii_digit() || ch == '.' || ch == '-' => {
+                    let start_line = self.line;
                     let mut value = String::new();
 
                     while let Some(&ch) = chars.peek()
@@ -283,15 +297,19 @@ impl Parser {
                         _ if value.parse::<i64>().is_ok() => {
                             tokens.push(Token::new(
                                 TokenType::Int(value.parse::<isize>()?),
-                                self.line,
-                                self.column.saturating_sub(value.len())..=self.column,
+                                Section::new(
+                                    start_line..=self.line,
+                                    self.column.saturating_sub(value.len())..=self.column,
+                                ),
                             ));
                         }
                         _ if value.parse::<f64>().is_ok() => {
                             tokens.push(Token::new(
                                 TokenType::Float(value.parse::<f64>()?),
-                                self.line,
-                                self.column.saturating_sub(value.len())..=self.column,
+                                Section::new(
+                                    start_line..=self.line,
+                                    self.column.saturating_sub(value.len())..=self.column,
+                                ),
                             ));
                         }
                         _ => (),
@@ -300,6 +318,7 @@ impl Parser {
 
                 // Multi-character tokens (literals, keywords, identifiers, operators)
                 _ if is_valid_char(ch, false) => {
+                    let start_line = self.line;
                     let mut value = String::new();
 
                     while let Some(&ch) = chars.peek()
@@ -319,15 +338,19 @@ impl Parser {
                         ($token:ident) => {{
                             tokens.push(Token::new(
                                 TokenType::$token,
-                                self.line,
-                                self.column.saturating_sub(value.len())..=self.column,
+                                Section::new(
+                                    start_line..=self.line,
+                                    self.column.saturating_sub(value.len())..=self.column,
+                                ),
                             ));
                         }};
                         ($token:ident($value:expr)) => {{
                             tokens.push(Token::new(
                                 TokenType::$token($value),
-                                self.line,
-                                self.column.saturating_sub(value.len())..=self.column,
+                                Section::new(
+                                    start_line..=self.line,
+                                    self.column.saturating_sub(value.len())..=self.column,
+                                ),
                             ));
                         }};
                     }
@@ -363,15 +386,15 @@ impl Parser {
 
                 _ => {
                     if let Some(path) = &self.source.path {
-                        let location = Location::from_path(path.clone(), self.line..=self.line)?;
+                        let location = Location::from_path(path.clone())?
+                            .section(Section::new(self.line..=self.line, 0..=usize::MAX));
                         return Err(Error::new(ErrorType::UnexpectedToken(ch), Some(location)));
                     }
 
                     let location = Location {
                         path: None,
                         text: self.source.text.clone(),
-                        lines: self.line..=self.line,
-                        section: None,
+                        section: Some(Section::new(self.line..=self.line, 0..=usize::MAX)),
                     };
 
                     return Err(Error::new(ErrorType::UnexpectedToken(ch), Some(location)));

@@ -2,10 +2,14 @@ use super::{
     types::{Error, ErrorType, NativeFunction, Value},
     ValueResult,
 };
-use crate::parser::ast::types::Expr;
+use crate::parser::ast::types::{Expr, ExprType};
 
 impl super::Scope {
-    pub(super) fn eval_call(&mut self, name: &impl ToString, args: &[Expr]) -> ValueResult {
+    pub(super) fn eval_call(&mut self, expr: &Expr) -> ValueResult {
+        let ExprType::Call { name, args } = &expr.expr_type else {
+            unreachable!()
+        };
+
         let name = name.to_string();
 
         #[allow(clippy::unwrap_used, clippy::single_match)]
@@ -14,19 +18,19 @@ impl super::Scope {
                 let cond = args.first().ok_or_else(|| {
                     Error::new(
                         ErrorType::ArgsMismatch("if".into(), 3, args.len()),
-                        self.location_from_exprs(args),
+                        self.location_from_expr(expr),
                     )
                 })?;
                 let then_branch = args.get(1).ok_or_else(|| {
                     Error::new(
                         ErrorType::ArgsMismatch("if".into(), 3, args.len()),
-                        self.location_from_exprs(args),
+                        self.location_from_expr(expr),
                     )
                 })?;
                 let else_branch = args.get(2).ok_or_else(|| {
                     Error::new(
                         ErrorType::ArgsMismatch("if".into(), 3, args.len()),
-                        self.location_from_exprs(args),
+                        self.location_from_expr(expr),
                     )
                 })?;
 
@@ -53,7 +57,7 @@ impl super::Scope {
                     if args.len() != *params {
                         return Err(Box::new(Error::new(
                             ErrorType::ArgsMismatch(name, *params, args.len()),
-                            self.location_from_exprs(args),
+                            self.location_from_expr(expr),
                         )));
                     }
 
@@ -81,7 +85,7 @@ impl super::Scope {
                     if args.len() != parameters.len() {
                         return Err(Box::new(Error::new(
                             ErrorType::ArgsMismatch(name, parameters.len(), args.len()),
-                            self.location_from_exprs(args),
+                            self.location_from_expr(expr),
                         )));
                     }
 
@@ -89,7 +93,7 @@ impl super::Scope {
 
                     // Add arguments into scope
                     for (param, arg) in parameters.iter().zip(evaluated_args) {
-                        scope.add_variable(&param, arg);
+                        scope.add_variable(param, arg);
                     }
 
                     // Add the function itself into scope

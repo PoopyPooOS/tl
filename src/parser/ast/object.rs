@@ -6,11 +6,16 @@ use crate::parser::{
     ast::{advance, consume, err, raw_err},
     tokenizer::types::TokenType,
 };
+use logger::location::Section;
 use std::collections::BTreeMap;
 
 impl super::Parser {
     pub(super) fn parse_object(&mut self) -> ExprResult {
-        let start = self.tokens.get(self.position).ok_or_else(|| raw_err!(NoTokensLeft))?.clone();
+        let start = self
+            .tokens
+            .get(self.position)
+            .ok_or_else(|| raw_err!(NoTokensLeft))?
+            .clone();
 
         consume!(self, LBrace);
         let last_context = self.context.clone();
@@ -19,7 +24,10 @@ impl super::Parser {
         let mut fields = BTreeMap::new();
 
         loop {
-            let token = self.tokens.get(self.position).ok_or_else(|| raw_err!(NoTokensLeft))?;
+            let token = self
+                .tokens
+                .get(self.position)
+                .ok_or_else(|| raw_err!(NoTokensLeft))?;
 
             if token.token_type == TokenType::RBrace {
                 consume!(self, RBrace);
@@ -32,7 +40,10 @@ impl super::Parser {
                         name.clone()
                     } else {
                         return err!(
-                            ExpectedTokenGot(TokenType::Identifier(String::new()), token.token_type.clone()),
+                            ExpectedTokenGot(
+                                TokenType::Identifier(String::new()),
+                                token.token_type.clone()
+                            ),
                             self.location_from_token(token)
                         );
                     }
@@ -40,7 +51,11 @@ impl super::Parser {
                 _ => {
                     return err!(
                         ExpectedToken(TokenType::Identifier(String::new())),
-                        self.location_from_token(self.tokens.get(self.position).ok_or_else(|| raw_err!(NoTokensLeft))?,)
+                        self.location_from_token(
+                            self.tokens
+                                .get(self.position)
+                                .ok_or_else(|| raw_err!(NoTokensLeft))?,
+                        )
                     );
                 }
             };
@@ -56,8 +71,13 @@ impl super::Parser {
                 _ => {
                     return err!(
                         ExpectedSeperatorInObjectKV,
-                        #[allow(clippy::unwrap_used, reason = "`location_from_token` always returns `Some`")]
-                        self.tokens.get(self.position).map(|token| self.location_from_token(token).unwrap())
+                        #[allow(
+                            clippy::unwrap_used,
+                            reason = "`location_from_token` always returns `Some`"
+                        )]
+                        self.tokens
+                            .get(self.position)
+                            .map(|token| self.location_from_token(token).unwrap())
                     );
                 }
             }
@@ -71,14 +91,11 @@ impl super::Parser {
         let end = self
             .tokens
             .get(self.position.saturating_sub(1))
-            .ok_or_else(|| raw_err!(NoTokensLeft))?
-            .cols
-            .end();
+            .ok_or_else(|| raw_err!(NoTokensLeft))?;
 
         Ok(Expr::new(
             ExprType::Literal(Literal::Object(fields)),
-            start.line,
-            *start.cols.start()..=*end,
+            Section::merge_start_end(&start.section, &end.section),
         ))
     }
 }
