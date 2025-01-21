@@ -2,7 +2,7 @@
 
 - Tree-sitter grammar:
     - [x] Update function call rules to not require commas.
-    - [] Make it so that there can be multiple expressions without any errors.
+    - [x] Make it so that there can be multiple expressions without any errors.
 
 - Runtime:
     - [] Implement field access.
