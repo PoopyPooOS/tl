@@ -4,7 +4,7 @@ use super::{
     ExprResult,
 };
 use crate::parser::{ast::consume, tokenizer::types::TokenType};
-use logger::{location::Section, Location};
+use logger::location::Section;
 
 impl super::Parser {
     pub(super) fn parse_expr(&mut self) -> ExprResult {
@@ -79,19 +79,25 @@ impl super::Parser {
             TokenType::Bool(v) => literal!(Boolean(*v)),
             TokenType::Identifier(_) => self.parse_ident()?,
             other => {
-                let location = Location {
-                    path: self.source.path.clone(),
-                    text: self.source.text.clone(),
-                    section: Some(token.section),
-                };
-
-                return err!(UnexpectedToken(other.clone()), Some(location));
+                return err!(
+                    UnexpectedToken(other.clone()),
+                    self.location_from_token(&token)
+                );
             }
         };
 
         let token = self.tokens.get(self.position);
-        if token.is_some_and(|token| token.token_type.is_binary_operator()) {
-            return self.parse_binary_op_with_left(0, expr);
+
+        if let Some(token) = token {
+            match &token.token_type {
+                b if b.is_binary_operator() => {
+                    return self.parse_binary_op_with_left(0, expr);
+                }
+                TokenType::Dot => {
+                    return self.parse_field_access();
+                }
+                _ => (),
+            }
         }
 
         Ok(expr)

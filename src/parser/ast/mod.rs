@@ -11,6 +11,7 @@ pub mod types;
 mod array;
 mod binary_op;
 mod expr;
+mod field_access;
 mod r#fn;
 mod ident;
 mod interpolated_string;
@@ -144,14 +145,16 @@ macro_rules! consume {
 /// Internal macro for the AST.
 #[allow(unused_macros, reason = "will be used soon probably")]
 macro_rules! get_ident {
-    ($self:expr) => {
-        match advance!($self) {
+    ($self:expr) => {{
+        match $crate::parser::ast::advance!($self) {
             Some(token) => {
-                if let TokenType::Identifier(v) = &token.token_type {
+                if let $crate::parser::ast::TokenType::Identifier(v) = &token.token_type {
                     v.clone()
                 } else {
                     return $crate::parser::ast::err!(
-                        ExpectedToken(TokenType::Identifier("identifier".to_string())),
+                        ExpectedToken($crate::parser::ast::TokenType::Identifier(
+                            "identifier".to_string()
+                        )),
                         $self.location_from_token(
                             $self
                                 .tokens
@@ -161,25 +164,31 @@ macro_rules! get_ident {
                     );
                 }
             }
-            _ => return $crate::parser::ast::err!(
-                ExpectedToken(TokenType::Identifier("identifier".to_string())),
-                $self.location_from_token(
-                    $self
-                        .tokens
-                        .get($self.position.saturating_sub(1))
-                        .ok_or_else(|| $crate::parser::ast::raw_err!(NoTokensLeft))?
+            _ => {
+                return $crate::parser::ast::err!(
+                    ExpectedToken($crate::parser::ast::TokenType::Identifier(
+                        "identifier".to_string()
+                    )),
+                    $self.location_from_token(
+                        $self
+                            .tokens
+                            .get($self.position.saturating_sub(1))
+                            .ok_or_else(|| $crate::parser::ast::raw_err!(NoTokensLeft))?
+                    )
                 )
-            ),
+            }
         }
-    };
-    ($self:expr, $token:expr) => {
-        let name = match advance!($self) {
+    }};
+    ($self:expr, $token:expr) => {{
+        match $crate::parser::ast::advance!($self) {
             Some(token) => {
-                if let TokenType::Identifier(name) = &token.token_type {
+                if let $crate::parser::ast::TokenType::Identifier(name) = &token.token_type {
                     (token.clone(), name.clone())
                 } else {
                     return $crate::parser::ast::err!(
-                        ExpectedToken(TokenType::Identifier("identifier".to_string())),
+                        ExpectedToken($crate::parser::ast::TokenType::Identifier(
+                            "identifier".to_string()
+                        )),
                         $self.location_from_token(
                             $self
                                 .tokens
@@ -189,17 +198,21 @@ macro_rules! get_ident {
                     );
                 }
             }
-            _ => return $crate::parser::ast::err!(
-                ExpectedToken(TokenType::Identifier("identifier".to_string())),
-                $self.location_from_token(
-                    $self
-                        .tokens
-                        .get($self.position)
-                        .ok_or_else(|| $crate::parser::ast::raw_err!(NoTokensLeft))?
+            _ => {
+                return $crate::parser::ast::err!(
+                    ExpectedToken($crate::parser::ast::TokenType::Identifier(
+                        "identifier".to_string()
+                    )),
+                    $self.location_from_token(
+                        $self
+                            .tokens
+                            .get($self.position)
+                            .ok_or_else(|| $crate::parser::ast::raw_err!(NoTokensLeft))?
+                    )
                 )
-            );
-        };
-    };
+            }
+        }
+    }};
 }
 
 /// Internal macro for the AST.

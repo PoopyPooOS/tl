@@ -45,6 +45,10 @@ pub enum ExprType {
     Identifier(String),
     /// ident, index
     ArrayIndex(String, usize),
+    FieldAccess {
+        base: Box<Expr>,
+        path: Vec<Expr>,
+    },
     BinaryOp {
         left: Box<Expr>,
         operator: BinaryOperator,
@@ -98,9 +102,6 @@ pub enum BinaryOperator {
     And,
     /// ||
     Or,
-
-    // Access Operators
-    Dot,
 }
 
 impl BinaryOperator {
@@ -134,9 +135,6 @@ impl BinaryOperator {
             TokenType::And => Ok(Self::And),
             TokenType::Or => Ok(Self::Or),
 
-            // Access Operators
-            TokenType::Dot => Ok(Self::Dot),
-
             _ => err!(UnexpectedToken(token_type)),
         }
     }
@@ -164,9 +162,6 @@ impl Display for BinaryOperator {
                 Self::LtEq => "<=",
                 Self::And => "&&",
                 Self::Or => "||",
-
-                // Access Operators
-                Self::Dot => ".",
             }
         )
     }

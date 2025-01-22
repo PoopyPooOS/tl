@@ -9,28 +9,48 @@ impl super::Scope {
         operator: &BinaryOperator,
         right: &Expr,
     ) -> ValueResult {
-        let left = self.eval_expr(left)?;
-        let right = self.eval_expr(right)?;
+        let lhs = self.eval_expr(left)?;
+
+        // // Do field access before evaluating rhs because rhs would not be a valid variable.
+        // if operator == &BinaryOperator::Dot {
+        //     match &right.expr_type {
+        //         ExprType::Identifier(v) => return Ok(lhs.access(v)),
+        //         ExprType::BinaryOp {
+        //             left,
+        //             operator,
+        //             right,
+        //         } if operator == &BinaryOperator::Dot => {
+        //             return self.eval_binary_op(left, operator, right)
+        //         }
+        //         _ => {
+        //             return Err(Box::new(Error::new(
+        //                 ErrorType::CanNotAccessWithNonIdent,
+        //                 self.location_from_expr(right),
+        //             )))
+        //         }
+        //     }
+        // }
+
+        let rhs = self.eval_expr(right)?;
 
         #[allow(
             clippy::arithmetic_side_effects,
             reason = "Arthimetic operation implementations for `Value` uses saturating ops where it can."
         )]
         Ok(match operator {
-            BinaryOperator::Plus => left + right,
-            BinaryOperator::Minus => left - right,
-            BinaryOperator::Multiply => left * right,
-            BinaryOperator::Divide => left / right,
-            BinaryOperator::Modulo => left % right,
-            BinaryOperator::Eq => Value::Boolean(left == right),
-            BinaryOperator::NotEq => Value::Boolean(left != right),
-            BinaryOperator::Gt => Value::Boolean(left > right),
-            BinaryOperator::GtEq => Value::Boolean(left >= right),
-            BinaryOperator::Lt => Value::Boolean(left < right),
-            BinaryOperator::LtEq => Value::Boolean(left <= right),
-            BinaryOperator::And => Value::Boolean(left.and(&right)),
-            BinaryOperator::Or => Value::Boolean(left.or(&right)),
-            BinaryOperator::Dot => todo!("Implement field access"),
+            BinaryOperator::Plus => lhs + rhs,
+            BinaryOperator::Minus => lhs - rhs,
+            BinaryOperator::Multiply => lhs * rhs,
+            BinaryOperator::Divide => lhs / rhs,
+            BinaryOperator::Modulo => lhs % rhs,
+            BinaryOperator::Eq => Value::Boolean(lhs == rhs),
+            BinaryOperator::NotEq => Value::Boolean(lhs != rhs),
+            BinaryOperator::Gt => Value::Boolean(lhs > rhs),
+            BinaryOperator::GtEq => Value::Boolean(lhs >= rhs),
+            BinaryOperator::Lt => Value::Boolean(lhs < rhs),
+            BinaryOperator::LtEq => Value::Boolean(lhs <= rhs),
+            BinaryOperator::And => Value::Boolean(lhs.and(&rhs)),
+            BinaryOperator::Or => Value::Boolean(lhs.or(&rhs)),
         })
     }
 }

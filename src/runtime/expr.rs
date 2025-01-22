@@ -21,7 +21,65 @@ impl super::Scope {
                     ))
                 })?
                 .clone()),
-            ExprType::ArrayIndex(_, _) => todo!("array indexing"),
+            ExprType::ArrayIndex(ident, index) => {
+                let var = self
+                    .fetch_var(ident)
+                    .ok_or_else(|| {
+                        Box::new(Error::new(
+                            ErrorType::VariableDoesntExist(ident.clone()),
+                            self.location_from_expr(expr),
+                        ))
+                    })?
+                    .clone();
+
+                match var {
+                    Value::Array(v) => {
+                        let item = v.get(*index).unwrap_or(&Value::Null).clone();
+
+                        if item == Value::Null {
+                            return Err(Box::new(Error::new(
+                                ErrorType::IndexOutOfBounds(*index, v.len()),
+                                self.location_from_expr(expr),
+                            )));
+                        }
+
+                        Ok(item)
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            // TODO: Construct this expr type in the AST, right now field access is still just binary ops with `Dot` as the operator.
+            ExprType::FieldAccess { base, path } => {
+                let base = self.eval_expr(base)?;
+                let mut value = base.clone();
+
+                let path = path.iter().map(|expr| {
+                    (
+                        expr,
+                        match &expr.expr_type {
+                            ExprType::Identifier(v) => v.clone(),
+                            _ => unreachable!(),
+                        },
+                    )
+                });
+
+                for (idx, (expr, ident)) in path.enumerate() {
+                    value = if idx == 0 {
+                        base.access(&ident)
+                    } else {
+                        value.access(&ident)
+                    };
+
+                    if value == Value::Null {
+                        return Err(Box::new(Error::new(
+                            ErrorType::FieldDoesntExist(ident),
+                            self.location_from_expr(expr),
+                        )));
+                    }
+                }
+
+                Ok(value)
+            }
             ExprType::BinaryOp {
                 left,
                 operator,

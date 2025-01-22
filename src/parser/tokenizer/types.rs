@@ -92,9 +92,6 @@ impl TokenType {
                 | Self::LtEq
                 | Self::And
                 | Self::Or
-
-                // Logical Operator
-                | Self::Dot
         )
     }
 

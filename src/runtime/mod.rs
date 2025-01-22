@@ -48,6 +48,10 @@ type ValueResult = Result<Value, Box<Error>>;
 impl Scope {
     #[must_use]
     pub fn new(source: Source, ast: Vec<Statement>) -> Self {
+        if cfg!(debug_assertions) {
+            logger::set_app_name!("Runtime");
+        }
+
         Self {
             ast: Rc::new(ast),
             source,

@@ -106,7 +106,7 @@ impl super::Scope {
         } else {
             Err(Box::new(Error::new(
                 ErrorType::FunctionDoesntExist(name),
-                None,
+                self.location_from_expr(expr),
             )))
         }
     }

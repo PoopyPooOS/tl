@@ -137,16 +137,15 @@ fn field_access() {
     let input = "package.dependencies";
     let expected = vec![Statement::new(
         StatementType::Expr(Expr::new(
-            ExprType::BinaryOp {
-                left: Box::new(Expr::new(
+            ExprType::FieldAccess {
+                base: Box::new(Expr::new(
                     ExprType::Identifier("package".into()),
                     Section::new(0..=0, 0..=7),
                 )),
-                operator: BinaryOperator::Dot,
-                right: Box::new(Expr::new(
+                path: vec![Expr::new(
                     ExprType::Identifier("dependencies".into()),
                     Section::new(0..=0, 8..=20),
-                )),
+                )],
             },
             Section::new(0..=0, 0..=20),
         )),

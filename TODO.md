@@ -5,6 +5,7 @@
     - [x] Make it so that there can be multiple expressions without any errors.
 
 - Runtime:
-    - [] Implement field access.
+    - [x] Implement field access.
+    - [x] Implement array indexing.
     - [x] Use safer arthimetic when evaluating binary operations.
     - [] Add an import function to the stdlib which evaluates another file and returns the evaluation result. 

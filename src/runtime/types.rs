@@ -9,9 +9,9 @@ use logger::{warn, Log, LogLevel};
 use std::{
     cmp::Ordering,
     collections::BTreeMap,
-    fmt::Display,
+    fmt::{self, Display},
     io,
-    ops::{Add, Div, Mul, Rem, Sub},
+    ops::{Add, Div, Index, Mul, Rem, Sub},
 };
 
 #[derive(Debug, Default, Clone)]
@@ -67,10 +67,18 @@ impl Value {
     pub fn or(&self, rhs: &Self) -> bool {
         self.is_truthy() || rhs.is_truthy()
     }
+
+    #[must_use]
+    pub fn access(&self, rhs: impl Into<String>) -> Self {
+        match self {
+            Value::Object(v) => v.get(&rhs.into()).unwrap_or(&Value::Null).clone(),
+            _ => Value::Null,
+        }
+    }
 }
 
 impl Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::Null => f.write_str("null"),
             Value::Boolean(v) => f.write_str(&format!("{v}")),
@@ -89,6 +97,17 @@ impl Display for Value {
                 f.write_str(&format!("{{ {} }}", formatted.join("; ")))
             }
             Value::Function { .. } => f.write_str("function"),
+        }
+    }
+}
+
+impl Index<usize> for Value {
+    type Output = Self;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match self {
+            Value::Array(v) => v.get(index).unwrap_or(&Value::Null),
+            _ => &Value::Null,
         }
     }
 }
@@ -306,7 +325,13 @@ pub type Error = crate::Error<ErrorType>;
 #[derive(Debug)]
 pub enum ErrorType {
     VariableDoesntExist(String),
+    FieldDoesntExist(String),
     FunctionDoesntExist(String),
+
+    CanNotAccessWithNonIdent,
+
+    /// (`index`, `length`)
+    IndexOutOfBounds(usize, usize),
 
     /// (`function_name`, `params_len`, `args_len`)
     ArgsMismatch(String, usize, usize),
@@ -327,8 +352,17 @@ impl From<Error> for Log {
             ErrorType::VariableDoesntExist(name) => {
                 format!("The variable '{name}' does not exist.")
             }
+            ErrorType::FieldDoesntExist(name) => {
+                format!("The field '{name}' does not exist.")
+            }
             ErrorType::FunctionDoesntExist(name) => {
                 format!("The function '{name}' does not exist.")
+            }
+            ErrorType::CanNotAccessWithNonIdent => {
+                "Can not access fields with expressions other than identifiers".into()
+            }
+            ErrorType::IndexOutOfBounds(index, length) => {
+                format!("Index out of bounds: index is {index} but the length is {length}")
             }
             ErrorType::ArgsMismatch(name, params_len, args_len) => {
                 format!("Function '{name}' has {params_len} parameter{}, but {args_len} argument{} {} provided", if params_len == 1 { "" } else { "s" }, if args_len == 1 { "" } else { "s" }, if args_len == 1 { "was" } else { "were" })
