@@ -3,10 +3,13 @@
 
 use crate::{
     parser::parse,
-    runtime::{types::Value, Scope},
+    runtime::{
+        types::{Error as RuntimeError, ErrorType as RuntimeErrorType, Value},
+        Scope,
+    },
     Source,
 };
-use logger::Log;
+use logger::{location::Section, Location, Log};
 use pretty_assertions::assert_eq;
 use std::collections::BTreeMap;
 
@@ -17,6 +20,14 @@ fn run(text: impl Into<String>) -> Result<Value, Box<Log>> {
     Ok(Scope::new(source, ast)
         .eval()
         .map_err(|err| Log::from(*err))?)
+}
+
+/// Evaluate something expecting a runtime error.
+fn run_err(text: impl Into<String>) -> RuntimeError {
+    let source = Source::new(text);
+    let ast = parse(&source).unwrap();
+
+    *Scope::new(source, ast).eval().unwrap_err()
 }
 
 fn make_scope(text: impl Into<String>) -> Result<Scope, Box<Log>> {
@@ -83,6 +94,29 @@ fn array() {
 }
 
 #[test]
+fn array_indexing() {
+    let input = r"
+        let numbers = [ 1 2 3 ]
+
+        numbers[1]
+    ";
+    let expected = Value::Int(2);
+    assert_eq!(run(input).unwrap(), expected);
+
+    // Out of bounds index
+    let input = r"
+        let numbers = [ 1 2 3 ]
+
+        numbers[3]
+    ";
+    let expected = RuntimeError::new(
+        RuntimeErrorType::IndexOutOfBounds(3, 3),
+        Some(Location::from_text(input).section(Section::new(3..=3, 8..=18))),
+    );
+    assert_eq!(run_err(input), expected);
+}
+
+#[test]
 fn object() {
     let input = "{ name = \"John Doe\" age = 42 }";
     let expected = Value::Object(BTreeMap::from([
@@ -92,7 +126,6 @@ fn object() {
     assert_eq!(run(input).unwrap(), expected);
 }
 
-#[ignore = "field access is not implemented"]
 #[test]
 fn field_access() {
     let input = r#"
