@@ -339,6 +339,40 @@ pub enum ErrorType {
     IOError(io::Error),
 }
 
+impl PartialEq for ErrorType {
+    fn eq(&self, other: &Self) -> bool {
+        use ErrorType as E;
+
+        match (self, other) {
+            (E::VariableDoesntExist(r_ident), E::VariableDoesntExist(l_ident))
+                if r_ident == l_ident =>
+            {
+                true
+            }
+            (E::FieldDoesntExist(r_ident), E::FieldDoesntExist(l_ident)) if r_ident == l_ident => {
+                true
+            }
+            (E::FunctionDoesntExist(r_ident), E::FunctionDoesntExist(l_ident))
+                if r_ident == l_ident =>
+            {
+                true
+            }
+            (E::CanNotAccessWithNonIdent, E::CanNotAccessWithNonIdent) => true,
+            (E::IndexOutOfBounds(r_index, r_len), E::IndexOutOfBounds(l_index, l_len))
+                if r_index == l_index && r_len == l_len =>
+            {
+                true
+            }
+            (
+                E::ArgsMismatch(r_name, r_params, r_args),
+                E::ArgsMismatch(l_name, l_params, l_args),
+            ) if r_name == l_name && r_params == l_params && r_args == l_args => true,
+
+            _ => false,
+        }
+    }
+}
+
 impl From<Error> for Log {
     fn from(value: Error) -> Self {
         let log = Log {

@@ -205,6 +205,46 @@ pub enum ErrorType {
     IOError(io::Error),
 }
 
+impl PartialEq for ErrorType {
+    fn eq(&self, other: &Self) -> bool {
+        use ErrorType as E;
+
+        match (self, other) {
+            (E::InvalidBinaryOperator(r_token_type), E::InvalidBinaryOperator(l_token_type))
+                if r_token_type == l_token_type =>
+            {
+                true
+            }
+            (E::NegativeArrayIndex, E::NegativeArrayIndex)
+            | (E::NoTokensLeft, E::NoTokensLeft)
+            | (E::UnexpectedColonInObjectKV, E::UnexpectedColonInObjectKV)
+            | (E::MissingRightSide, E::MissingRightSide)
+            | (E::ExpectedSeperatorInObjectKV, E::ExpectedSeperatorInObjectKV)
+            | (E::NoIdentifierAfterLet, E::NoIdentifierAfterLet) => true,
+            (E::ExpectedTokenGot(r_expected, r_got), E::ExpectedTokenGot(l_expected, l_got))
+                if r_expected == l_expected && r_got == l_got =>
+            {
+                true
+            }
+            (E::ExpectedToken(r_expected), E::ExpectedToken(l_expected))
+                if r_expected == l_expected =>
+            {
+                true
+            }
+            (E::UnexpectedToken(r_token), E::UnexpectedToken(l_token)) if r_token == l_token => {
+                true
+            }
+            (E::TokenizationError(r_error), E::TokenizationError(l_error))
+                if r_error == l_error =>
+            {
+                true
+            }
+
+            _ => false,
+        }
+    }
+}
+
 impl From<Error> for Log {
     fn from(value: Error) -> Self {
         let mut log = Log {

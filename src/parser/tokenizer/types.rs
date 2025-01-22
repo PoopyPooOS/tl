@@ -200,6 +200,22 @@ pub enum ErrorType {
     IOError(io::Error),
 }
 
+impl PartialEq for ErrorType {
+    fn eq(&self, other: &Self) -> bool {
+        use ErrorType as E;
+
+        match (self, other) {
+            (E::ParseIntError(r_err), E::ParseIntError(l_err)) if r_err == l_err => true,
+            (E::ParseFloatError(r_err), E::ParseFloatError(l_err)) if r_err == l_err => true,
+            (E::UnclosedString, E::UnclosedString)
+            | (E::UnclosedInterpolation, E::UnclosedInterpolation) => true,
+            (E::UnexpectedToken(r_char), E::UnexpectedToken(l_char)) if r_char == l_char => true,
+
+            _ => false,
+        }
+    }
+}
+
 impl From<Error> for Log {
     fn from(value: Error) -> Self {
         let log = Log {
