@@ -1,2 +1,2 @@
 - Runtime:
-    - [] Add serde implementations for `Value` and a simple public `eval` function to evaluate expecting a type.
+    - [x] Add serde implementations for `Value` and a simple public `eval` function to evaluate expecting a type.

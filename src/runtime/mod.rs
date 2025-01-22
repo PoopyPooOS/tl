@@ -16,6 +16,9 @@ use types::{Error, ErrorType, NativeFunction, Value};
 
 pub mod types;
 
+#[cfg(feature = "serde")]
+pub mod serde;
+
 // Runtime Implementations
 mod binary_op;
 mod call;
