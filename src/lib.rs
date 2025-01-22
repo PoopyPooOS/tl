@@ -28,4 +28,5 @@ pub mod parser;
 pub mod runtime;
 
 // Utils
-pub mod utils;
+mod utils;
+pub use utils::*;

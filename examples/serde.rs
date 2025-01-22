@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::{path::PathBuf, time::Instant};
-use tl::{utils::eval, Source};
+use tl::{eval, Source};
 
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
