@@ -6,17 +6,12 @@ edition = "2021"
 [features]
 default = ["serde"]
 serde = ["dep:serde"]
-stdFetch = ["dep:url", "dep:reqwest"]
 
 [dependencies]
 logger = { path = "../logger" }
 
 # for `serde` feature
 serde = { version = "1.0.215", features = ["derive"], optional = true }
-
-# for `stdFetch` feature
-url = { version = "2.5.4", optional = true }
-reqwest = { version = "0.12.9", features = ["blocking"], optional = true }
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"
