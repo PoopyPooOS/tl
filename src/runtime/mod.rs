@@ -5,14 +5,14 @@ use crate::{
     },
     Source,
 };
-use logger::{error, Location};
+use logger::Location;
 use std::{
     collections::HashMap,
     fmt::{self, Debug},
     path::PathBuf,
     rc::Rc,
 };
-use types::{Error, NativeFunction, Value};
+use types::{Error, ErrorType, NativeFunction, Value};
 
 pub mod types;
 
@@ -87,7 +87,7 @@ impl Scope {
                     for arg in args {
                         println!("{arg}");
                     }
-                    None
+                    Ok(Value::Null)
                 })),
             );
             self.native_functions.insert(
@@ -96,7 +96,7 @@ impl Scope {
                     for arg in args {
                         print!("{arg}");
                     }
-                    None
+                    Ok(Value::Null)
                 })),
             );
 
@@ -106,13 +106,17 @@ impl Scope {
                     params: 1,
                     func: Box::new(|args| {
                         let Value::String(path) = args.first().unwrap() else {
-                            error!("`import` requires a path string as input");
-                            return None;
+                            return Err(Box::new(Error::new(
+                                ErrorType::NativeFnError(
+                                    "`import` requires a path string as an input".to_string(),
+                                ),
+                                None,
+                            )));
                         };
                         let source = Source::from(PathBuf::from(path));
-                        let ast = parse(&source).unwrap();
+                        let ast = parse(&source).map_err(|err| Error::from(*err))?;
 
-                        Some(Scope::new(source, ast).eval().unwrap())
+                        Scope::new(source, ast).eval()
                     }),
                 },
             );

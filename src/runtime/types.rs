@@ -4,7 +4,8 @@
     clippy::cast_precision_loss
 )]
 
-use crate::parser::ast::types::Statement;
+use super::ValueResult;
+use crate::parser::ast::{self, types::Statement};
 use logger::{warn, Log, LogLevel};
 use std::{
     cmp::Ordering,
@@ -310,14 +311,12 @@ impl PartialEq for Value {
 
 impl Eq for Value {}
 
+pub type NativeFn = Box<dyn Fn(Vec<Value>) -> ValueResult>;
 pub enum NativeFunction {
     /// Has strict parameter amount requirements.
-    Strict {
-        params: usize,
-        func: Box<dyn Fn(Vec<Value>) -> Option<Value>>,
-    },
+    Strict { params: usize, func: NativeFn },
     /// Doesn't have strict parameter amount requirements.
-    Loose(Box<dyn Fn(Vec<Value>) -> Option<Value>>),
+    Loose(NativeFn),
 }
 
 pub type Error = crate::Error<ErrorType>;
@@ -335,6 +334,10 @@ pub enum ErrorType {
 
     /// (`function_name`, `params_len`, `args_len`)
     ArgsMismatch(String, usize, usize),
+
+    NativeFnError(String),
+
+    ParseError(ast::types::Error),
 
     IOError(io::Error),
 }
@@ -401,6 +404,10 @@ impl From<Error> for Log {
             ErrorType::ArgsMismatch(name, params_len, args_len) => {
                 format!("Function '{name}' has {params_len} parameter{}, but {args_len} argument{} {} provided", if params_len == 1 { "" } else { "s" }, if args_len == 1 { "" } else { "s" }, if args_len == 1 { "was" } else { "were" })
             },
+            ErrorType::ParseError(err) => {
+                return Self::from(err);
+            }
+            ErrorType::NativeFnError(v) => v,
             ErrorType::IOError(error) => format!("IO error: {error}"),
         })
     }
@@ -409,5 +416,12 @@ impl From<Error> for Log {
 impl From<io::Error> for Error {
     fn from(value: io::Error) -> Self {
         Self::new(ErrorType::IOError(value), None)
+    }
+}
+
+impl From<ast::types::Error> for Error {
+    fn from(value: ast::types::Error) -> Self {
+        let location = value.location.clone();
+        Self::new(ErrorType::ParseError(value), location)
     }
 }

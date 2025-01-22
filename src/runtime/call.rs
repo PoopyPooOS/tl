@@ -52,7 +52,7 @@ impl super::Scope {
         let evaluated_args = evaluated_args;
 
         if let Some(native_fn) = self.native_functions.get(&name) {
-            match native_fn {
+            let mut result = match native_fn {
                 NativeFunction::Strict { params, func } => {
                     if args.len() != *params {
                         return Err(Box::new(Error::new(
@@ -61,12 +61,20 @@ impl super::Scope {
                         )));
                     }
 
-                    return Ok(func(evaluated_args).unwrap_or_default());
+                    func(evaluated_args)
                 }
-                NativeFunction::Loose(func) => {
-                    return Ok(func(evaluated_args).unwrap_or_default());
-                }
+                NativeFunction::Loose(func) => func(evaluated_args),
+            };
+
+            // Set error location here because native functions will almost always just return `None` for the location.
+            if let Err(ref mut err) = result
+                && matches!(err.error_type, ErrorType::NativeFnError(_))
+                && err.location.is_none()
+            {
+                err.location = self.location_from_expr(expr);
             }
+
+            return result;
         }
 
         let function = self

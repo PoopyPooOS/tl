@@ -8,4 +8,4 @@
     - [x] Implement field access.
     - [x] Implement array indexing.
     - [x] Use safer arthimetic when evaluating binary operations.
-    - [] Add an import function to the stdlib which evaluates another file and returns the evaluation result. 
+    - [x] Add an import function to the stdlib which evaluates another file and returns the evaluation result.
