@@ -8,7 +8,7 @@ default = ["serde", "fs"]
 fs = []
 
 serde = ["dep:serde"]
-toml = ["dep:toml"]
+toml = ["serde", "dep:toml"]
 
 [dependencies]
 logger = { path = "../logger" }
