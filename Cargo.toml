@@ -4,14 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["serde"]
+default = ["serde", "fs"]
+fs = []
+
 serde = ["dep:serde"]
+toml = ["dep:toml"]
 
 [dependencies]
 logger = { path = "../logger" }
 
-# for `serde` feature
 serde = { version = "1.0.215", features = ["derive"], optional = true }
+toml = { version = "0.8.19", optional = true }
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"

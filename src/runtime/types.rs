@@ -339,7 +339,49 @@ pub enum ErrorType {
 
     ParseError(ast::types::Error),
 
+    #[cfg(feature = "toml")]
+    TomlParsingError(toml::de::Error),
+
     IOError(io::Error),
+}
+
+impl From<Error> for Log {
+    fn from(value: Error) -> Self {
+        let log = Log {
+            level: LogLevel::Error,
+            message: "Unknown runtime error".into(),
+            location: value.location,
+            hint: None,
+        };
+
+        log.message(match value.error_type {
+            ErrorType::VariableDoesntExist(name) => {
+                format!("The variable '{name}' does not exist.")
+            }
+            ErrorType::FieldDoesntExist(name) => {
+                format!("The field '{name}' does not exist.")
+            }
+            ErrorType::FunctionDoesntExist(name) => {
+                format!("The function '{name}' does not exist.")
+            }
+            ErrorType::CanNotAccessWithNonIdent => {
+                "Can not access fields with expressions other than identifiers".into()
+            }
+            ErrorType::IndexOutOfBounds(index, length) => {
+                format!("Index out of bounds: index is {index} but the length is {length}")
+            }
+            ErrorType::ArgsMismatch(name, params_len, args_len) => {
+                format!("Function '{name}' has {params_len} parameter{}, but {args_len} argument{} {} provided", if params_len == 1 { "" } else { "s" }, if args_len == 1 { "" } else { "s" }, if args_len == 1 { "was" } else { "were" })
+            },
+            ErrorType::NativeFnError(v) => v,
+            ErrorType::ParseError(err) => {
+                return Self::from(err);
+            }
+            #[cfg(feature = "toml")]
+            ErrorType::TomlParsingError(err) => format!("{err}"),
+            ErrorType::IOError(error) => format!("IO error: {error}"),
+        })
+    }
 }
 
 impl PartialEq for ErrorType {
@@ -376,43 +418,6 @@ impl PartialEq for ErrorType {
     }
 }
 
-impl From<Error> for Log {
-    fn from(value: Error) -> Self {
-        let log = Log {
-            level: LogLevel::Error,
-            message: "Unknown runtime error".into(),
-            location: value.location,
-            hint: None,
-        };
-
-        log.message(match value.error_type {
-            ErrorType::VariableDoesntExist(name) => {
-                format!("The variable '{name}' does not exist.")
-            }
-            ErrorType::FieldDoesntExist(name) => {
-                format!("The field '{name}' does not exist.")
-            }
-            ErrorType::FunctionDoesntExist(name) => {
-                format!("The function '{name}' does not exist.")
-            }
-            ErrorType::CanNotAccessWithNonIdent => {
-                "Can not access fields with expressions other than identifiers".into()
-            }
-            ErrorType::IndexOutOfBounds(index, length) => {
-                format!("Index out of bounds: index is {index} but the length is {length}")
-            }
-            ErrorType::ArgsMismatch(name, params_len, args_len) => {
-                format!("Function '{name}' has {params_len} parameter{}, but {args_len} argument{} {} provided", if params_len == 1 { "" } else { "s" }, if args_len == 1 { "" } else { "s" }, if args_len == 1 { "was" } else { "were" })
-            },
-            ErrorType::ParseError(err) => {
-                return Self::from(err);
-            }
-            ErrorType::NativeFnError(v) => v,
-            ErrorType::IOError(error) => format!("IO error: {error}"),
-        })
-    }
-}
-
 impl From<io::Error> for Error {
     fn from(value: io::Error) -> Self {
         Self::new(ErrorType::IOError(value), None)
@@ -423,5 +428,12 @@ impl From<ast::types::Error> for Error {
     fn from(value: ast::types::Error) -> Self {
         let location = value.location.clone();
         Self::new(ErrorType::ParseError(value), location)
+    }
+}
+
+#[cfg(feature = "toml")]
+impl From<toml::de::Error> for Error {
+    fn from(value: toml::de::Error) -> Self {
+        Self::new(ErrorType::TomlParsingError(value), None)
     }
 }

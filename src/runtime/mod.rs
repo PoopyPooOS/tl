@@ -9,6 +9,7 @@ use logger::Location;
 use std::{
     collections::HashMap,
     fmt::{self, Debug},
+    fs,
     path::PathBuf,
     rc::Rc,
 };
@@ -116,10 +117,98 @@ impl Scope {
                                 None,
                             )));
                         };
-                        let source = Source::from(PathBuf::from(path));
+                        let path = PathBuf::from(path);
+                        let source = Source::from(path);
                         let ast = parse(&source).map_err(|err| Error::from(*err))?;
 
                         Scope::new(source, ast).eval()
+                    }),
+                },
+            );
+
+            #[cfg(feature = "fs")]
+            self.add_native_fn(
+                "readFile",
+                NativeFunction::Strict {
+                    params: 1,
+                    func: Box::new(|args| {
+                        let Value::String(path) = args.first().unwrap() else {
+                            return Err(Box::new(Error::new(
+                                ErrorType::NativeFnError(
+                                    "`readFile` requires a path string as an input".to_string(),
+                                ),
+                                None,
+                            )));
+                        };
+                        let path = PathBuf::from(path);
+                        let content =
+                            fs::read_to_string(path).map_err(|err| Box::new(err.into()))?;
+
+                        Ok(Value::String(content))
+                    }),
+                },
+            );
+
+            #[cfg(feature = "toml")]
+            self.add_native_fn(
+                "toml",
+                NativeFunction::Strict {
+                    params: 1,
+                    func: Box::new(|args| {
+                        let Value::String(content) = args.first().unwrap().clone() else {
+                            return Err(Box::new(Error::new(
+                                ErrorType::NativeFnError(
+                                    "`toml` requires a toml string as an input".to_string(),
+                                ),
+                                None,
+                            )));
+                        };
+                        let toml = toml::from_str::<toml::Value>(&content)
+                            .map_err(|err| Box::new(err.into()))?;
+
+                        #[allow(clippy::items_after_statements)]
+                        fn convert_value(toml: toml::Value) -> ValueResult {
+                            use std::collections::BTreeMap;
+
+                            Ok(match toml {
+                                toml::Value::String(v) => Value::String(v),
+                                toml::Value::Integer(v) => {
+                                    Value::Int(v.try_into().map_err(|_| {
+                                        Box::new(Error::new(
+                                            ErrorType::NativeFnError(
+                                                "Failed to convert integer while parsing toml file"
+                                                    .into(),
+                                            ),
+                                            None,
+                                        ))
+                                    })?)
+                                }
+                                toml::Value::Float(v) => Value::Float(v),
+                                toml::Value::Boolean(v) => Value::Boolean(v),
+                                // TODO: This could probably be better.
+                                toml::Value::Datetime(v) => Value::String(v.to_string()),
+                                toml::Value::Array(v) => {
+                                    let mut values = Vec::new();
+
+                                    for toml_value in v {
+                                        values.push(convert_value(toml_value)?);
+                                    }
+
+                                    Value::Array(values)
+                                }
+                                toml::Value::Table(v) => {
+                                    let mut object = BTreeMap::new();
+
+                                    for field in v {
+                                        object.insert(field.0, convert_value(field.1)?);
+                                    }
+
+                                    Value::Object(object)
+                                }
+                            })
+                        }
+
+                        convert_value(toml)
                     }),
                 },
             );
