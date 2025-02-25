@@ -1,6 +1,6 @@
 use super::{
-    types::{Error, ErrorType, NativeFunction, Value},
     ValueResult,
+    types::{Error, ErrorType, NativeFunction, Value},
 };
 use crate::parser::ast::types::{Expr, ExprType};
 
@@ -41,6 +41,28 @@ impl super::Scope {
                 }
 
                 return self.eval_expr(else_branch);
+            }
+            "maybe" => {
+                let cond = args.first().ok_or_else(|| {
+                    Error::new(
+                        ErrorType::ArgsMismatch("if".into(), 3, args.len()),
+                        self.location_from_expr(expr),
+                    )
+                })?;
+                let then = args.get(1).ok_or_else(|| {
+                    Error::new(
+                        ErrorType::ArgsMismatch("if".into(), 3, args.len()),
+                        self.location_from_expr(expr),
+                    )
+                })?;
+
+                let cond = self.eval_expr(cond)?;
+
+                if cond.is_truthy() {
+                    return Ok(cond);
+                }
+
+                return self.eval_expr(then);
             }
             _ => (),
         }
