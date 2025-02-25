@@ -1,13 +1,11 @@
 use super::{
-    types::{Error, ErrorType, Value},
     ValueResult,
+    types::{Error, ErrorType, Value},
 };
 use crate::parser::ast::types::{Expr, ExprType, Literal};
 use std::collections::BTreeMap;
 
-#[allow(clippy::todo, reason = "This is not production code")]
 impl super::Scope {
-    #[allow(clippy::expect_used)]
     pub(super) fn eval_expr(&mut self, expr: &Expr) -> ValueResult {
         match &expr.expr_type {
             ExprType::Literal(literal) => self.eval_literal(literal),
@@ -48,7 +46,6 @@ impl super::Scope {
                     _ => unreachable!(),
                 }
             }
-            // TODO: Construct this expr type in the AST, right now field access is still just binary ops with `Dot` as the operator.
             ExprType::FieldAccess { base, path } => {
                 let base = self.eval_expr(base)?;
                 let mut value = base.clone();
@@ -63,19 +60,12 @@ impl super::Scope {
                     )
                 });
 
-                for (idx, (expr, ident)) in path.enumerate() {
+                for (idx, (_, ident)) in path.enumerate() {
                     value = if idx == 0 {
                         base.access(&ident)
                     } else {
                         value.access(&ident)
                     };
-
-                    if value == Value::Null {
-                        return Err(Box::new(Error::new(
-                            ErrorType::FieldDoesntExist(ident),
-                            self.location_from_expr(expr),
-                        )));
-                    }
                 }
 
                 Ok(value)
