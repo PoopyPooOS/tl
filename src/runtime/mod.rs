@@ -1,9 +1,9 @@
 use crate::{
+    Source,
     parser::{
         ast::types::{Expr, Statement, StatementType},
         parse,
     },
-    Source,
 };
 use logger::Location;
 use std::{
@@ -118,7 +118,7 @@ impl Scope {
                             )));
                         };
                         let path = PathBuf::from(path);
-                        let source = Source::from(path);
+                        let source = Source::from_path(path).map_err(Error::from)?;
                         let ast = parse(&source).map_err(|err| Error::from(*err))?;
 
                         Scope::new(source, ast).eval()

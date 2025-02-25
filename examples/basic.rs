@@ -1,14 +1,10 @@
 use logger::Log;
-use std::{path::PathBuf, process, time::Instant};
+use std::{process, time::Instant};
 use tl::runtime::Scope;
-#[allow(unused_imports)]
-use tl::{
-    parser::{parse, tokenizer},
-    Source,
-};
+use tl::{Source, parser::parse};
 
 fn main() {
-    let source = Source::from(PathBuf::from("examples/basic.tl"));
+    let source = Source::from_path("examples/basic.tl").expect("Failed to read source");
 
     // Parse
     let now = Instant::now();

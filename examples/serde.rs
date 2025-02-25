@@ -1,6 +1,6 @@
 use serde::Deserialize;
-use std::{path::PathBuf, time::Instant};
-use tl::{eval, Source};
+use std::time::Instant;
+use tl::{Source, eval};
 
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
@@ -10,7 +10,7 @@ struct User {
 }
 
 fn main() {
-    let source = Source::from(PathBuf::from("examples/serde.tl"));
+    let source = Source::from_path("examples/serde.tl").expect("Failed to read source");
     let now = Instant::now();
 
     match eval::<Vec<User>>(source) {

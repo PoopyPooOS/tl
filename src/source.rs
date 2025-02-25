@@ -1,5 +1,8 @@
-use logger::error;
-use std::{fmt::Display, fs, path::PathBuf, process};
+use std::{
+    fmt::Display,
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct Source {
@@ -21,25 +24,22 @@ impl Source {
             text: text.into(),
         }
     }
-}
 
-impl From<PathBuf> for Source {
-    fn from(path: PathBuf) -> Self {
-        let text = match fs::read_to_string(&path) {
-            Ok(text) => text,
-            Err(err) => {
-                error!(format!(
-                    "Failed to read from file '{}':\n{err:#?}",
-                    &path.display()
-                ));
-                process::exit(1);
-            }
-        };
+    pub fn from_text(text: impl Into<String>) -> Self {
+        Self::from(text.into())
+    }
 
-        Self {
-            path: Some(path),
+    /// Reads from the given file path.
+    ///
+    /// # Errors
+    /// This function will return an error if it fails to read from the given file path.
+    pub fn from_path(path: impl AsRef<Path>) -> io::Result<Self> {
+        let text = fs::read_to_string(&path)?;
+
+        Ok(Self {
+            path: Some(path.as_ref().to_path_buf()),
             text,
-        }
+        })
     }
 }
 
