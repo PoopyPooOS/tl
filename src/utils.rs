@@ -1,4 +1,4 @@
-use crate::{parser::parse, runtime::types::Value, runtime::Scope, Source};
+use crate::{Source, parser::parse, runtime::Scope, runtime::types::Value};
 use logger::Log;
 
 /// Evaluate a source script and return the result as a deserialized value.
@@ -20,7 +20,7 @@ where
     match runtime.eval() {
         Ok(value) if value != Value::Null => {
             Ok(Some(Deserialize::deserialize(value).map_err(|err| {
-                Box::new(make_fatal!(format!("Could not deserialize value: {err}")))
+                Box::new(make_fatal!("Could not deserialize value: {err}"))
             })?))
         }
         Ok(_) => Ok(None),
