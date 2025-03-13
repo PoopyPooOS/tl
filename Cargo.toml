@@ -1,7 +1,10 @@
 [package]
 name = "tl"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+
+[lib]
+crate-type = ["dylib", "rlib"]
 
 [features]
 default = ["serde", "fs"]
@@ -11,10 +14,10 @@ serde = ["dep:serde"]
 toml = ["serde", "dep:toml"]
 
 [dependencies]
-logger = { path = "../logger" }
+serde = { workspace = true, optional = true }
+toml = { workspace = true, optional = true }
 
-serde = { version = "1.0.215", features = ["derive"], optional = true }
-toml = { version = "0.8.19", optional = true }
+logger = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"
