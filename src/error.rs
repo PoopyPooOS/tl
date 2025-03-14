@@ -16,7 +16,6 @@ impl<T: Debug + PartialEq> Display for Error<T> {
 }
 
 impl<T: Debug + PartialEq> Error<T> {
-    #[must_use]
     pub fn new(error_type: T, location: Option<Location>) -> Self {
         Self {
             error_type,

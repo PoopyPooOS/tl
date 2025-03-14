@@ -6,7 +6,7 @@
 
 use super::ValueResult;
 use crate::parser::ast::{self, types::Statement};
-use logger::{warn, Log, LogLevel};
+use logger::{Log, LogLevel, warn};
 use std::{
     cmp::Ordering,
     collections::BTreeMap,
@@ -32,7 +32,6 @@ pub enum Value {
 }
 
 impl Value {
-    #[must_use]
     pub fn type_of(&self) -> &'static str {
         match self {
             Self::Null => "null",
@@ -46,7 +45,6 @@ impl Value {
         }
     }
 
-    #[must_use]
     pub fn is_truthy(&self) -> bool {
         match self {
             Self::Boolean(b) => *b,
@@ -59,12 +57,10 @@ impl Value {
         }
     }
 
-    #[must_use]
     pub fn and(&self, rhs: &Self) -> bool {
         self.is_truthy() && rhs.is_truthy()
     }
 
-    #[must_use]
     pub fn or(&self, rhs: &Self) -> bool {
         self.is_truthy() || rhs.is_truthy()
     }

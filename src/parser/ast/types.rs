@@ -1,6 +1,6 @@
 use super::err;
 use crate::parser::tokenizer::{self, types::TokenType};
-use logger::{location::Section, Log, LogLevel};
+use logger::{Log, LogLevel, location::Section};
 use std::{collections::BTreeMap, fmt::Display, io};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -10,7 +10,6 @@ pub struct Statement {
 }
 
 impl Statement {
-    #[must_use]
     pub fn new(statement_type: StatementType, section: Section) -> Self {
         Self {
             statement_type,
@@ -32,7 +31,6 @@ pub struct Expr {
 }
 
 impl Expr {
-    #[must_use]
     pub fn new(expr_type: ExprType, section: Section) -> Self {
         Self { expr_type, section }
     }
@@ -105,7 +103,6 @@ pub enum BinaryOperator {
 }
 
 impl BinaryOperator {
-    #[must_use]
     pub fn precedence(&self) -> u8 {
         match self {
             Self::Plus | Self::Minus => 1,

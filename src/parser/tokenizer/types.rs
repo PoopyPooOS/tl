@@ -1,4 +1,4 @@
-use logger::{location::Section, Log, LogLevel};
+use logger::{Log, LogLevel, location::Section};
 use std::{
     cmp::Ordering,
     fmt::{self, Display},
@@ -72,7 +72,6 @@ pub enum TokenType {
 }
 
 impl TokenType {
-    #[must_use]
     pub fn is_binary_operator(&self) -> bool {
         matches!(
             self,
@@ -95,7 +94,6 @@ impl TokenType {
         )
     }
 
-    #[must_use]
     pub fn is_number(&self) -> bool {
         matches!(self, Self::Int(_) | Self::Float(_))
     }
@@ -163,7 +161,6 @@ pub struct Token {
 }
 
 impl Token {
-    #[must_use]
     pub fn new(token_type: TokenType, section: Section) -> Self {
         Self {
             token_type,

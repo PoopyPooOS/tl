@@ -1,5 +1,2 @@
 /target
-/Cargo.lock
-
-# TODO: Remove these files soon, they are for reference only.
-/*.old
+/.helix
