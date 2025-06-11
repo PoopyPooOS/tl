@@ -1,9 +1,9 @@
 use crate::{
-    Source,
     parser::{
         ast::types::{Expr, Statement, StatementType},
         parse,
     },
+    Source,
 };
 use logger::Location;
 use std::{
@@ -13,7 +13,7 @@ use std::{
     path::PathBuf,
     rc::Rc,
 };
-use types::{Error, ErrorType, NativeFunction, Value};
+pub use types::{Error, ErrorType, NativeFunction, Value};
 
 pub mod types;
 
@@ -62,12 +62,10 @@ impl Scope {
         }
     }
 
-    #[allow(clippy::needless_pass_by_value)]
     pub fn add_variable(&mut self, name: impl ToString, value: Value) {
         self.variables.insert(name.to_string(), value);
     }
 
-    #[allow(clippy::needless_pass_by_value)]
     pub fn add_native_fn(&mut self, name: impl ToString, native_fn: NativeFunction) {
         self.native_functions.insert(name.to_string(), native_fn);
     }
@@ -75,7 +73,6 @@ impl Scope {
     /// Evaluates a list of statements (an AST).
     /// # Errors
     /// This function will return an error if an evaluation error occurs.
-    #[allow(clippy::missing_panics_doc)]
     pub fn eval(&mut self) -> ValueResult {
         let mut value = None;
 
@@ -108,7 +105,7 @@ impl Scope {
                 NativeFunction::Strict {
                     params: 1,
                     func: Box::new(|args| {
-                        let Value::String(path) = args.first().unwrap() else {
+                        let Some(Value::String(path)) = args.first() else {
                             return Err(Box::new(Error::new(
                                 ErrorType::NativeFnError(
                                     "`import` requires a path string as an input".to_string(),
@@ -131,7 +128,7 @@ impl Scope {
                 NativeFunction::Strict {
                     params: 1,
                     func: Box::new(|args| {
-                        let Value::String(path) = args.first().unwrap() else {
+                        let Some(Value::String(path)) = args.first() else {
                             return Err(Box::new(Error::new(
                                 ErrorType::NativeFnError(
                                     "`readFile` requires a path string as an input".to_string(),
@@ -154,18 +151,6 @@ impl Scope {
                 NativeFunction::Strict {
                     params: 1,
                     func: Box::new(|args| {
-                        let Value::String(content) = args.first().unwrap().clone() else {
-                            return Err(Box::new(Error::new(
-                                ErrorType::NativeFnError(
-                                    "`toml` requires a toml string as an input".to_string(),
-                                ),
-                                None,
-                            )));
-                        };
-                        let toml = toml::from_str::<toml::Value>(&content)
-                            .map_err(|err| Box::new(err.into()))?;
-
-                        #[allow(clippy::items_after_statements)]
                         fn convert_value(toml: toml::Value) -> ValueResult {
                             use std::collections::BTreeMap;
 
@@ -207,6 +192,17 @@ impl Scope {
                             })
                         }
 
+                        let Some(Value::String(content)) = args.first() else {
+                            return Err(Box::new(Error::new(
+                                ErrorType::NativeFnError(
+                                    "`toml` requires a toml string as an input".to_string(),
+                                ),
+                                None,
+                            )));
+                        };
+                        let toml = toml::from_str::<toml::Value>(content)
+                            .map_err(|err| Box::new(err.into()))?;
+
                         convert_value(toml)
                     }),
                 },
@@ -244,10 +240,6 @@ impl Scope {
         self.scopes.get_mut(&scope_id).unwrap()
     }
 
-    #[allow(
-        clippy::unnecessary_wraps,
-        reason = "`Option<Location>` is more commonly used, this simplifies things"
-    )]
     /// Always returns `Some`, safe to unwrap if needed.
     fn location_from_expr(&self, expr: &Expr) -> Option<Location> {
         Some(Location {

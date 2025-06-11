@@ -1,6 +1,5 @@
 #![feature(let_chains, stmt_expr_attributes)]
 // Lints
-#![allow(clippy::unused_self, clippy::too_many_lines)]
 #![deny(
     clippy::panic,
     clippy::unwrap_used,

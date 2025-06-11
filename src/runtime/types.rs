@@ -1,12 +1,8 @@
-#![allow(
-    clippy::arithmetic_side_effects,
-    clippy::float_arithmetic,
-    clippy::cast_precision_loss
-)]
+#![allow(clippy::arithmetic_side_effects, clippy::float_arithmetic)]
 
 use super::ValueResult;
 use crate::parser::ast::{self, types::Statement};
-use logger::{Log, LogLevel, warn};
+use logger::{warn, Log, LogLevel};
 use std::{
     cmp::Ordering,
     collections::BTreeMap,
@@ -29,6 +25,17 @@ pub enum Value {
         args: Vec<String>,
         body: Vec<Statement>,
     },
+}
+
+#[macro_export]
+macro_rules! object {
+    ($($key:ident = $val:expr),* $(,)?) => {
+        Value::Object(std::collections::BTreeMap::from([
+            $(
+                (stringify!($key).to_owned(), $val),
+            )*
+        ]))
+    };
 }
 
 impl Value {
@@ -284,7 +291,6 @@ impl Ord for Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        #[allow(clippy::cast_possible_truncation)]
         match (self, other) {
             (Value::Null, Value::Null) => true,
             (Value::Boolean(lhs), Value::Boolean(rhs)) => lhs == rhs,

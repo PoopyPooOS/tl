@@ -1,5 +1,4 @@
 #![allow(clippy::unwrap_used, reason = "Panics automatically invalidate tests")]
-#![allow(clippy::too_many_lines, reason = "Some tests can get very long")]
 
 use crate::{
     parser::parse,
