@@ -26,7 +26,6 @@ impl Parser {
     /// Tokenizes the source code inside the [`Parser`] struct.
     /// # Errors
     /// This function will return an error if a tokenization error occurs.
-    #[allow(clippy::too_many_lines)]
     pub fn tokenize(&mut self) -> Result<Vec<Token>, types::Error> {
         let mut tokens = Vec::new();
         let mut chars = self.source.text.chars().peekable();
