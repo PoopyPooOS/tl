@@ -1,36 +1,16 @@
-use logger::Log;
-use std::{process, time::Instant};
-use tl::runtime::Scope;
-use tl::{Source, parser::parse};
+use std::time::Instant;
+use tl::{eval, Source};
 
 fn main() {
-    let source = Source::from_path("examples/basic.tl").expect("Failed to read source");
-
-    // Parse
+    let source = Source::from_text(include_str!("basic.tl"));
     let now = Instant::now();
-    let ast = parse(&source).unwrap_or_else(|err| {
-        Log::from(*err).output();
-        process::exit(0)
-    });
-    let parse_time = now.elapsed();
 
-    // Evaluate
-    let now = Instant::now();
-    let evaluated = Scope::new(source, ast).eval();
-    let eval_time = now.elapsed();
-
-    match evaluated {
-        Ok(evaluated) => {
-            println!("Evaluated: {evaluated}");
+    match eval::<String>(source) {
+        Ok(Some(value)) => {
+            let time = now.elapsed();
+            println!("Evaluated:\n{value}\nTook {time:?}.");
         }
-        Err(err) => {
-            Log::from(*err).output();
-            return;
-        }
+        Ok(None) => (),
+        Err(log) => log.output(),
     }
-
-    println!(
-        "Took {parse_time:?} to parse.\nTook {eval_time:?} to evaluate.\nTook {:?} in total.",
-        parse_time + eval_time
-    );
 }

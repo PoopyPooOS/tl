@@ -81,8 +81,8 @@ impl Scope {
             reason = "The length of `args` is checked before by `eval_call`"
         )]
         {
-            self.native_functions.insert(
-                "println".into(),
+            self.add_native_fn(
+                "println",
                 NativeFunction::Loose(Box::new(|args| {
                     for arg in args {
                         println!("{arg}");
@@ -90,14 +90,99 @@ impl Scope {
                     Ok(Value::Null)
                 })),
             );
-            self.native_functions.insert(
-                "print".into(),
+            self.add_native_fn(
+                "print",
                 NativeFunction::Loose(Box::new(|args| {
                     for arg in args {
                         print!("{arg}");
                     }
                     Ok(Value::Null)
                 })),
+            );
+
+            self.add_native_fn(
+                "map",
+                NativeFunction::Strict {
+                    params: 2,
+                    func: Box::new(|args| {
+                        let Some(Value::Function {
+                            args: callback_args,
+                            body: callback,
+                        }) = args.first()
+                        else {
+                            return Err(Box::new(Error::new(
+                                ErrorType::NativeFnError(
+                                    "`map` requires a function with a single argument as the first argument".to_string(),
+                                ),
+                                None,
+                            )));
+                        };
+                        let Some(Value::Array(list)) = args.get(1) else {
+                            return Err(Box::new(Error::new(
+                                ErrorType::NativeFnError(
+                                    "`map` requires an array the second argument".to_string(),
+                                ),
+                                None,
+                            )));
+                        };
+
+                        let mut new_list = Vec::with_capacity(list.len());
+
+                        if callback_args.len() != 1 {
+                            return Err(Box::new(Error::new(
+                                ErrorType::NativeFnError(
+                                    "`map` requires a function with a single argument as the first argument".to_string(),
+                                ),
+                                None,
+                            )));
+                        }
+
+                        let Some(callback_arg) = callback_args.first() else {
+                            unreachable!("length was checked before");
+                        };
+
+                        for item in list {
+                            let mut scope = Scope::new(Source::from_text(""), callback.clone());
+                            scope.add_variable(callback_arg, item.clone());
+                            new_list.push(scope.eval()?);
+                        }
+
+                        Ok(Value::Array(new_list))
+                    }),
+                },
+            );
+            self.add_native_fn(
+                "join",
+                NativeFunction::Strict {
+                    params: 2,
+                    func: Box::new(|args| {
+                        let Some(Value::Array(list)) = args.first() else {
+                            return Err(Box::new(Error::new(
+                                ErrorType::NativeFnError(
+                                    "`join` requires an array the first argument".to_string(),
+                                ),
+                                None,
+                            )));
+                        };
+                        let Some(Value::String(sep)) = args.get(1) else {
+                            return Err(Box::new(Error::new(
+                                ErrorType::NativeFnError(
+                                    "`join` requires a separator string as the second argument"
+                                        .to_string(),
+                                ),
+                                None,
+                            )));
+                        };
+
+                        #[allow(clippy::arithmetic_side_effects)]
+                        Ok(Value::String(
+                            list.iter()
+                                .map(Value::to_string)
+                                .reduce(|a, b| a + sep + &b)
+                                .unwrap_or_default(),
+                        ))
+                    }),
+                },
             );
 
             self.add_native_fn(

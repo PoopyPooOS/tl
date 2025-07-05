@@ -1,6 +1,6 @@
 use super::{
-    ValueResult,
     types::{Error, ErrorType, NativeFunction, Value},
+    ValueResult,
 };
 use crate::parser::ast::types::{Expr, ExprType};
 
