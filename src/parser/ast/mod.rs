@@ -17,6 +17,7 @@ mod ident;
 mod interpolated_string;
 mod r#let;
 mod object;
+mod path;
 
 #[derive(Debug)]
 pub struct Parser {
@@ -106,6 +107,12 @@ macro_rules! advance {
 /// Internal macro for the AST.
 macro_rules! consume {
     ($self:expr, $expected:ident) => {
+        $crate::parser::ast::consume!(no_propagate $self, $expected)?
+    };
+    ($self:expr, $expected:ident($($value:expr),*)) => {
+        $crate::parser::ast::consume!(no_propagate $self, $expected($($value),*))?
+    };
+    (no_propagate $self:expr, $expected:ident) => {
         match $crate::parser::ast::advance!($self) {
             Some(token) => {
                 if token.token_type == $crate::parser::tokenizer::types::TokenType::$expected {
@@ -117,10 +124,10 @@ macro_rules! consume {
                     )
                 }
             }
-            _ => $crate::parser::ast::err!(ExpectedToken($crate::parser::tokenizer::types::TokenType::$expected)),
-        }?
+            _ => $crate::parser::ast::err!(ExpectedOneOfTokens(vec![$crate::parser::tokenizer::types::TokenType::$expected])),
+        }
     };
-    ($self:expr, $expected:ident($($value:expr),*)) => {
+    (no_propagate $self:expr, $expected:ident($($value:expr),*)) => {
         match $crate::parser::ast::advance!($self) {
             Some(token) => {
                 if let $crate::parser::tokenizer::types::TokenType::$expected($($value),*) = token.token_type {
@@ -136,7 +143,7 @@ macro_rules! consume {
                 }
             }
             _ => $crate::parser::ast::err!(
-                ExpectedToken($crate::parser::tokenizer::types::TokenType::$expected($($value.clone()),*))
+                ExpectedOneOfTokens(vec![$crate::parser::tokenizer::types::TokenType::$expected($($value.clone()),*)])
             ),
         }
     };
@@ -152,9 +159,9 @@ macro_rules! get_ident {
                     v.clone()
                 } else {
                     return $crate::parser::ast::err!(
-                        ExpectedToken($crate::parser::ast::TokenType::Identifier(
+                        ExpectedOneOfTokens(vec![$crate::parser::ast::TokenType::Identifier(
                             "identifier".to_string()
-                        )),
+                        )]),
                         $self.location_from_token(
                             $self
                                 .tokens
@@ -166,9 +173,9 @@ macro_rules! get_ident {
             }
             _ => {
                 return $crate::parser::ast::err!(
-                    ExpectedToken($crate::parser::ast::TokenType::Identifier(
+                    ExpectedOneOfTokens(vec![$crate::parser::ast::TokenType::Identifier(
                         "identifier".to_string()
-                    )),
+                    )]),
                     $self.location_from_token(
                         $self
                             .tokens
@@ -186,9 +193,9 @@ macro_rules! get_ident {
                     (token.clone(), name.clone())
                 } else {
                     return $crate::parser::ast::err!(
-                        ExpectedToken($crate::parser::ast::TokenType::Identifier(
+                        ExpectedOneOfTokens(vec![$crate::parser::ast::TokenType::Identifier(
                             "identifier".to_string()
-                        )),
+                        )]),
                         $self.location_from_token(
                             $self
                                 .tokens
@@ -200,9 +207,9 @@ macro_rules! get_ident {
             }
             _ => {
                 return $crate::parser::ast::err!(
-                    ExpectedToken($crate::parser::ast::TokenType::Identifier(
+                    ExpectedOneOfTokens(vec![$crate::parser::ast::TokenType::Identifier(
                         "identifier".to_string()
-                    )),
+                    )]),
                     $self.location_from_token(
                         $self
                             .tokens

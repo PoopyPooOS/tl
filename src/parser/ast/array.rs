@@ -13,7 +13,7 @@ impl super::Parser {
         let start = self
             .tokens
             .get(self.position)
-            .ok_or_else(|| raw_err!(ExpectedToken(TokenType::LBracket)))?
+            .ok_or_else(|| raw_err!(ExpectedOneOfTokens(vec![TokenType::LBracket])))?
             .clone();
         consume!(self, LBracket);
 

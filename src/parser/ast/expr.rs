@@ -78,6 +78,7 @@ impl super::Parser {
             TokenType::Float(v) => literal!(Float(*v)),
             TokenType::Bool(v) => literal!(Boolean(*v)),
             TokenType::Identifier(_) => self.parse_ident()?,
+            TokenType::Dot | TokenType::Slash => self.parse_path()?,
             other => {
                 return err!(
                     UnexpectedToken(other.clone()),
@@ -93,7 +94,9 @@ impl super::Parser {
                 b if b.is_binary_operator() => {
                     return self.parse_binary_op_with_left(0, expr);
                 }
-                TokenType::Dot => {
+                TokenType::Dot
+                    if !matches!(expr.expr_type, ExprType::Literal(Literal::Path(..))) =>
+                {
                     return self.parse_field_access();
                 }
                 _ => (),

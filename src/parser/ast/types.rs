@@ -1,7 +1,7 @@
 use super::err;
 use crate::parser::tokenizer::{self, types::TokenType};
-use logger::{Log, LogLevel, location::Section};
-use std::{collections::BTreeMap, fmt::Display, io};
+use logger::{location::Section, Log, LogLevel};
+use std::{collections::BTreeMap, fmt::Display, io, path::PathBuf};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Statement {
@@ -70,6 +70,7 @@ pub enum Literal {
     Boolean(bool),
     String(String),
     InterpolatedString(Vec<Expr>),
+    Path(PathBuf),
     Array(Vec<Expr>),
     Object(BTreeMap<String, Expr>),
 }
@@ -189,7 +190,7 @@ pub enum ErrorType {
     /// When a specific token type is expected but another token type was found.
     ExpectedTokenGot(TokenType, TokenType),
     /// When a token is expected but no tokens are left.
-    ExpectedToken(TokenType),
+    ExpectedOneOfTokens(Vec<TokenType>),
 
     /// Very rare edge case in which a token can not be parsed by the AST regardless of the context its in.
     UnexpectedToken(TokenType),
@@ -223,7 +224,7 @@ impl PartialEq for ErrorType {
             {
                 true
             }
-            (E::ExpectedToken(r_expected), E::ExpectedToken(l_expected))
+            (E::ExpectedOneOfTokens(r_expected), E::ExpectedOneOfTokens(l_expected))
                 if r_expected == l_expected =>
             {
                 true
@@ -272,8 +273,23 @@ impl From<Error> for Log {
             ErrorType::ExpectedTokenGot(expected, found) => {
                 format!("Expected token '{expected}' found '{found}'")
             }
-            ErrorType::ExpectedToken(expected) => {
-                format!("Expected token '{expected}', but no tokens are left")
+            ErrorType::ExpectedOneOfTokens(expected) => {
+                if expected.len() == 1 {
+                    format!(
+                        "Expected token '{}', but no tokens are left",
+                        #[allow(clippy::unwrap_used, reason = "length checked before")]
+                        expected.first().unwrap()
+                    )
+                } else {
+                    format!(
+                        "Expected one of the following tokens: {}, but no tokens are left",
+                        expected
+                            .into_iter()
+                            .map(|token| format!("'{token}'"))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                }
             }
             ErrorType::UnexpectedToken(token) => format!("Unexpected token: {token}"),
             ErrorType::NoTokensLeft => "No tokens left".into(),

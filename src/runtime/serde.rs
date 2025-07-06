@@ -14,13 +14,14 @@ impl<'de> Deserializer<'de> for Value {
     {
         match self {
             Value::Null => visitor.visit_unit(),
-            Value::Boolean(b) => visitor.visit_bool(b),
-            Value::Int(n) => visitor.visit_i64(
-                n.try_into()
+            Value::Boolean(val) => visitor.visit_bool(val),
+            Value::Int(val) => visitor.visit_i64(
+                val.try_into()
                     .map_err(|_| de::Error::custom("Integer overflowed"))?,
             ),
-            Value::Float(f) => visitor.visit_f64(f),
-            Value::String(s) => visitor.visit_string(s),
+            Value::Float(val) => visitor.visit_f64(val),
+            Value::String(val) => visitor.visit_string(val),
+            Value::Path(val) => visitor.visit_string(val.display().to_string()),
             Value::Array(arr) => {
                 let seq = ValueSeq {
                     iter: arr.into_iter(),

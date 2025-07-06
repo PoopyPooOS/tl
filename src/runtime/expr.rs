@@ -1,6 +1,6 @@
 use super::{
-    ValueResult,
     types::{Error, ErrorType, Value},
+    ValueResult,
 };
 use crate::parser::ast::types::{Expr, ExprType, Literal};
 use std::collections::BTreeMap;
@@ -100,6 +100,7 @@ impl super::Scope {
 
                 Ok(Value::String(value))
             }
+            Literal::Path(path) => Ok(Value::Path(path.clone())),
             Literal::Array(v) => {
                 let mut values = Vec::new();
 

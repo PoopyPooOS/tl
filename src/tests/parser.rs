@@ -13,7 +13,7 @@ use crate::{
 };
 use logger::{location::Section, Log};
 use pretty_assertions::assert_eq;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, path::PathBuf};
 
 fn parse(text: impl Into<String>) -> Result<Vec<Statement>, Box<Log>> {
     Ok(full_parse(&Source::new(text)).map_err(|err| Log::from(*err))?)
@@ -105,6 +105,26 @@ fn interpolated_string() {
             ),
         ]),
         Section::new(0..=0, 0..=28)
+    )];
+    assert_eq!(parse(input).unwrap(), expected);
+}
+
+#[test]
+fn relative_path() {
+    let input = "./file.txt";
+    let expected = vec![literal!(
+        Path(PathBuf::from("file.txt")),
+        Section::new(0..=0, 0..=10)
+    )];
+    assert_eq!(parse(input).unwrap(), expected);
+}
+
+#[test]
+fn absolute_path() {
+    let input = "/bin/sh";
+    let expected = vec![literal!(
+        Path(PathBuf::from("/bin/sh")),
+        Section::new(0..=0, 0..=7)
     )];
     assert_eq!(parse(input).unwrap(), expected);
 }

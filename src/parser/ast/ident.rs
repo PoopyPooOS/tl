@@ -79,7 +79,7 @@ impl super::Parser {
                         raw_err!(NegativeArrayIndex, self.location_from_token(token))
                     })?
                 }
-                _ => return err!(ExpectedToken(TokenType::Int(0))),
+                _ => return err!(ExpectedOneOfTokens(vec![TokenType::Int(0)])),
             },
             _ => return err!(NoTokensLeft),
         };

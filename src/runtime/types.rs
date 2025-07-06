@@ -9,6 +9,7 @@ use std::{
     fmt::{self, Display},
     io,
     ops::{Add, Div, Index, Mul, Rem, Sub},
+    path::PathBuf,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -19,6 +20,7 @@ pub enum Value {
     Int(isize),
     Float(f64),
     String(String),
+    Path(PathBuf),
     Array(Vec<Value>),
     Object(BTreeMap<String, Value>),
     Function {
@@ -46,6 +48,7 @@ impl Value {
             Self::Int(_) => "number",
             Self::Float(_) => "float",
             Self::String(_) => "string",
+            Self::Path(_) => "path",
             Self::Array(_) => "array",
             Self::Object(_) => "object",
             Self::Function { .. } => "function",
@@ -58,6 +61,7 @@ impl Value {
             Self::Int(n) => *n > 0,
             Self::Float(f) => *f > 0.0,
             Self::String(s) => !s.is_empty(),
+            Self::Path(p) => !p.exists(),
             Self::Array(arr) => !arr.is_empty(),
             Self::Object(map) => !map.is_empty(),
             Self::Function { .. } | Self::Null => false,
@@ -89,6 +93,7 @@ impl Display for Value {
             Value::Int(v) => f.write_str(&format!("{v}")),
             Value::Float(v) => f.write_str(&format!("{v}")),
             Value::String(v) => f.write_str(v),
+            Value::Path(v) => f.write_str(&v.display().to_string()),
             Value::Array(v) => {
                 let formatted = v.iter().map(ToString::to_string).collect::<Vec<_>>();
                 f.write_str(&format!("[ {} ]", formatted.join(" ")))

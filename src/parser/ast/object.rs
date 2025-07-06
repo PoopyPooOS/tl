@@ -50,7 +50,7 @@ impl super::Parser {
                 }
                 _ => {
                     return err!(
-                        ExpectedToken(TokenType::Identifier(String::new())),
+                        ExpectedOneOfTokens(vec![TokenType::Identifier(String::new())]),
                         self.location_from_token(
                             self.tokens
                                 .get(self.position)

@@ -8,10 +8,12 @@ use crate::parser::tokenizer::types::{Token, TokenType};
 impl super::Parser {
     pub(super) fn parse_interpolated_string(&mut self, v: &[Token]) -> ExprResult {
         let mut result = Vec::new();
-        let start = self
-            .tokens
-            .get(self.position)
-            .ok_or_else(|| raw_err!(ExpectedToken(TokenType::InterpolatedString(vec![])), None))?;
+        let start = self.tokens.get(self.position).ok_or_else(|| {
+            raw_err!(
+                ExpectedOneOfTokens(vec![TokenType::InterpolatedString(vec![])]),
+                None
+            )
+        })?;
 
         for token in v {
             match &token.token_type {
