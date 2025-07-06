@@ -1,3 +1,5 @@
+use std::{iter::Peekable, path::PathBuf, str::Chars};
+
 use crate::source::Source;
 use logger::{location::Section, Location};
 use types::{Error, ErrorType, Token, TokenType};
@@ -66,24 +68,117 @@ impl Parser {
                 }
                 // Comments / Slash operator
                 '/' => {
-                    if let Some(next_ch) = chars.clone().nth(1)
-                        && next_ch == '/'
-                    {
-                        chars.next();
-                        chars.next();
-                        self.column = self.column.saturating_add(2);
+                    // Look ahead to distinguish between comment vs path
+                    if let Some(next_ch) = chars.clone().nth(1) {
+                        if next_ch == '/' {
+                            // Comment
+                            chars.next();
+                            chars.next();
+                            self.column = self.column.saturating_add(2);
+                            while let Some(&ch) = chars.peek() {
+                                if ch == '\n' {
+                                    break;
+                                }
+                                chars.next();
+                                self.column = self.column.saturating_add(1);
+                            }
+                            continue;
+                        }
 
-                        while let Some(&ch) = chars.peek() {
-                            if ch == '\n' {
-                                break;
+                        let line_start = self.line;
+                        let column_start = self.column;
+
+                        // Path start
+                        let path_token = {
+                            let chars: &mut Peekable<Chars<'_>> = &mut chars;
+                            let mut path_buf = String::new();
+                            let mut interpolated_tokens = Vec::new();
+                            let mut start_interpolation = false;
+
+                            while let Some(&ch) = chars.peek() {
+                                match ch {
+                                    '"' | ' ' | '\n' | '\t' | ',' | ')' | '}' | ']' => break,
+                                    '$' if chars.clone().nth(1) == Some('{') => {
+                                        // Flush current path segment if any
+                                        if !path_buf.is_empty() {
+                                            interpolated_tokens.push(Token::new(
+                                                TokenType::String(path_buf.clone()),
+                                                Section::new(
+                                                    self.line..=self.line,
+                                                    self.column
+                                                        ..=self
+                                                            .column
+                                                            .saturating_add(path_buf.len()),
+                                                ),
+                                            ));
+                                            path_buf.clear();
+                                        }
+
+                                        // Consume `${`
+                                        chars.next();
+                                        chars.next();
+                                        self.column = self.column.saturating_add(2);
+                                        start_interpolation = true;
+
+                                        let mut nested = String::new();
+                                        let mut depth: i32 = 1;
+                                        for nch in chars.by_ref() {
+                                            self.column = self.column.saturating_add(1);
+                                            match nch {
+                                                '{' => depth = depth.saturating_add(1),
+                                                '}' => {
+                                                    depth = depth.saturating_sub(1);
+                                                    if depth == 0 {
+                                                        break;
+                                                    }
+                                                }
+                                                _ => {}
+                                            }
+                                            nested.push(nch);
+                                        }
+
+                                        let mut nested_tokenizer = Self {
+                                            source: nested.clone().into(),
+                                            line: self.line,
+                                            column: self.column,
+                                        };
+                                        let nested = nested_tokenizer.tokenize()?;
+                                        interpolated_tokens.extend(nested);
+                                    }
+                                    _ => {
+                                        path_buf.push(ch);
+                                        chars.next();
+                                        self.column = self.column.saturating_add(1);
+                                    }
+                                }
                             }
 
-                            chars.next();
-                            self.column = self.column.saturating_add(1);
-                        }
+                            if start_interpolation {
+                                if !path_buf.is_empty() {
+                                    interpolated_tokens.push(Token::new(
+                                        TokenType::String(path_buf),
+                                        Section::new(
+                                            line_start..=self.line,
+                                            column_start..=self.column,
+                                        ),
+                                    ));
+                                }
+                                Ok::<TokenType, types::Error>(TokenType::InterpolatedPath(
+                                    interpolated_tokens,
+                                ))
+                            } else {
+                                Ok(TokenType::Path(PathBuf::from(path_buf)))
+                            }
+                        }?;
+
+                        tokens.push(Token::new(
+                            path_token,
+                            Section::new(line_start..=self.line, column_start..=self.column),
+                        ));
                         continue;
                     }
 
+                    // Standalone slash
                     push_token!(Slash, 1);
                 }
 
@@ -103,7 +198,103 @@ impl Parser {
                 // Misc
                 ',' => push_token!(Comma, 1),
                 ':' => push_token!(Colon, 1),
-                '.' => push_token!(Dot, 1),
+                '.' => {
+                    if let Some(next_ch) = chars.clone().nth(1)
+                        && matches!(next_ch, '/' | '.')
+                    {
+                        let line_start = self.line;
+                        let column_start = self.column;
+
+                        let path_token = {
+                            let mut path_buf = String::new();
+                            let mut interpolated_tokens = Vec::new();
+                            let mut start_interpolation = false;
+
+                            while let Some(&ch) = chars.peek() {
+                                match ch {
+                                    '"' | ' ' | '\n' | '\t' | ',' | ')' | '}' | ']' => break,
+                                    '$' if chars.clone().nth(1) == Some('{') => {
+                                        // Flush current path segment if any
+                                        if !path_buf.is_empty() {
+                                            interpolated_tokens.push(Token::new(
+                                                TokenType::String(path_buf.clone()),
+                                                Section::new(
+                                                    self.line..=self.line,
+                                                    self.column
+                                                        ..=self
+                                                            .column
+                                                            .saturating_add(path_buf.len()),
+                                                ),
+                                            ));
+                                            path_buf.clear();
+                                        }
+
+                                        // Consume `${`
+                                        chars.next();
+                                        chars.next();
+                                        self.column = self.column.saturating_add(2);
+                                        start_interpolation = true;
+
+                                        let mut nested = String::new();
+                                        let mut depth: i32 = 1;
+                                        for nch in chars.by_ref() {
+                                            self.column = self.column.saturating_add(1);
+                                            match nch {
+                                                '{' => depth = depth.saturating_add(1),
+                                                '}' => {
+                                                    depth = depth.saturating_sub(1);
+                                                    if depth == 0 {
+                                                        break;
+                                                    }
+                                                }
+                                                _ => {}
+                                            }
+                                            nested.push(nch);
+                                        }
+
+                                        let mut nested_tokenizer = Self {
+                                            source: nested.clone().into(),
+                                            line: self.line,
+                                            column: self.column,
+                                        };
+                                        let nested = nested_tokenizer.tokenize()?;
+                                        interpolated_tokens.extend(nested);
+                                    }
+                                    _ => {
+                                        path_buf.push(ch);
+                                        chars.next();
+                                        self.column = self.column.saturating_add(1);
+                                    }
+                                }
+                            }
+
+                            if start_interpolation {
+                                if !path_buf.is_empty() {
+                                    interpolated_tokens.push(Token::new(
+                                        TokenType::String(path_buf),
+                                        Section::new(
+                                            line_start..=self.line,
+                                            column_start..=self.column,
+                                        ),
+                                    ));
+                                }
+                                Ok::<TokenType, types::Error>(TokenType::InterpolatedPath(
+                                    interpolated_tokens,
+                                ))
+                            } else {
+                                Ok(TokenType::Path(PathBuf::from(path_buf)))
+                            }
+                        }?;
+
+                        tokens.push(Token::new(
+                            path_token,
+                            Section::new(line_start..=self.line, column_start..=self.column),
+                        ));
+                        continue;
+                    }
+
+                    push_token!(Dot, 1);
+                }
 
                 // Strings
                 #[allow(clippy::range_minus_one, reason = "Exclusive ranges can not be used")]

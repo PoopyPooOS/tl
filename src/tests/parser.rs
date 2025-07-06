@@ -113,7 +113,7 @@ fn interpolated_string() {
 fn relative_path() {
     let input = "./file.txt";
     let expected = vec![literal!(
-        Path(PathBuf::from("file.txt")),
+        Path(PathBuf::from("./file.txt")),
         Section::new(0..=0, 0..=10)
     )];
     assert_eq!(parse(input).unwrap(), expected);
@@ -128,6 +128,8 @@ fn absolute_path() {
     )];
     assert_eq!(parse(input).unwrap(), expected);
 }
+
+// TODO: Add interpolated path test
 
 #[test]
 fn object() {

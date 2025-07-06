@@ -74,11 +74,12 @@ impl super::Parser {
             TokenType::Null => literal!(Null),
             TokenType::String(v) => literal!(String(v.clone())),
             TokenType::InterpolatedString(v) => self.parse_interpolated_string(v)?,
+            TokenType::Path(v) => literal!(Path(v.clone())),
+            TokenType::InterpolatedPath(v) => self.parse_interpolated_path(v)?,
             TokenType::Int(v) => literal!(Int(*v)),
             TokenType::Float(v) => literal!(Float(*v)),
             TokenType::Bool(v) => literal!(Boolean(*v)),
             TokenType::Identifier(_) => self.parse_ident()?,
-            TokenType::Dot | TokenType::Slash => self.parse_path()?,
             other => {
                 return err!(
                     UnexpectedToken(other.clone()),

@@ -1,9 +1,10 @@
-use logger::{Log, LogLevel, location::Section};
+use logger::{location::Section, Log, LogLevel};
 use std::{
     cmp::Ordering,
     fmt::{self, Display},
     io,
     num::{ParseFloatError, ParseIntError},
+    path::PathBuf,
 };
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -11,6 +12,8 @@ pub enum TokenType {
     // Literals
     InterpolatedString(Vec<Token>),
     String(String),
+    InterpolatedPath(Vec<Token>),
+    Path(PathBuf),
     Int(isize),
     Float(f64),
     Bool(bool),
@@ -105,6 +108,8 @@ impl Display for TokenType {
             // Literals
             Self::InterpolatedString(_) => write!(f, "interpolated string"),
             Self::String(v) => write!(f, "\"{v}\""),
+            Self::InterpolatedPath(_) => write!(f, "interpolated path"),
+            Self::Path(v) => write!(f, "{}", v.display()),
             Self::Int(v) => write!(f, "{v}"),
             Self::Float(v) => write!(f, "{v}"),
             Self::Bool(v) => write!(f, "{v}"),

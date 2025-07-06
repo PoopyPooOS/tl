@@ -71,6 +71,7 @@ pub enum Literal {
     String(String),
     InterpolatedString(Vec<Expr>),
     Path(PathBuf),
+    InterpolatedPath(Vec<Expr>),
     Array(Vec<Expr>),
     Object(BTreeMap<String, Expr>),
 }

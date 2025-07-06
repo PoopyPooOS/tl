@@ -135,6 +135,11 @@ impl Add for Value {
             // Strings
             (Self::String(lhs), Self::String(rhs)) => Self::String(lhs + &rhs),
 
+            // Paths
+            (Self::Path(lhs), Self::Path(rhs)) => Self::Path(lhs.join(rhs)),
+            (Self::String(lhs), Self::Path(rhs)) => Self::Path(PathBuf::from(lhs).join(rhs)),
+            (Self::Path(lhs), Self::String(rhs)) => Self::Path(lhs.join(rhs)),
+
             // Arrays and objects
             (Self::Array(mut lhs), Self::Array(rhs)) => {
                 lhs.extend(rhs);

@@ -101,6 +101,16 @@ impl super::Scope {
                 Ok(Value::String(value))
             }
             Literal::Path(path) => Ok(Value::Path(path.clone())),
+            Literal::InterpolatedPath(v) => {
+                let mut value = String::new();
+
+                for expr in v {
+                    let expr = self.eval_expr(expr)?;
+                    value.push_str(&expr.to_string());
+                }
+
+                Ok(Value::Path(value.into()))
+            }
             Literal::Array(v) => {
                 let mut values = Vec::new();
 

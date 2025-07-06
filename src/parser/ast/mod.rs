@@ -14,10 +14,10 @@ mod expr;
 mod field_access;
 mod r#fn;
 mod ident;
+mod interpolated_path;
 mod interpolated_string;
 mod r#let;
 mod object;
-mod path;
 
 #[derive(Debug)]
 pub struct Parser {
