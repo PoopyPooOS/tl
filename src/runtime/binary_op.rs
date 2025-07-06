@@ -1,7 +1,6 @@
 use super::{types::Value, ValueResult};
 use crate::parser::ast::types::{BinaryOperator, Expr};
 
-#[allow(clippy::todo, reason = "This is not production code")]
 impl super::Scope {
     pub(super) fn eval_binary_op(
         &mut self,

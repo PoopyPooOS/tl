@@ -252,7 +252,6 @@ impl From<Error> for Log {
             hint: None,
         };
 
-        #[allow(clippy::single_match)]
         match value.error_type {
             ErrorType::UnexpectedColonInObjectKV => {
                 log.hint = Some("Use '=' instead".into());
