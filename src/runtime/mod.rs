@@ -10,7 +10,6 @@ use std::{
     collections::HashMap,
     fmt::{self, Debug},
     fs,
-    path::PathBuf,
     rc::Rc,
 };
 pub use types::{Error, ErrorType, NativeFunction, Value};
@@ -190,15 +189,14 @@ impl Scope {
                 NativeFunction::Strict {
                     params: 1,
                     func: Box::new(|args| {
-                        let Some(Value::String(path)) = args.first() else {
+                        let Some(Value::Path(path)) = args.first() else {
                             return Err(Box::new(Error::new(
                                 ErrorType::NativeFnError(
-                                    "`import` requires a path string as an input".to_string(),
+                                    "`import` requires a path as input".to_string(),
                                 ),
                                 None,
                             )));
                         };
-                        let path = PathBuf::from(path);
                         let source = Source::from_path(path).map_err(Error::from)?;
                         let ast = parse(&source).map_err(|err| Error::from(*err))?;
 
@@ -213,19 +211,59 @@ impl Scope {
                 NativeFunction::Strict {
                     params: 1,
                     func: Box::new(|args| {
-                        let Some(Value::String(path)) = args.first() else {
+                        let Some(Value::Path(path)) = args.first() else {
                             return Err(Box::new(Error::new(
                                 ErrorType::NativeFnError(
-                                    "`readFile` requires a path string as an input".to_string(),
+                                    "`readFile` requires a path as input".to_string(),
                                 ),
                                 None,
                             )));
                         };
-                        let path = PathBuf::from(path);
                         let content =
                             fs::read_to_string(path).map_err(|err| Box::new(err.into()))?;
 
                         Ok(Value::String(content))
+                    }),
+                },
+            );
+
+            #[cfg(feature = "fs")]
+            self.add_native_fn(
+                "readDir",
+                NativeFunction::Strict {
+                    params: 1,
+                    func: Box::new(|args| {
+                        use crate::object;
+
+                        let Some(Value::Path(path)) = args.first() else {
+                            return Err(Box::new(Error::new(
+                                ErrorType::NativeFnError(
+                                    "`readDir` requires a path as input".to_string(),
+                                ),
+                                None,
+                            )));
+                        };
+                        let content = fs::read_dir(path).map_err(|err| Box::new(err.into()))?;
+                        let content = content
+                            .into_iter()
+                            .filter_map(Result::ok)
+                            .map(|entry| {
+                                object!(
+                                    path = Value::Path(entry.path()),
+                                    type = Value::String(
+                                        match entry.file_type() {
+                                            Ok(f) if f.is_file() => "file",
+                                            Ok(f) if f.is_dir() => "dir",
+                                            Ok(f) if f.is_symlink() => "symlink",
+                                            _ => "other",
+                                        }
+                                        .into()
+                                    )
+                                )
+                            })
+                            .collect::<Vec<_>>();
+
+                        Ok(Value::Array(content))
                     }),
                 },
             );
