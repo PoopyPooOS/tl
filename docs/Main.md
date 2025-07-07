@@ -77,7 +77,7 @@ Other files can be evaluated and imported with the `import` function:
 ```
 ```tl
 // main.tl
-let math = import("math.tl")
+let math = import(./math.tl)
 
 println(math.add(3 5)) // 8
 println(math.sub(5 3)) // 2
