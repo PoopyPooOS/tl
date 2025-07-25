@@ -1,9 +1,10 @@
 use super::types::Value;
 use serde::{
+    Deserialize, Deserializer, Serialize, Serializer,
     de::{self, Expected, IntoDeserializer, MapAccess, SeqAccess, Visitor},
-    forward_to_deserialize_any, Deserializer,
+    forward_to_deserialize_any,
 };
-use std::collections::btree_map;
+use std::{collections::btree_map, fmt};
 
 impl<'de> Deserializer<'de> for Value {
     type Error = de::value::Error;
@@ -115,5 +116,113 @@ impl<'de> MapAccess<'de> for ValueMap {
             Some(value) => seed.deserialize(value),
             None => Err(de::Error::custom("Value expected after key")),
         }
+    }
+}
+
+impl Serialize for Value {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Value::Boolean(v) => serializer.serialize_bool(*v),
+            Value::Int(v) => serializer.serialize_i64(*v as i64),
+            Value::Float(v) => serializer.serialize_f64(*v),
+            Value::String(v) => serializer.serialize_str(v),
+            Value::Path(v) => serializer.serialize_str(&v.display().to_string()),
+            Value::Array(v) => v.serialize(serializer),
+            Value::Object(v) => v.serialize(serializer),
+            Value::Null | Value::Function { .. } => serializer.serialize_unit(),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Value {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct ValueVisitor;
+
+        impl<'de> Visitor<'de> for ValueVisitor {
+            type Value = Value;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a valid Value")
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E> {
+                Ok(Value::Null)
+            }
+
+            fn visit_unit<E>(self) -> Result<Self::Value, E> {
+                Ok(Value::Null)
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E> {
+                Ok(Value::Boolean(v))
+            }
+
+            fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E> {
+                Ok(Value::Int(v as isize))
+            }
+
+            fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E> {
+                Ok(Value::Int(v as isize))
+            }
+
+            fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E> {
+                Ok(Value::Int(v as isize))
+            }
+
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E> {
+                Ok(Value::Int(v as isize))
+            }
+
+            fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E> {
+                Ok(Value::Int(v as isize))
+            }
+
+            fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E> {
+                Ok(Value::Int(v as isize))
+            }
+
+            fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E> {
+                Ok(Value::Int(v as isize))
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E> {
+                Ok(Value::Int(v as isize))
+            }
+
+            fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E> {
+                Ok(Value::Float(f64::from(v)))
+            }
+
+            fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E> {
+                Ok(Value::Float(v))
+            }
+
+            fn visit_char<E>(self, v: char) -> Result<Self::Value, E> {
+                Ok(Value::String(v.to_string()))
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> {
+                Ok(Value::String(v.to_owned()))
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E> {
+                Ok(Value::String(v))
+            }
+
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(
+                self,
+                seq: A,
+            ) -> Result<Self::Value, A::Error> {
+                let vec = Deserialize::deserialize(de::value::SeqAccessDeserializer::new(seq))?;
+                Ok(Value::Array(vec))
+            }
+
+            fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<Self::Value, A::Error> {
+                let map = Deserialize::deserialize(de::value::MapAccessDeserializer::new(map))?;
+                Ok(Value::Object(map))
+            }
+        }
+
+        deserializer.deserialize_any(ValueVisitor)
     }
 }
