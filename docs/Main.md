@@ -5,7 +5,9 @@ This language uses the `//` prefix.
 As of right now there is no support for multi-line comments.
 
 ## Literals
-Basic literals like numbers, strings, floats, booleans are the same as in every other language.  
+Basic literals like numbers, strings, booleans are the same as in every other language.  
+<br>
+Paths use either a `./`, `../` or `/` prefix and end when a whitespace character other than space is met.
 <br>
 Arrays are the same as other languages except they dont have comma seperators, like in Nix.  
 <br>

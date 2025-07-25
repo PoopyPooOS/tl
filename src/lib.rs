@@ -1,4 +1,4 @@
-#![feature(let_chains, stmt_expr_attributes)]
+#![feature(stmt_expr_attributes)]
 // Lints
 #![deny(
     clippy::panic,
