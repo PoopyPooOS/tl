@@ -2,7 +2,7 @@
 
 use super::ValueResult;
 use crate::parser::ast::{self, types::Statement};
-use logger::{warn, Log, LogLevel};
+use logger::{Log, LogLevel, warn};
 use std::{
     cmp::Ordering,
     collections::BTreeMap,
@@ -31,7 +31,7 @@ pub enum Value {
 
 #[macro_export]
 macro_rules! object {
-    ($($key:ident = $val:expr),* $(,)?) => {
+    ($($key:ident: $val:expr),* $(,)?) => {
         Value::Object(std::collections::BTreeMap::from([
             $(
                 (stringify!($key).to_owned(), $val),

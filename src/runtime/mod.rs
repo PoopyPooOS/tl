@@ -1,9 +1,9 @@
 use crate::{
+    Source,
     parser::{
         ast::types::{Expr, Statement, StatementType},
         parse,
     },
-    Source,
 };
 use logger::Location;
 use std::{
@@ -248,9 +248,9 @@ impl Scope {
                             .into_iter()
                             .filter_map(Result::ok)
                             .map(|entry| {
-                                object!(
-                                    path = Value::Path(entry.path()),
-                                    type = Value::String(
+                                object! {
+                                    path: Value::Path(entry.path()),
+                                    type: Value::String(
                                         match entry.file_type() {
                                             Ok(f) if f.is_file() => "file",
                                             Ok(f) if f.is_dir() => "dir",
@@ -259,7 +259,7 @@ impl Scope {
                                         }
                                         .into()
                                     )
-                                )
+                                }
                             })
                             .collect::<Vec<_>>();
 
