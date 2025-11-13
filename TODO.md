@@ -1,2 +1,0 @@
-- Tests:
-    - [] Add tests for the serde feature.

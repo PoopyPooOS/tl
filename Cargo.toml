@@ -14,7 +14,10 @@ toml = ["serde", "dep:toml"]
 serde = { workspace = true, optional = true }
 toml = { workspace = true, optional = true }
 
-logger.workspace = true
+miette.workspace = true
+thiserror.workspace = true
+
+colored.workspace = true
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"

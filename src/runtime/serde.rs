@@ -1,3 +1,5 @@
+use crate::runtime::ValueKind;
+
 use super::types::Value;
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
@@ -13,30 +15,33 @@ impl<'de> Deserializer<'de> for Value {
     where
         V: Visitor<'de>,
     {
-        match self {
-            Value::Null => visitor.visit_unit(),
-            Value::Boolean(val) => visitor.visit_bool(val),
-            Value::Int(val) => visitor.visit_i64(
+        match self.kind {
+            ValueKind::Null => visitor.visit_unit(),
+            ValueKind::Boolean(val) => visitor.visit_bool(val),
+            ValueKind::Int(val) => visitor.visit_i64(
                 val.try_into()
                     .map_err(|_| de::Error::custom("Integer overflowed"))?,
             ),
-            Value::Float(val) => visitor.visit_f64(val),
-            Value::String(val) => visitor.visit_string(val),
-            Value::Path(val) => visitor.visit_string(val.display().to_string()),
-            Value::Array(arr) => {
+            ValueKind::Float(val) => visitor.visit_f64(val),
+            ValueKind::String(val) => visitor.visit_string(val),
+            ValueKind::Path(val) => visitor.visit_string(val.display().to_string()),
+            ValueKind::Array(arr) => {
                 let seq = ValueSeq {
                     iter: arr.into_iter(),
                 };
                 visitor.visit_seq(seq)
             }
-            Value::Object(map) => {
+            ValueKind::Object(map) => {
                 let map = ValueMap {
                     iter: map.into_iter(),
                     value: None,
                 };
                 visitor.visit_map(map)
             }
-            Value::Function { .. } => Err(de::Error::custom("Functions cannot be deserialized")),
+            ValueKind::Function { .. } => {
+                Err(de::Error::custom("Functions cannot be deserialized"))
+            }
+            ValueKind::Builtin(..) => Err(de::Error::custom("Builtins cannot be deserialized")),
         }
     }
 
@@ -49,8 +54,8 @@ impl<'de> Deserializer<'de> for Value {
     where
         V: Visitor<'de>,
     {
-        match self {
-            Value::String(s) => visitor.visit_enum(s.into_deserializer()),
+        match self.kind {
+            ValueKind::String(s) => visitor.visit_enum(s.into_deserializer()),
             _ => Err(de::Error::invalid_type(de::Unexpected::Unit, &self)),
         }
     }
@@ -102,7 +107,8 @@ impl<'de> MapAccess<'de> for ValueMap {
         match self.iter.next() {
             Some((key, value)) => {
                 self.value = Some(value);
-                seed.deserialize(Value::String(key)).map(Some)
+                seed.deserialize(Value::new_builtin(ValueKind::String(key)))
+                    .map(Some)
             }
             None => Ok(None),
         }
@@ -121,15 +127,17 @@ impl<'de> MapAccess<'de> for ValueMap {
 
 impl Serialize for Value {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match self {
-            Value::Boolean(v) => serializer.serialize_bool(*v),
-            Value::Int(v) => serializer.serialize_i64(*v as i64),
-            Value::Float(v) => serializer.serialize_f64(*v),
-            Value::String(v) => serializer.serialize_str(v),
-            Value::Path(v) => serializer.serialize_str(&v.display().to_string()),
-            Value::Array(v) => v.serialize(serializer),
-            Value::Object(v) => v.serialize(serializer),
-            Value::Null | Value::Function { .. } => serializer.serialize_unit(),
+        match &self.kind {
+            ValueKind::Boolean(v) => serializer.serialize_bool(*v),
+            ValueKind::Int(v) => serializer.serialize_i64(*v as i64),
+            ValueKind::Float(v) => serializer.serialize_f64(*v),
+            ValueKind::String(v) => serializer.serialize_str(v),
+            ValueKind::Path(v) => serializer.serialize_str(&v.display().to_string()),
+            ValueKind::Array(v) => v.serialize(serializer),
+            ValueKind::Object(v) => v.serialize(serializer),
+            ValueKind::Null | ValueKind::Function { .. } | ValueKind::Builtin(..) => {
+                serializer.serialize_unit()
+            }
         }
     }
 }
@@ -146,67 +154,67 @@ impl<'de> Deserialize<'de> for Value {
             }
 
             fn visit_none<E>(self) -> Result<Self::Value, E> {
-                Ok(Value::Null)
+                Ok(Value::new_builtin(ValueKind::Null))
             }
 
             fn visit_unit<E>(self) -> Result<Self::Value, E> {
-                Ok(Value::Null)
+                Ok(Value::new_builtin(ValueKind::Null))
             }
 
             fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E> {
-                Ok(Value::Boolean(v))
+                Ok(Value::new_builtin(ValueKind::Boolean(v)))
             }
 
             fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E> {
-                Ok(Value::Int(v as isize))
+                Ok(Value::new_builtin(ValueKind::Int(v as isize)))
             }
 
             fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E> {
-                Ok(Value::Int(v as isize))
+                Ok(Value::new_builtin(ValueKind::Int(v as isize)))
             }
 
             fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E> {
-                Ok(Value::Int(v as isize))
+                Ok(Value::new_builtin(ValueKind::Int(v as isize)))
             }
 
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E> {
-                Ok(Value::Int(v as isize))
+                Ok(Value::new_builtin(ValueKind::Int(v as isize)))
             }
 
             fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E> {
-                Ok(Value::Int(v as isize))
+                Ok(Value::new_builtin(ValueKind::Int(v as isize)))
             }
 
             fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E> {
-                Ok(Value::Int(v as isize))
+                Ok(Value::new_builtin(ValueKind::Int(v as isize)))
             }
 
             fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E> {
-                Ok(Value::Int(v as isize))
+                Ok(Value::new_builtin(ValueKind::Int(v as isize)))
             }
 
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E> {
-                Ok(Value::Int(v as isize))
+                Ok(Value::new_builtin(ValueKind::Int(v as isize)))
             }
 
             fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E> {
-                Ok(Value::Float(f64::from(v)))
+                Ok(Value::new_builtin(ValueKind::Float(f64::from(v))))
             }
 
             fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E> {
-                Ok(Value::Float(v))
+                Ok(Value::new_builtin(ValueKind::Float(v)))
             }
 
             fn visit_char<E>(self, v: char) -> Result<Self::Value, E> {
-                Ok(Value::String(v.to_string()))
+                Ok(Value::new_builtin(ValueKind::String(v.to_string())))
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> {
-                Ok(Value::String(v.to_owned()))
+                Ok(Value::new_builtin(ValueKind::String(v.to_owned())))
             }
 
             fn visit_string<E>(self, v: String) -> Result<Self::Value, E> {
-                Ok(Value::String(v))
+                Ok(Value::new_builtin(ValueKind::String(v)))
             }
 
             fn visit_seq<A: serde::de::SeqAccess<'de>>(
@@ -214,12 +222,12 @@ impl<'de> Deserialize<'de> for Value {
                 seq: A,
             ) -> Result<Self::Value, A::Error> {
                 let vec = Deserialize::deserialize(de::value::SeqAccessDeserializer::new(seq))?;
-                Ok(Value::Array(vec))
+                Ok(Value::new_builtin(ValueKind::Array(vec)))
             }
 
             fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<Self::Value, A::Error> {
                 let map = Deserialize::deserialize(de::value::MapAccessDeserializer::new(map))?;
-                Ok(Value::Object(map))
+                Ok(Value::new_builtin(ValueKind::Object(map)))
             }
         }
 

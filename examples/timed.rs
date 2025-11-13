@@ -1,38 +1,31 @@
-use logger::Log;
-use std::{process, time::Instant};
-use tl::runtime::Scope;
-use tl::{parser::parse, Source};
+use miette::NamedSource;
+use std::{collections::HashMap, time::Instant};
+use tl::{
+    parser::{ast, lexer},
+    runtime::Scope,
+};
 
-fn main() {
-    let source = Source::from_text(include_str!("basic.tl"));
-
-    println!("Running `examples/basic.tl`");
+fn main() -> miette::Result<()> {
+    let source = NamedSource::new("examples/basic.tl", String::from(include_str!("basic.tl")));
 
     // Parse
     let now = Instant::now();
-    let ast = parse(&source).unwrap_or_else(|err| {
-        Log::from(*err).output();
-        process::exit(0)
-    });
-    let parse_time = now.elapsed();
+    let mut lexer = lexer::Lexer::new(source.clone());
+    let tokens = lexer.tokenize()?;
+    let tokenization_time = now.elapsed();
+    let now = Instant::now();
+    let ast = ast::Parser::new(tokens, source.clone()).parse()?;
+    let ast_gen_time = now.elapsed();
 
     // Evaluate
     let now = Instant::now();
-    let evaluated = Scope::new(source, ast).eval();
+    let evaluated = Scope::new(HashMap::new(), source, ast).eval()?;
     let eval_time = now.elapsed();
 
-    match evaluated {
-        Ok(evaluated) => {
-            println!("Evaluated: {evaluated}");
-        }
-        Err(err) => {
-            Log::from(*err).output();
-            return;
-        }
-    }
-
     println!(
-        "Took {parse_time:?} to parse.\nTook {eval_time:?} to evaluate.\nTook {:?} in total.",
-        parse_time + eval_time
+        "Evaluated: {evaluated}\n\nTook {tokenization_time:?} to tokenize.\nTook {ast_gen_time:?} to generate an AST.\nTook {eval_time:?} to evaluate.\nTook {total_time:?} in total.",
+        total_time = tokenization_time + ast_gen_time + eval_time
     );
+
+    Ok(())
 }

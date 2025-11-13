@@ -1,53 +1,81 @@
-use super::{
-    types::{Statement, StatementType},
-    StatementResult,
+use crate::{
+    merge_spans,
+    parser::{
+        ast::{
+            ExprResult, advance, consume,
+            types::{Error, ErrorKind, Expr, ExprKind},
+        },
+        lexer::types::TokenKind,
+    },
 };
-use crate::parser::{
-    ast::{advance, consume, err, raw_err},
-    tokenizer::types::TokenType,
-};
-use logger::location::Section;
 
 impl super::Parser {
-    pub(super) fn parse_let(&mut self) -> StatementResult {
+    pub(super) fn parse_let(&mut self) -> ExprResult {
         let start = self
             .tokens
-            .get(self.position)
-            .ok_or_else(|| raw_err!(NoTokensLeft))?
+            .get(self.pos)
+            .ok_or(Error::new(
+                ErrorKind::NoTokensLeft,
+                self.source.clone(),
+                self.closest_span(),
+            ))?
             .clone();
 
         consume!(self, Let);
 
-        let name = match advance!(self) {
-            Some(token) => {
-                if let TokenType::Identifier(name) = &token.token_type {
-                    (token.clone(), name.clone())
-                } else {
-                    return err!(NoIdentifierAfterLet, self.location_from_token(token));
-                }
-            }
-            _ => {
-                return err!(
-                    NoIdentifierAfterLet,
-                    self.location_from_token(
-                        self.tokens
-                            .get(self.position.saturating_sub(1))
-                            .ok_or_else(|| raw_err!(NoTokensLeft))?,
-                    )
-                );
-            }
-        };
+        let mut bindings = Vec::new();
 
-        consume!(self, Equals);
-        let value = self.parse_expr()?;
-        let end_section = value.section.clone();
+        loop {
+            let token = self
+                .tokens
+                .get(self.pos)
+                .ok_or(Error::new(
+                    ErrorKind::NoTokensLeft,
+                    self.source.clone(),
+                    self.closest_span(),
+                ))?
+                .clone();
 
-        Ok(vec![Statement::new(
-            StatementType::Let {
-                name: name.1,
-                value,
+            if token.kind == TokenKind::In {
+                break;
+            }
+
+            let name_token = advance!(self).ok_or(Error::new(
+                ErrorKind::NoTokensLeft,
+                self.source.clone(),
+                token.span,
+            ))?;
+
+            let name = if let TokenKind::Identifier(name) = &name_token.kind {
+                name.clone()
+            } else {
+                return Err(Error::new(
+                    ErrorKind::ExpectedToken {
+                        expected: "identifier".into(),
+                        found: None,
+                    },
+                    self.source.clone(),
+                    token.span,
+                ));
+            };
+
+            consume!(self, Equals);
+
+            let value = self.parse()?;
+            bindings.push((name, value));
+        }
+
+        consume!(self, In);
+
+        let body = self.parse()?;
+        let end_span = body.span;
+
+        Ok(Expr::new(
+            ExprKind::LetIn {
+                bindings,
+                expr: Box::new(body),
             },
-            Section::merge_start_end(&start.section, &end_section),
-        )])
+            merge_spans(start.span, end_span),
+        ))
     }
 }

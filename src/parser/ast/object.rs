@@ -1,20 +1,29 @@
 use super::{
-    types::{Expr, ExprType, Literal},
     Context, ExprResult,
+    types::{Expr, ExprKind, Literal},
 };
-use crate::parser::{
-    ast::{advance, consume, err, raw_err},
-    tokenizer::types::TokenType,
+use crate::{
+    merge_spans,
+    parser::{
+        ast::{
+            advance, consume,
+            types::{Error, ErrorKind},
+        },
+        lexer::types::TokenKind,
+    },
 };
-use logger::location::Section;
 use std::collections::BTreeMap;
 
 impl super::Parser {
     pub(super) fn parse_object(&mut self) -> ExprResult {
         let start = self
             .tokens
-            .get(self.position)
-            .ok_or_else(|| raw_err!(NoTokensLeft))?
+            .get(self.pos)
+            .ok_or(Error::new(
+                ErrorKind::NoTokensLeft,
+                self.source.clone(),
+                self.closest_span(),
+            ))?
             .clone();
 
         consume!(self, LBrace);
@@ -24,78 +33,133 @@ impl super::Parser {
         let mut fields = BTreeMap::new();
 
         loop {
-            let token = self
-                .tokens
-                .get(self.position)
-                .ok_or_else(|| raw_err!(NoTokensLeft))?;
+            let token = self.tokens.get(self.pos).ok_or(Error::new(
+                ErrorKind::NoTokensLeft,
+                self.source.clone(),
+                self.closest_span(),
+            ))?;
 
-            if token.token_type == TokenType::RBrace {
+            if token.kind == TokenKind::RBrace {
                 consume!(self, RBrace);
                 break;
             }
 
-            let key = match advance!(self) {
-                Some(token) => {
-                    if let TokenType::Identifier(name) = &token.token_type {
-                        name.clone()
-                    } else {
-                        return err!(
-                            ExpectedTokenGot(
-                                TokenType::Identifier(String::new()),
-                                token.token_type.clone()
-                            ),
-                            self.location_from_token(token)
-                        );
+            let mut key_parts = Vec::new();
+            loop {
+                let token = advance!(self).ok_or(Error::new(
+                    ErrorKind::NoTokensLeft,
+                    self.source.clone(),
+                    token.span,
+                ))?;
+
+                match &token.kind {
+                    TokenKind::Identifier(name) | TokenKind::String(name) => {
+                        key_parts.push(name.clone());
+                    }
+                    _ => {
+                        return Err(Error::new(
+                            ErrorKind::ExpectedToken {
+                                expected: "identifier".into(),
+                                found: Some(token.kind.clone()),
+                            },
+                            self.source.clone(),
+                            token.span,
+                        ));
                     }
                 }
-                _ => {
-                    return err!(
-                        ExpectedOneOfTokens(vec![TokenType::Identifier(String::new())]),
-                        self.location_from_token(
-                            self.tokens
-                                .get(self.position)
-                                .ok_or_else(|| raw_err!(NoTokensLeft))?,
-                        )
-                    );
+
+                if let Some(next) = self.tokens.get(self.pos)
+                    && matches!(next.kind, TokenKind::Dot)
+                {
+                    advance!(self);
+                    continue;
                 }
-            };
+                break;
+            }
 
             match advance!(self) {
-                Some(token) => match token.token_type {
-                    TokenType::Equals => (),
-                    TokenType::Colon => {
-                        return err!(UnexpectedColonInObjectKV, self.location_from_token(token));
+                Some(token) => match token.kind {
+                    TokenKind::Equals => (),
+                    TokenKind::Colon => {
+                        return Err(Error::new(
+                            ErrorKind::UnexpectedColonInObjectKV,
+                            self.source.clone(),
+                            token.span,
+                        ));
                     }
-                    _ => {}
+                    _ => {
+                        return Err(Error::new(
+                            ErrorKind::ExpectedSeparatorInObjectKV,
+                            self.source.clone(),
+                            token.span,
+                        ));
+                    }
                 },
                 _ => {
-                    return err!(
-                        ExpectedSeperatorInObjectKV,
-                        #[allow(
-                            clippy::unwrap_used,
-                            reason = "`location_from_token` always returns `Some`"
-                        )]
-                        self.tokens
-                            .get(self.position)
-                            .map(|token| self.location_from_token(token).unwrap())
-                    );
+                    return Err(Error::new(
+                        ErrorKind::ExpectedSeparatorInObjectKV,
+                        self.source.clone(),
+                        self.closest_span(),
+                    ));
                 }
             }
 
-            let value = self.parse_expr()?;
+            let value = self.parse()?;
+            let nested = Self::nest_object(key_parts, value);
 
-            fields.insert(key, value);
+            Self::merge_object(&mut fields, nested);
         }
 
         self.context = last_context;
         let end = self
             .tokens
-            .get(self.position.saturating_sub(1))
-            .ok_or_else(|| raw_err!(NoTokensLeft))?;
+            .get(self.pos.saturating_sub(1))
+            .ok_or(Error::new(
+                ErrorKind::NoTokensLeft,
+                self.source.clone(),
+                self.closest_span(),
+            ))?;
 
         Ok(Expr::new(
-            ExprType::Literal(Literal::Object(fields)),
-            Section::merge_start_end(&start.section, &end.section),
+            ExprKind::Literal(Literal::Object(fields)),
+            merge_spans(start.span, end.span),
         ))
+    }
+
+    fn nest_object(mut parts: Vec<String>, value: Expr) -> Expr {
+        #[allow(clippy::unwrap_used)]
+        let last = parts.pop().unwrap();
+
+        let mut inner = BTreeMap::new();
+        inner.insert(last, value.clone());
+
+        let mut expr = Expr::new(ExprKind::Literal(Literal::Object(inner)), value.span);
+
+        while let Some(part) = parts.pop() {
+            let mut outer = BTreeMap::new();
+            outer.insert(part, expr.clone());
+            expr = Expr::new(ExprKind::Literal(Literal::Object(outer)), expr.span);
+        }
+
+        expr
+    }
+
+    fn merge_object(target: &mut BTreeMap<String, Expr>, nested: Expr) {
+        if let ExprKind::Literal(Literal::Object(new_map)) = nested.kind {
+            for (k, v) in new_map {
+                if let Some(existing) = target.get_mut(&k)
+                    && let (
+                        ExprKind::Literal(Literal::Object(existing_map)),
+                        ExprKind::Literal(Literal::Object(new_sub)),
+                    ) = (&mut existing.kind, v.kind.clone())
+                {
+                    for (nk, nv) in new_sub {
+                        Self::merge_object(existing_map, Self::nest_object(vec![nk], nv));
+                    }
+                    continue;
+                }
+                target.insert(k, v);
+            }
+        }
     }
 }

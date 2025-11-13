@@ -1,14 +1,26 @@
-use logger::{location::Section, Log, LogLevel};
+use miette::{Diagnostic, SourceSpan};
 use std::{
-    cmp::Ordering,
     fmt::{self, Display},
     io,
     num::{ParseFloatError, ParseIntError},
     path::PathBuf,
 };
+use thiserror::Error;
 
-#[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub enum TokenType {
+#[derive(Debug, PartialEq, Clone)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub span: SourceSpan,
+}
+
+impl Token {
+    pub fn new(kind: TokenKind, span: SourceSpan) -> Self {
+        Self { kind, span }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum TokenKind {
     // Literals
     InterpolatedString(Vec<Token>),
     String(String),
@@ -24,6 +36,7 @@ pub enum TokenType {
 
     // Keywords
     Let,
+    In,
 
     // Logic Operators
     /// ==
@@ -74,7 +87,7 @@ pub enum TokenType {
     Dot,
 }
 
-impl TokenType {
+impl TokenKind {
     pub fn is_binary_operator(&self) -> bool {
         matches!(
             self,
@@ -102,10 +115,11 @@ impl TokenType {
     }
 }
 
-impl Display for TokenType {
+impl Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             // Literals
+            // TODO: Handle interpolated strings/paths
             Self::InterpolatedString(_) => write!(f, "interpolated string"),
             Self::String(v) => write!(f, "\"{v}\""),
             Self::InterpolatedPath(_) => write!(f, "interpolated path"),
@@ -116,13 +130,11 @@ impl Display for TokenType {
             Self::Null => write!(f, "null"),
 
             // Identifiers
-            #[cfg(debug_assertions)]
-            Self::Identifier(v) => write!(f, "identifier: {v}"),
-            #[cfg(not(debug_assertions))]
             Self::Identifier(v) => write!(f, "{v}"),
 
             // Keywords
             Self::Let => write!(f, "let"),
+            Self::In => write!(f, "in"),
 
             // Logic Operators
             Self::Eq => write!(f, "=="),
@@ -159,103 +171,33 @@ impl Display for TokenType {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Token {
-    pub token_type: TokenType,
-    pub section: Section,
-}
+pub type Error = crate::Error<ErrorKind>;
 
-impl Token {
-    pub fn new(token_type: TokenType, section: Section) -> Self {
-        Self {
-            token_type,
-            section,
-        }
-    }
-}
+#[derive(Error, Diagnostic, Debug)]
+#[error("Lexer error")]
+pub enum ErrorKind {
+    #[error(transparent)]
+    ParseIntError(#[from] ParseIntError),
+    #[error(transparent)]
+    ParseFloatError(#[from] ParseFloatError),
 
-impl PartialEq for Token {
-    fn eq(&self, other: &Self) -> bool {
-        self.token_type == other.token_type
-    }
-}
-
-impl PartialOrd for Token {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.token_type.partial_cmp(&other.token_type)
-    }
-}
-
-pub type Error = crate::Error<ErrorType>;
-
-#[derive(Debug)]
-pub enum ErrorType {
-    // Number errors
-    ParseIntError(ParseIntError),
-    ParseFloatError(ParseFloatError),
-
-    // String errors
+    #[error("Unclosed string literal")]
+    #[diagnostic(code(tl::parser::lexer::unclosed_string))]
     UnclosedString,
+    #[error("Unclosed interpolation")]
+    #[diagnostic(code(tl::parser::lexer::unclosed_interpolation))]
     UnclosedInterpolation,
 
-    UnexpectedToken(char),
-    IOError(io::Error),
+    #[error("Unexpected token")]
+    #[diagnostic(code(tl::parser::lexer::unexpected_token))]
+    UnexpectedToken,
+
+    #[error(transparent)]
+    IO(#[from] io::Error),
 }
 
-impl PartialEq for ErrorType {
+impl PartialEq for Error {
     fn eq(&self, other: &Self) -> bool {
-        use ErrorType as E;
-
-        match (self, other) {
-            (E::ParseIntError(r_err), E::ParseIntError(l_err)) if r_err == l_err => true,
-            (E::ParseFloatError(r_err), E::ParseFloatError(l_err)) if r_err == l_err => true,
-            (E::UnclosedString, E::UnclosedString)
-            | (E::UnclosedInterpolation, E::UnclosedInterpolation) => true,
-            (E::UnexpectedToken(r_char), E::UnexpectedToken(l_char)) if r_char == l_char => true,
-
-            _ => false,
-        }
-    }
-}
-
-impl From<Error> for Log {
-    fn from(value: Error) -> Self {
-        let log = Log {
-            level: LogLevel::Error,
-            message: "Unknown tokenization error".into(),
-            location: value.location,
-            hint: None,
-        };
-
-        log.message(match value.error_type {
-            // Number errors
-            ErrorType::ParseIntError(error) => format!("Failed to parse int: {error}"),
-            ErrorType::ParseFloatError(error) => format!("Failed to parse float: {error}"),
-
-            // String errors
-            ErrorType::UnclosedString => "Unclosed string literal".to_string(),
-            ErrorType::UnclosedInterpolation => "Unclosed string interpolation".to_string(),
-
-            ErrorType::UnexpectedToken(token) => format!("Unexpected token: {token}"),
-            ErrorType::IOError(error) => format!("IO error: {error}"),
-        })
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(value: io::Error) -> Self {
-        Self::new(ErrorType::IOError(value), None)
-    }
-}
-
-impl From<ParseIntError> for Error {
-    fn from(value: ParseIntError) -> Self {
-        Self::new(ErrorType::ParseIntError(value), None)
-    }
-}
-
-impl From<ParseFloatError> for Error {
-    fn from(value: ParseFloatError) -> Self {
-        Self::new(ErrorType::ParseFloatError(value), None)
+        std::mem::discriminant(&self.kind) == std::mem::discriminant(&other.kind)
     }
 }

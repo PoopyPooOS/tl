@@ -1,41 +1,54 @@
 use super::{
-    types::{Expr, ExprType, Literal},
     ExprResult,
+    types::{Expr, ExprKind, Literal},
 };
-use crate::parser::{
-    ast::{consume, raw_err},
-    tokenizer::types::TokenType,
+use crate::{
+    merge_spans,
+    parser::{
+        ast::{
+            consume,
+            types::{Error, ErrorKind},
+        },
+        lexer::types::TokenKind,
+    },
 };
-use logger::location::Section;
 
 impl super::Parser {
     pub(super) fn parse_array(&mut self) -> ExprResult {
         let start = self
             .tokens
-            .get(self.position)
-            .ok_or_else(|| raw_err!(ExpectedOneOfTokens(vec![TokenType::LBracket])))?
+            .get(self.pos)
+            .ok_or(Error::new(
+                ErrorKind::ExpectedToken {
+                    expected: "'{'".into(),
+                    found: None,
+                },
+                self.source.clone(),
+                self.closest_span(),
+            ))?
             .clone();
+
         consume!(self, LBracket);
 
         let mut array = Vec::new();
-        while let Some(next_token) = self.tokens.get(self.position).cloned() {
-            if next_token.token_type == TokenType::RBracket {
+        while let Some(next_token) = self.tokens.get(self.pos).cloned() {
+            if next_token.kind == TokenKind::RBracket {
                 consume!(self, RBracket);
                 break;
             }
 
-            let expr = self.parse_expr()?;
+            let expr = self.parse()?;
             array.push(expr);
         }
 
         let end = self
             .tokens
-            .get(self.position.saturating_sub(1))
+            .get(self.pos.saturating_sub(1))
             .unwrap_or(&start);
 
         Ok(Expr::new(
-            ExprType::Literal(Literal::Array(array)),
-            Section::merge_start_end(&start.section, &end.section),
+            ExprKind::Literal(Literal::Array(array)),
+            merge_spans(start.span, end.span),
         ))
     }
 }

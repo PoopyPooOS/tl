@@ -1,9 +1,6 @@
-use crate::{
-    parser::tokenizer::types::{Token, TokenType},
-    Source,
-};
-use logger::Location;
-use types::{Error, Expr, Statement, StatementType};
+use crate::parser::lexer::types::Token;
+use miette::{NamedSource, SourceSpan};
+use types::{Error, Expr};
 
 pub mod types;
 
@@ -11,7 +8,6 @@ pub mod types;
 mod array;
 mod binary_op;
 mod expr;
-mod field_access;
 mod r#fn;
 mod ident;
 mod interpolated_path;
@@ -19,14 +15,16 @@ mod interpolated_string;
 mod r#let;
 mod object;
 
+mod pretty_print;
+
 #[derive(Debug)]
 pub struct Parser {
     // Input
     tokens: Vec<Token>,
-    source: Source,
+    source: NamedSource<String>,
 
     // State
-    position: usize,
+    pos: usize,
     context: Context,
 }
 
@@ -35,70 +33,47 @@ enum Context {
     TopLevel,
     Function,
     Object,
-    CallArgs,
 }
 
-pub type ExprResult = Result<Expr, Box<Error>>;
-pub type StatementResult = Result<Vec<Statement>, Box<Error>>;
+pub type ExprResult = Result<Expr, Error>;
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>, source: impl Into<Source>) -> Self {
-        if cfg!(debug_assertions) {
-            logger::set_app_name!("AST");
-        }
-
+    pub fn new(tokens: Vec<Token>, source: NamedSource<String>) -> Self {
         Self {
             tokens,
-            source: source.into(),
+            source,
 
-            position: 0,
+            pos: 0,
             context: Context::TopLevel,
         }
     }
 
-    /// Generates an AST based on the tokens of this [`Parser`].
-    /// # Errors
-    /// This function will return an error if a AST generation error occurs.
-    pub fn parse(&mut self) -> Result<Vec<Statement>, Box<Error>> {
-        let mut statements = Vec::new();
+    /// Return a span that contains the current line the parser is on.
+    fn closest_span(&self) -> SourceSpan {
+        if let Some(token) = self.tokens.get(self.pos) {
+            token.span
+        } else if let Some(token) = self.tokens.get(self.pos.saturating_sub(1)) {
+            token.span
+        } else {
+            let length = self
+                .source
+                .inner()
+                .as_bytes()
+                .iter()
+                .position(|&b| b == b'\n')
+                .unwrap_or(self.source.inner().len());
 
-        while let Some(token) = self.tokens.get(self.position) {
-            let parsed = match token.token_type {
-                TokenType::Let => self.parse_let()?,
-                TokenType::RBrace if self.context == Context::Function => break,
-                _ => {
-                    let expr = self.parse_expr()?;
-                    let section = expr.section.clone();
-                    vec![Statement::new(StatementType::Expr(expr), section)]
-                }
-            };
-
-            statements.extend(parsed);
+            SourceSpan::new(0.into(), length)
         }
-
-        Ok(statements)
-    }
-
-    #[allow(
-        clippy::unnecessary_wraps,
-        reason = "`Option<Location>` is more commonly used, this simplifies things"
-    )]
-    /// Always returns `Some`, safe to unwrap if needed.
-    fn location_from_token(&self, token: &Token) -> Option<Location> {
-        Some(Location {
-            path: self.source.path.clone(),
-            text: self.source.text.clone(),
-            section: Some(token.section.clone()),
-        })
     }
 }
 
 /// Internal macro for the AST.
 macro_rules! advance {
     ($self:expr) => {{
-        let token = $self.tokens.get($self.position);
+        let token = $self.tokens.get($self.pos);
         if token.is_some() {
-            $self.position = $self.position.saturating_add(1);
+            $self.pos = $self.pos.saturating_add(1);
         }
         token
     }};
@@ -112,147 +87,58 @@ macro_rules! consume {
     ($self:expr, $expected:ident($($value:expr),*)) => {
         $crate::parser::ast::consume!(no_propagate $self, $expected($($value),*))?
     };
-    (no_propagate $self:expr, $expected:ident) => {
-        match $crate::parser::ast::advance!($self) {
-            Some(token) => {
-                if token.token_type == $crate::parser::tokenizer::types::TokenType::$expected {
-                    Ok(token.clone())
-                } else {
-                    $crate::parser::ast::err!(
-                        ExpectedTokenGot($crate::parser::tokenizer::types::TokenType::$expected, token.token_type.clone()),
-                        $self.location_from_token(token)
-                    )
-                }
-            }
-            _ => $crate::parser::ast::err!(ExpectedOneOfTokens(vec![$crate::parser::tokenizer::types::TokenType::$expected])),
-        }
-    };
-    (no_propagate $self:expr, $expected:ident($($value:expr),*)) => {
-        match $crate::parser::ast::advance!($self) {
-            Some(token) => {
-                if let $crate::parser::tokenizer::types::TokenType::$expected($($value),*) = token.token_type {
-                    Ok(token.clone())
-                } else {
-                    $crate::parser::ast::err!(
-                        ExpectedTokenGot(
-                            $crate::parser::tokenizer::types::TokenType::$expected($($value.clone()),*),
-                            token.token_type.clone()
-                        ),
-                        $self.location_from_token(token)
-                    )
-                }
-            }
-            _ => $crate::parser::ast::err!(
-                ExpectedOneOfTokens(vec![$crate::parser::tokenizer::types::TokenType::$expected($($value.clone()),*)])
-            ),
-        }
-    };
-}
+    (no_propagate $self:expr, $expected:ident) => {{
+        use $crate::parser::lexer::types::TokenKind;
+        use $crate::parser::ast::types::{Error, ErrorKind};
 
-/// Internal macro for the AST.
-#[allow(unused_macros, reason = "will be used soon probably")]
-macro_rules! get_ident {
-    ($self:expr) => {{
         match $crate::parser::ast::advance!($self) {
             Some(token) => {
-                if let $crate::parser::ast::TokenType::Identifier(v) = &token.token_type {
-                    v.clone()
+                if token.kind == TokenKind::$expected {
+                    Ok(token.clone())
                 } else {
-                    return $crate::parser::ast::err!(
-                        ExpectedOneOfTokens(vec![$crate::parser::ast::TokenType::Identifier(
-                            "identifier".to_string()
-                        )]),
-                        $self.location_from_token(
-                            $self
-                                .tokens
-                                .get($self.position)
-                                .ok_or_else(|| $crate::parser::ast::raw_err!(NoTokensLeft))?
-                        )
-                    );
+                    Err(Error::new(
+                        ErrorKind::ExpectedToken {
+                            expected: stringify!($expected).to_lowercase(),
+                            found: Some(token.kind.clone())
+                        },
+                        $self.source.clone(),
+                        token.span,
+                    ))
                 }
             }
-            _ => {
-                return $crate::parser::ast::err!(
-                    ExpectedOneOfTokens(vec![$crate::parser::ast::TokenType::Identifier(
-                        "identifier".to_string()
-                    )]),
-                    $self.location_from_token(
-                        $self
-                            .tokens
-                            .get($self.position.saturating_sub(1))
-                            .ok_or_else(|| $crate::parser::ast::raw_err!(NoTokensLeft))?
-                    )
-                )
-            }
+            _ => Err(Error::new(
+                ErrorKind::ExpectedToken {
+                    expected: stringify!($expected).to_lowercase(),
+                    found: None
+                },
+                $self.source.clone(),
+                $self.closest_span(),
+            ))
         }
     }};
-    ($self:expr, $token:expr) => {{
+    (no_propagate $self:expr, $expected:ident($($value:expr),*)) => {{
+        use $crate::parser::lexer::types::TokenKind;
+        use $crate::parser::ast::types::{Error, ErrorKind};
+
         match $crate::parser::ast::advance!($self) {
             Some(token) => {
-                if let $crate::parser::ast::TokenType::Identifier(name) = &token.token_type {
-                    (token.clone(), name.clone())
+                if let TokenKind::$expected($($value),*) = token.kind {
+                    Ok(token.clone())
                 } else {
-                    return $crate::parser::ast::err!(
-                        ExpectedOneOfTokens(vec![$crate::parser::ast::TokenType::Identifier(
-                            "identifier".to_string()
-                        )]),
-                        $self.location_from_token(
-                            $self
-                                .tokens
-                                .get($self.position)
-                                .ok_or_else(|| $crate::parser::ast::raw_err!(NoTokensLeft))?
-                        )
-                    );
+                    Err(Error::new(
+                        ErrorKind::ExpectedToken(TokenKind::$expected($($value.clone()),*), Some(token.kind.clone())),
+                        $self.source.clone(),
+                        token.span,
+                    ))
                 }
             }
-            _ => {
-                return $crate::parser::ast::err!(
-                    ExpectedOneOfTokens(vec![$crate::parser::ast::TokenType::Identifier(
-                        "identifier".to_string()
-                    )]),
-                    $self.location_from_token(
-                        $self
-                            .tokens
-                            .get($self.position)
-                            .ok_or_else(|| $crate::parser::ast::raw_err!(NoTokensLeft))?
-                    )
-                )
-            }
+            _ => Err(Error::new(
+                ErrorKind::ExpectedToken(TokenKind::$expected($($value.clone()),*), None),
+                $self.source.clone(),
+                $self.closest_span(),
+            ))
         }
     }};
 }
 
-/// Internal macro for the AST.
-macro_rules! err {
-    ($err_type:ident) => {
-        Err(Box::new(crate::parser::ast::types::Error::new(crate::parser::ast::types::ErrorType::$err_type, None)))
-    };
-    ($err_type:ident, $location:expr) => {
-        Err(Box::new(crate::parser::ast::types::Error::new(crate::parser::ast::types::ErrorType::$err_type, $location)))
-    };
-    ($err_type:ident($($err_value:expr),*)) => {
-        Err(Box::new(crate::parser::ast::types::Error::new(crate::parser::ast::types::ErrorType::$err_type($($err_value),*), None)))
-    };
-    ($err_type:ident($($err_value:expr),*), $location:expr) => {
-        Err(Box::new(crate::parser::ast::types::Error::new(crate::parser::ast::types::ErrorType::$err_type($($err_value),*), $location)))
-    };
-}
-
-/// Internal macro for the AST.
-macro_rules! raw_err {
-    ($err_type:ident) => {
-        Box::new(crate::parser::ast::types::Error::new(crate::parser::ast::types::ErrorType::$err_type, None))
-    };
-    ($err_type:ident, $location:expr) => {
-        Box::new(crate::parser::ast::types::Error::new(crate::parser::ast::types::ErrorType::$err_type, $location))
-    };
-    ($err_type:ident($($err_value:expr),*)) => {
-        Box::new(crate::parser::ast::types::Error::new(crate::parser::ast::types::ErrorType::$err_type($($err_value),*), None))
-    };
-    ($err_type:ident($($err_value:expr),*), $location:expr) => {
-        Box::new(crate::parser::ast::types::Error::new(crate::parser::ast::types::ErrorType::$err_type($($err_value),*), $location))
-    };
-}
-
-#[allow(unused_imports, reason = "will be used soon probably")]
-pub(crate) use {advance, consume, err, get_ident, raw_err};
+pub(crate) use {advance, consume};

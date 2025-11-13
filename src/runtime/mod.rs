@@ -1,18 +1,10 @@
 use crate::{
-    Source,
-    parser::{
-        ast::types::{Expr, Statement, StatementType},
-        parse,
-    },
+    parser::{ast::types::Expr, parse},
+    runtime::types::ValueResult,
 };
-use logger::Location;
-use std::{
-    collections::HashMap,
-    fmt::{self, Debug},
-    fs,
-    rc::Rc,
-};
-pub use types::{Error, ErrorType, NativeFunction, Value};
+use miette::NamedSource;
+use std::{collections::HashMap, fmt::Debug, fs, rc::Rc};
+pub use types::{Builtin, Error, ErrorKind, Value, ValueKind};
 
 pub mod types;
 
@@ -24,327 +16,329 @@ mod binary_op;
 mod call;
 mod expr;
 
-#[derive(Default)]
+#[derive(Debug)]
 pub struct Scope {
+    scopes: Vec<Scope>,
     variables: HashMap<String, Value>,
-    native_functions: HashMap<String, NativeFunction>,
-    scopes: HashMap<usize, Scope>,
-    ast: Rc<Vec<Statement>>,
 
-    source: Source,
+    ast: Rc<Expr>,
+    source: NamedSource<String>,
 }
-
-impl Debug for Scope {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Scope")
-            .field("variables", &self.variables)
-            .field("native_functions", &self.native_functions.keys())
-            .field("scopes", &self.scopes)
-            .field("ast", &self.ast)
-            .field("source", &self.source)
-            .finish()
-    }
-}
-
-type ValueResult = Result<Value, Box<Error>>;
 
 impl Scope {
-    pub fn new(source: Source, ast: Vec<Statement>) -> Self {
-        if cfg!(debug_assertions) {
-            logger::set_app_name!("Runtime");
-        }
-
+    #[allow(
+        clippy::missing_panics_doc,
+        reason = "The possible panic is checked beforehand"
+    )]
+    pub fn new(variables: HashMap<String, Value>, source: NamedSource<String>, ast: Expr) -> Self {
         Self {
+            scopes: Vec::new(),
+            variables,
+
             ast: Rc::new(ast),
             source,
-            ..Default::default()
         }
     }
 
-    pub fn add_variable(&mut self, name: impl ToString, value: Value) {
-        self.variables.insert(name.to_string(), value);
+    pub fn define(&mut self, name: impl ToString, value: impl Into<Value>) {
+        self.variables.insert(name.to_string(), value.into());
     }
 
-    pub fn add_native_fn(&mut self, name: impl ToString, native_fn: NativeFunction) {
-        self.native_functions.insert(name.to_string(), native_fn);
-    }
-
-    /// Evaluates a list of statements (an AST).
+    /// Evaluates an AST expression.
     /// # Errors
     /// This function will return an error if an evaluation error occurs.
     pub fn eval(&mut self) -> ValueResult {
-        let mut value = None;
-
         #[allow(
             clippy::unwrap_used,
             reason = "The length of `args` is checked before by `eval_call`"
         )]
         {
-            self.add_native_fn(
-                "println",
-                NativeFunction::Loose(Box::new(|args| {
-                    for arg in args {
-                        println!("{arg}");
-                    }
-                    Ok(Value::Null)
-                })),
-            );
-            self.add_native_fn(
-                "print",
-                NativeFunction::Loose(Box::new(|args| {
-                    for arg in args {
-                        print!("{arg}");
-                    }
-                    Ok(Value::Null)
-                })),
-            );
+            self.define(
+                "if",
+                Value::new_builtin(
+                    Builtin(Rc::new(|ctx| {
+                        let args_len = 3;
 
-            self.add_native_fn(
-                "map",
-                NativeFunction::Strict {
-                    params: 2,
-                    func: Box::new(|args| {
-                        let Some(Value::Function {
-                            args: callback_args,
-                            body: callback,
-                        }) = args.first()
-                        else {
-                            return Err(Box::new(Error::new(
-                                ErrorType::NativeFnError(
-                                    "`map` requires a function with a single argument as the first argument".to_string(),
-                                ),
-                                None,
-                            )));
-                        };
-                        let Some(Value::Array(list)) = args.get(1) else {
-                            return Err(Box::new(Error::new(
-                                ErrorType::NativeFnError(
-                                    "`map` requires an array the second argument".to_string(),
-                                ),
-                                None,
-                            )));
-                        };
+                        let cond = ctx.get_arg(0, args_len)?;
+                        let then_branch = ctx.get_arg(1, args_len)?;
+                        let else_branch = ctx.get_arg(2, args_len)?;
 
-                        let mut new_list = Vec::with_capacity(list.len());
+                        let mut scope = ctx.new_scope();
 
-                        if callback_args.len() != 1 {
-                            return Err(Box::new(Error::new(
-                                ErrorType::NativeFnError(
-                                    "`map` requires a function with a single argument as the first argument".to_string(),
-                                ),
-                                None,
-                            )));
+                        let cond = scope.eval_expr(&cond)?;
+
+                        if cond.is_truthy() {
+                            return scope.eval_expr(&then_branch);
                         }
 
-                        let Some(callback_arg) = callback_args.first() else {
-                            unreachable!("length was checked before");
-                        };
+                        scope.eval_expr(&else_branch)
+                    }))
+                    .into(),
+                ),
+            );
+            self.define(
+                "maybe",
+                Value::new_builtin(
+                    Builtin(Rc::new(|inputs| {
+                        let cond = inputs.get_arg(0, 2)?;
+                        let then = inputs.get_arg(1, 2)?;
 
-                        for item in list {
-                            let mut scope = Scope::new(Source::from_text(""), callback.clone());
-                            scope.add_variable(callback_arg, item.clone());
-                            new_list.push(scope.eval()?);
+                        let mut scope = Scope::new(inputs.variables, inputs.source, inputs.expr);
+
+                        let cond = scope.eval_expr(&cond)?;
+
+                        if cond.is_truthy() {
+                            return Ok(cond);
                         }
 
-                        Ok(Value::Array(new_list))
-                    }),
-                },
-            );
-            self.add_native_fn(
-                "join",
-                NativeFunction::Strict {
-                    params: 2,
-                    func: Box::new(|args| {
-                        let Some(Value::Array(list)) = args.first() else {
-                            return Err(Box::new(Error::new(
-                                ErrorType::NativeFnError(
-                                    "`join` requires an array the first argument".to_string(),
-                                ),
-                                None,
-                            )));
-                        };
-                        let Some(Value::String(sep)) = args.get(1) else {
-                            return Err(Box::new(Error::new(
-                                ErrorType::NativeFnError(
-                                    "`join` requires a separator string as the second argument"
-                                        .to_string(),
-                                ),
-                                None,
-                            )));
-                        };
-
-                        #[allow(clippy::arithmetic_side_effects)]
-                        Ok(Value::String(
-                            list.iter()
-                                .map(Value::to_string)
-                                .reduce(|a, b| a + sep + &b)
-                                .unwrap_or_default(),
-                        ))
-                    }),
-                },
+                        scope.eval_expr(&then)
+                    }))
+                    .into(),
+                ),
             );
 
-            self.add_native_fn(
+            // let variables = self.variables.clone();
+            // self.define(
+            //     "map",
+            //     Builtin::Strict {
+            //         params: 2,
+            //         func: Rc::new(move |args, _| {
+            //             let Some(Value::Function {
+            //                 args: callback_args,
+            //                 expr: callback,
+            //             }) = args.first()
+            //             else {
+            //                 return Err(Box::new(Error::new(
+            //                     ErrorType::NativeFnError(
+            //                         "`map` requires a function with a single argument as the first argument".to_string(),
+            //                     ),
+            //                     None,
+            //                 )));
+            //             };
+            //             let Some(Value::Array(list)) = args.get(1) else {
+            //                 return Err(Box::new(Error::new(
+            //                     ErrorType::NativeFnError(
+            //                         "`map` requires an array the second argument".to_string(),
+            //                     ),
+            //                     None,
+            //                 )));
+            //             };
+
+            //             let mut new_list = Vec::with_capacity(list.len());
+
+            //             if callback_args.len() != 1 {
+            //                 return Err(Box::new(Error::new(
+            //                     ErrorType::NativeFnError(
+            //                         "`map` requires a function with a single argument as the first argument".to_string(),
+            //                     ),
+            //                     None,
+            //                 )));
+            //             }
+
+            //             let Some(callback_arg) = callback_args.first() else {
+            //                 unreachable!("length was checked before");
+            //             };
+
+            //             for item in list {
+            //                 let mut scope = Scope::new(variables.clone(), Source::from_text(""), callback.clone());
+            //                 scope.define(callback_arg.clone(), item.clone());
+            //                 new_list.push(scope.eval()?);
+            //             }
+
+            //             Ok(Value::Array(new_list))
+            //         }),
+            //     },
+            // );
+            // self.define(
+            //     "join",
+            //     Builtin::Strict {
+            //         params: 2,
+            //         func: Rc::new(|args, _| {
+            //             let Some(Value::Array(list)) = args.first() else {
+            //                 return Err(Box::new(Error::new(
+            //                     ErrorType::NativeFnError(
+            //                         "`join` requires an array the first argument".to_string(),
+            //                     ),
+            //                     None,
+            //                 )));
+            //             };
+            //             let Some(Value::String(sep)) = args.get(1) else {
+            //                 return Err(Box::new(Error::new(
+            //                     ErrorType::NativeFnError(
+            //                         "`join` requires a separator string as the second argument"
+            //                             .to_string(),
+            //                     ),
+            //                     None,
+            //                 )));
+            //             };
+
+            //             #[allow(clippy::arithmetic_side_effects)]
+            //             Ok(Value::String(
+            //                 list.iter()
+            //                     .map(Value::to_string)
+            //                     .reduce(|a, b| a + sep + &b)
+            //                     .unwrap_or_default(),
+            //             ))
+            //         }),
+            //     },
+            // );
+
+            self.define(
                 "import",
-                NativeFunction::Strict {
-                    params: 1,
-                    func: Box::new(|args| {
-                        let Some(Value::Path(path)) = args.first() else {
-                            return Err(Box::new(Error::new(
-                                ErrorType::NativeFnError(
-                                    "`import` requires a path as input".to_string(),
-                                ),
-                                None,
-                            )));
+                Value::new_builtin(
+                    Builtin(Rc::new(move |ctx| {
+                        let (path, path_span) = {
+                            let path = ctx.ensure_is_path(ctx.get_arg_evaluated(0, 1)?)?;
+                            (path.data, path.span)
                         };
-                        let source = Source::from_path(path).map_err(Error::from)?;
-                        let ast = parse(&source).map_err(|err| Error::from(*err))?;
 
-                        Scope::new(source, ast).eval()
-                    }),
-                },
+                        let file = fs::read_to_string(&path)
+                            .map_err(|err| Error::new(err.into(), ctx.source.clone(), path_span))?;
+                        let source = NamedSource::new(path.display().to_string(), file);
+                        let ast = parse(&source).map_err(|err| {
+                            let span = err.span;
+                            let source = err.source.clone();
+                            Error::new(err.into(), source, span)
+                        })?;
+
+                        Scope::new(ctx.variables, source, ast).eval()
+                    }))
+                    .into(),
+                ),
             );
 
-            #[cfg(feature = "fs")]
-            self.add_native_fn(
-                "readFile",
-                NativeFunction::Strict {
-                    params: 1,
-                    func: Box::new(|args| {
-                        let Some(Value::Path(path)) = args.first() else {
-                            return Err(Box::new(Error::new(
-                                ErrorType::NativeFnError(
-                                    "`readFile` requires a path as input".to_string(),
-                                ),
-                                None,
-                            )));
-                        };
-                        let content =
-                            fs::read_to_string(path).map_err(|err| Box::new(err.into()))?;
+            //     #[cfg(feature = "fs")]
+            //     self.define(
+            //         "readFile",
+            //         Builtin::Strict {
+            //             params: 1,
+            //             func: Rc::new(|args, _| {
+            //                 let Some(Value::Path(path)) = args.first() else {
+            //                     return Err(Box::new(Error::new(
+            //                         ErrorType::NativeFnError(
+            //                             "`readFile` requires a path as input".to_string(),
+            //                         ),
+            //                         None,
+            //                     )));
+            //                 };
+            //                 let content =
+            //                     fs::read_to_string(path).map_err(|err| Box::new(err.into()))?;
 
-                        Ok(Value::String(content))
-                    }),
-                },
-            );
+            //                 Ok(Value::String(content))
+            //             }),
+            //         },
+            //     );
 
-            #[cfg(feature = "fs")]
-            self.add_native_fn(
-                "readDir",
-                NativeFunction::Strict {
-                    params: 1,
-                    func: Box::new(|args| {
-                        use crate::object;
+            //     #[cfg(feature = "fs")]
+            //     self.define(
+            //         "readDir",
+            //         Builtin::Strict {
+            //             params: 1,
+            //             func: Rc::new(|args, _| {
+            //                 use crate::object;
 
-                        let Some(Value::Path(path)) = args.first() else {
-                            return Err(Box::new(Error::new(
-                                ErrorType::NativeFnError(
-                                    "`readDir` requires a path as input".to_string(),
-                                ),
-                                None,
-                            )));
-                        };
-                        let content = fs::read_dir(path).map_err(|err| Box::new(err.into()))?;
-                        let content = content
-                            .into_iter()
-                            .filter_map(Result::ok)
-                            .map(|entry| {
-                                object! {
-                                    path: Value::Path(entry.path()),
-                                    type: Value::String(
-                                        match entry.file_type() {
-                                            Ok(f) if f.is_file() => "file",
-                                            Ok(f) if f.is_dir() => "dir",
-                                            Ok(f) if f.is_symlink() => "symlink",
-                                            _ => "other",
-                                        }
-                                        .into()
-                                    )
-                                }
-                            })
-                            .collect::<Vec<_>>();
+            //                 let Some(Value::Path(path)) = args.first() else {
+            //                     return Err(Box::new(Error::new(
+            //                         ErrorType::NativeFnError(
+            //                             "`readDir` requires a path as input".to_string(),
+            //                         ),
+            //                         None,
+            //                     )));
+            //                 };
+            //                 let content = fs::read_dir(path).map_err(|err| Box::new(err.into()))?;
+            //                 let content = content
+            //                     .into_iter()
+            //                     .filter_map(Result::ok)
+            //                     .map(|entry| {
+            //                         object! {
+            //                             path: Value::Path(entry.path()),
+            //                             type: Value::String(
+            //                                 match entry.file_type() {
+            //                                     Ok(f) if f.is_file() => "file",
+            //                                     Ok(f) if f.is_dir() => "dir",
+            //                                     Ok(f) if f.is_symlink() => "symlink",
+            //                                     _ => "other",
+            //                                 }
+            //                                 .into()
+            //                             )
+            //                         }
+            //                     })
+            //                     .collect::<Vec<_>>();
 
-                        Ok(Value::Array(content))
-                    }),
-                },
-            );
+            //                 Ok(Value::Array(content))
+            //             }),
+            //         },
+            //     );
 
-            #[cfg(feature = "toml")]
-            self.add_native_fn(
-                "toml",
-                NativeFunction::Strict {
-                    params: 1,
-                    func: Box::new(|args| {
-                        fn convert_value(toml: toml::Value) -> ValueResult {
-                            use std::collections::BTreeMap;
+            //     #[cfg(feature = "toml")]
+            //     self.define(
+            //         "toml",
+            //         Builtin::Strict {
+            //             params: 1,
+            //             func: Rc::new(|args, _| {
+            //                 fn convert_value(toml: toml::Value) -> ValueResult {
+            //                     use std::collections::BTreeMap;
 
-                            Ok(match toml {
-                                toml::Value::String(v) => Value::String(v),
-                                toml::Value::Integer(v) => {
-                                    Value::Int(v.try_into().map_err(|_| {
-                                        Box::new(Error::new(
-                                            ErrorType::NativeFnError(
-                                                "Failed to convert integer while parsing toml file"
-                                                    .into(),
-                                            ),
-                                            None,
-                                        ))
-                                    })?)
-                                }
-                                toml::Value::Float(v) => Value::Float(v),
-                                toml::Value::Boolean(v) => Value::Boolean(v),
-                                // TODO: This could probably be better.
-                                toml::Value::Datetime(v) => Value::String(v.to_string()),
-                                toml::Value::Array(v) => {
-                                    let mut values = Vec::new();
+            //                     Ok(match toml {
+            //                         toml::Value::String(v) => Value::String(v),
+            //                         toml::Value::Integer(v) => {
+            //                             Value::Int(v.try_into().map_err(|_| {
+            //                                 Box::new(Error::new(
+            //                                     ErrorType::NativeFnError(
+            //                                         "Failed to convert integer while parsing toml file"
+            //                                             .into(),
+            //                                     ),
+            //                                     None,
+            //                                 ))
+            //                             })?)
+            //                         }
+            //                         toml::Value::Float(v) => Value::Float(v),
+            //                         toml::Value::Boolean(v) => Value::Boolean(v),
+            //                         // TODO: This could probably be better.
+            //                         toml::Value::Datetime(v) => Value::String(v.to_string()),
+            //                         toml::Value::Array(v) => {
+            //                             let mut values = Vec::new();
 
-                                    for toml_value in v {
-                                        values.push(convert_value(toml_value)?);
-                                    }
+            //                             for toml_value in v {
+            //                                 values.push(convert_value(toml_value)?);
+            //                             }
 
-                                    Value::Array(values)
-                                }
-                                toml::Value::Table(v) => {
-                                    let mut object = BTreeMap::new();
+            //                             Value::Array(values)
+            //                         }
+            //                         toml::Value::Table(v) => {
+            //                             let mut object = BTreeMap::new();
 
-                                    for field in v {
-                                        object.insert(field.0, convert_value(field.1)?);
-                                    }
+            //                             for field in v {
+            //                                 object.insert(field.0, convert_value(field.1)?);
+            //                             }
 
-                                    Value::Object(object)
-                                }
-                            })
-                        }
+            //                             Value::Object(object)
+            //                         }
+            //                     })
+            //                 }
 
-                        let Some(Value::String(content)) = args.first() else {
-                            return Err(Box::new(Error::new(
-                                ErrorType::NativeFnError(
-                                    "`toml` requires a toml string as an input".to_string(),
-                                ),
-                                None,
-                            )));
-                        };
-                        let toml = toml::from_str::<toml::Value>(content)
-                            .map_err(|err| Box::new(err.into()))?;
+            //                 let Some(Value::String(content)) = args.first() else {
+            //                     return Err(Box::new(Error::new(
+            //                         ErrorType::NativeFnError(
+            //                             "`toml` requires a toml string as an input".to_string(),
+            //                         ),
+            //                         None,
+            //                     )));
+            //                 };
+            //                 let toml = toml::from_str::<toml::Value>(content)
+            //                     .map_err(|err| Box::new(err.into()))?;
 
-                        convert_value(toml)
-                    }),
-                },
-            );
+            //                 convert_value(toml)
+            //             }),
+            //         },
+            //     );
+            // }
+
+            let ast_clone = Rc::clone(&self.ast);
+            let value = self.eval_expr(&ast_clone)?;
+
+            Ok(value)
         }
-
-        let ast_clone = Rc::clone(&self.ast);
-        for node in ast_clone.iter() {
-            value = match &node.statement_type {
-                StatementType::Expr(expr) => Some(self.eval_expr(expr)?),
-                StatementType::Let { name, value } => {
-                    let value = self.eval_expr(value)?;
-                    self.add_variable(name, value);
-                    None
-                }
-            };
-        }
-
-        Ok(value.unwrap_or_default())
     }
 
     pub fn fetch_var(&self, name: &impl ToString) -> Option<&Value> {
@@ -356,19 +350,9 @@ impl Scope {
         clippy::missing_panics_doc,
         reason = "Value that is unwraped is inserted before in the same function."
     )]
-    pub fn create_scope(&mut self, ast: Vec<Statement>) -> &mut Scope {
-        let scope_id = self.scopes.len();
+    pub fn create_scope(&mut self, ast: Expr) -> &mut Scope {
         self.scopes
-            .insert(scope_id, Scope::new(self.source.clone(), ast));
-        self.scopes.get_mut(&scope_id).unwrap()
-    }
-
-    /// Always returns `Some`, safe to unwrap if needed.
-    fn location_from_expr(&self, expr: &Expr) -> Option<Location> {
-        Some(Location {
-            path: self.source.path.clone(),
-            text: self.source.text.clone(),
-            section: Some(expr.section.clone()),
-        })
+            .push(Scope::new(self.variables.clone(), self.source.clone(), ast));
+        self.scopes.last_mut().unwrap()
     }
 }

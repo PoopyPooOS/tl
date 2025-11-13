@@ -1,95 +1,91 @@
+use miette::SourceSpan;
+
 use super::{
-    types::{Error, ErrorType, Value},
     ValueResult,
+    types::{Error, ErrorKind, Value},
 };
-use crate::parser::ast::types::{Expr, ExprType, Literal};
+use crate::{
+    parser::ast::types::{Expr, ExprKind, Literal},
+    runtime::{Scope, ValueKind},
+};
 use std::collections::BTreeMap;
 
 impl super::Scope {
     pub(super) fn eval_expr(&mut self, expr: &Expr) -> ValueResult {
-        match &expr.expr_type {
-            ExprType::Literal(literal) => self.eval_literal(literal),
-            ExprType::Not(expr) => Ok(Value::Boolean(!self.eval_expr(expr)?.is_truthy())),
-            ExprType::Identifier(ident) => Ok(self
+        match &expr.kind {
+            ExprKind::Literal(literal) => self.eval_literal(literal, expr.span),
+            ExprKind::Not(body) => Ok(Value::new(
+                ValueKind::Boolean(!self.eval_expr(body)?.is_truthy()),
+                expr.span,
+            )),
+            ExprKind::Identifier(ident) => Ok(self
                 .fetch_var(ident)
-                .ok_or_else(|| {
-                    Box::new(Error::new(
-                        ErrorType::VariableDoesntExist(ident.clone()),
-                        self.location_from_expr(expr),
-                    ))
-                })?
+                .ok_or(Error::new(
+                    ErrorKind::VariableNotInScope {
+                        variable: expr.span,
+                    },
+                    self.source.clone(),
+                    expr.span,
+                ))?
                 .clone()),
-            ExprType::ArrayIndex(ident, index) => {
-                let var = self
-                    .fetch_var(ident)
-                    .ok_or_else(|| {
-                        Box::new(Error::new(
-                            ErrorType::VariableDoesntExist(ident.clone()),
-                            self.location_from_expr(expr),
-                        ))
-                    })?
-                    .clone();
-
-                match var {
-                    Value::Array(v) => {
-                        let item = v.get(*index).unwrap_or(&Value::Null).clone();
-
-                        if item == Value::Null {
-                            return Err(Box::new(Error::new(
-                                ErrorType::IndexOutOfBounds(*index, v.len()),
-                                self.location_from_expr(expr),
-                            )));
-                        }
-
-                        Ok(item)
-                    }
-                    _ => unreachable!(),
-                }
-            }
-            ExprType::FieldAccess { base, path } => {
+            ExprKind::ArrayIndex { base, index } => {
                 let base = self.eval_expr(base)?;
-                let mut value = base.clone();
+                let item = base.try_index(*index);
 
-                let path = path.iter().map(|expr| {
-                    (
-                        expr,
-                        match &expr.expr_type {
-                            ExprType::Identifier(v) => v.clone(),
-                            _ => unreachable!(),
+                match item {
+                    Ok(item) => Ok(item.clone()),
+                    Err(len) => Err(Error::new(
+                        ErrorKind::IndexOutOfBounds {
+                            length: len,
+                            // TODO: Add span for the index itself, not the full expr
+                            index: expr.span,
                         },
-                    )
-                });
-
-                for (idx, (_, ident)) in path.enumerate() {
-                    value = if idx == 0 {
-                        base.access(&ident)
-                    } else {
-                        value.access(&ident)
-                    };
+                        self.source.clone(),
+                        expr.span,
+                    )),
                 }
-
-                Ok(value)
             }
-            ExprType::BinaryOp {
+            ExprKind::ObjectAccess { base, field } => {
+                let base = self.eval_expr(base)?;
+                Ok(base.access(field))
+            }
+            ExprKind::BinaryOp {
                 left,
                 operator,
                 right,
             } => Ok(self.eval_binary_op(left, operator, right)?),
-            ExprType::FnDecl { args, body } => Ok(Value::Function {
-                args: args.clone(),
-                body: body.clone(),
-            }),
-            ExprType::Call { .. } => self.eval_call(expr),
+            ExprKind::FnDecl { args, expr: body } => Ok(Value::new(
+                ValueKind::Function {
+                    args: args.clone(),
+                    expr: *body.clone(),
+                },
+                expr.span,
+            )),
+            ExprKind::Call { .. } => self.eval_call(expr),
+            ExprKind::LetIn {
+                bindings,
+                expr: body,
+            } => {
+                let mut child_scope =
+                    Scope::new(self.variables.clone(), self.source.clone(), *body.clone());
+
+                for (name, expr) in bindings {
+                    let value = child_scope.eval_expr(expr)?;
+                    child_scope.define(name, value);
+                }
+
+                child_scope.eval_expr(body)
+            }
         }
     }
 
-    pub(super) fn eval_literal(&mut self, literal: &Literal) -> ValueResult {
+    pub(super) fn eval_literal(&mut self, literal: &Literal, span: SourceSpan) -> ValueResult {
         match literal {
-            Literal::Null => Ok(Value::Null),
-            Literal::Int(v) => Ok(Value::Int(*v)),
-            Literal::Float(v) => Ok(Value::Float(*v)),
-            Literal::Boolean(v) => Ok(Value::Boolean(*v)),
-            Literal::String(v) => Ok(Value::String(v.clone())),
+            Literal::Null => Ok(Value::new(ValueKind::Null, span)),
+            Literal::Int(v) => Ok(Value::new(ValueKind::Int(*v), span)),
+            Literal::Float(v) => Ok(Value::new(ValueKind::Float(*v), span)),
+            Literal::Bool(v) => Ok(Value::new(ValueKind::Boolean(*v), span)),
+            Literal::String(v) => Ok(Value::new(ValueKind::String(v.clone()), span)),
             Literal::InterpolatedString(v) => {
                 let mut value = String::new();
 
@@ -98,9 +94,9 @@ impl super::Scope {
                     value.push_str(&expr.to_string());
                 }
 
-                Ok(Value::String(value))
+                Ok(Value::new(ValueKind::String(value), span))
             }
-            Literal::Path(path) => Ok(Value::Path(path.clone())),
+            Literal::Path(path) => Ok(Value::new(ValueKind::Path(path.clone()), span)),
             Literal::InterpolatedPath(v) => {
                 let mut value = String::new();
 
@@ -109,7 +105,7 @@ impl super::Scope {
                     value.push_str(&expr.to_string());
                 }
 
-                Ok(Value::Path(value.into()))
+                Ok(Value::new(ValueKind::Path(value.into()), span))
             }
             Literal::Array(v) => {
                 let mut values = Vec::new();
@@ -118,7 +114,7 @@ impl super::Scope {
                     values.push(self.eval_expr(expr)?);
                 }
 
-                Ok(Value::Array(values))
+                Ok(Value::new(ValueKind::Array(values), span))
             }
             Literal::Object(v) => {
                 let mut values = BTreeMap::new();
@@ -127,7 +123,7 @@ impl super::Scope {
                     values.insert(k.clone(), self.eval_expr(expr)?);
                 }
 
-                Ok(Value::Object(values))
+                Ok(Value::new(ValueKind::Object(values), span))
             }
         }
     }

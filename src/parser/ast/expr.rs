@@ -1,27 +1,38 @@
 use super::{
-    err, raw_err,
-    types::{Expr, ExprType, Literal},
     ExprResult,
+    types::{Expr, ExprKind, Literal},
 };
-use crate::parser::{ast::consume, tokenizer::types::TokenType};
-use logger::location::Section;
+use crate::{
+    merge_spans,
+    parser::{
+        ast::{
+            consume,
+            types::{Error, ErrorKind},
+        },
+        lexer::types::TokenKind,
+    },
+};
 
 impl super::Parser {
-    pub(super) fn parse_expr(&mut self) -> ExprResult {
-        let token = self
-            .tokens
-            .get(self.position)
-            .ok_or_else(|| raw_err!(NoTokensLeft))?;
+    /// Generates an AST based on the tokens of this [`Parser`].
+    /// # Errors
+    /// This function will return an error if a AST generation error occurs.
+    pub fn parse(&mut self) -> ExprResult {
+        let token = self.tokens.get(self.pos).ok_or(Error::new(
+            ErrorKind::NoTokensLeft,
+            self.source.clone(),
+            self.closest_span(),
+        ))?;
 
-        let expr = match token.token_type {
-            TokenType::LBrace => Some(self.parse_object()?),
-            TokenType::LBracket => Some(self.parse_array()?),
-            TokenType::LParen => {
+        let expr = match token.kind {
+            TokenKind::LBrace => Some(self.parse_object()?),
+            TokenKind::LBracket => Some(self.parse_array()?),
+            TokenKind::LParen => {
                 // Function Declaration
-                if let Some(next_token) = self.tokens.get(self.position.saturating_add(1))
+                if let Some(next_token) = self.tokens.get(self.pos.saturating_add(1))
                     && matches!(
-                        next_token.token_type,
-                        TokenType::Identifier(_) | TokenType::RParen
+                        next_token.kind,
+                        TokenKind::Identifier(_) | TokenKind::RParen
                     )
                 {
                     return self.parse_fn_decl();
@@ -29,19 +40,24 @@ impl super::Parser {
 
                 None
             }
-            TokenType::Not => {
+            TokenKind::Not => {
                 let token = self
                     .tokens
-                    .get(self.position)
-                    .ok_or_else(|| raw_err!(NoTokensLeft))?
+                    .get(self.pos)
+                    .ok_or(Error::new(
+                        ErrorKind::NoTokensLeft,
+                        self.source.clone(),
+                        self.closest_span(),
+                    ))?
                     .clone();
 
                 consume!(self, Not);
-                let expr = self.parse_expr()?;
-                let section = Section::merge_start_end(&token.section, &expr.section);
+                let expr = self.parse()?;
+                let span = merge_spans(token.span, expr.span);
 
-                Some(Expr::new(ExprType::Not(Box::new(expr)), section))
+                Some(Expr::new(ExprKind::Not(Box::new(expr)), span))
             }
+            TokenKind::Let => Some(self.parse_let()?),
             _ => None,
         };
 
@@ -55,50 +71,50 @@ impl super::Parser {
     pub(super) fn parse_literal(&mut self) -> ExprResult {
         let token = self
             .tokens
-            .get(self.position)
-            .ok_or_else(|| raw_err!(NoTokensLeft))?
+            .get(self.pos)
+            .ok_or(Error::new(
+                ErrorKind::NoTokensLeft,
+                self.source.clone(),
+                self.closest_span(),
+            ))?
             .clone();
 
         macro_rules! literal {
             ($variant:ident) => {{
-                self.position = self.position.saturating_add(1);
-                Expr::new(ExprType::Literal(Literal::$variant), token.section)
+                self.pos = self.pos.saturating_add(1);
+                Expr::new(ExprKind::Literal(Literal::$variant), token.span)
             }};
             ($variant:ident($value:expr)) => {{
-                self.position = self.position.saturating_add(1);
-                Expr::new(ExprType::Literal(Literal::$variant($value)), token.section)
+                self.pos = self.pos.saturating_add(1);
+                Expr::new(ExprKind::Literal(Literal::$variant($value)), token.span)
             }};
         }
 
-        let expr = match &token.token_type {
-            TokenType::Null => literal!(Null),
-            TokenType::String(v) => literal!(String(v.clone())),
-            TokenType::InterpolatedString(v) => self.parse_interpolated_string(v)?,
-            TokenType::Path(v) => literal!(Path(v.clone())),
-            TokenType::InterpolatedPath(v) => self.parse_interpolated_path(v)?,
-            TokenType::Int(v) => literal!(Int(*v)),
-            TokenType::Float(v) => literal!(Float(*v)),
-            TokenType::Bool(v) => literal!(Boolean(*v)),
-            TokenType::Identifier(_) => self.parse_ident()?,
-            other => {
-                return err!(
-                    UnexpectedToken(other.clone()),
-                    self.location_from_token(&token)
-                );
+        let expr = match &token.kind {
+            TokenKind::Null => literal!(Null),
+            TokenKind::String(v) => literal!(String(v.clone())),
+            TokenKind::InterpolatedString(v) => self.parse_interpolated_string(v)?,
+            TokenKind::Path(v) => literal!(Path(v.clone())),
+            TokenKind::InterpolatedPath(v) => self.parse_interpolated_path(v)?,
+            TokenKind::Int(v) => literal!(Int(*v)),
+            TokenKind::Float(v) => literal!(Float(*v)),
+            TokenKind::Bool(v) => literal!(Bool(*v)),
+            TokenKind::Identifier(_) => self.parse_ident()?,
+            _ => {
+                return Err(Error::new(
+                    ErrorKind::UnexpectedToken,
+                    self.source.clone(),
+                    token.span,
+                ));
             }
         };
 
-        let token = self.tokens.get(self.position);
+        let token = self.tokens.get(self.pos);
 
         if let Some(token) = token {
-            match &token.token_type {
+            match &token.kind {
                 b if b.is_binary_operator() => {
                     return self.parse_binary_op_with_left(0, expr);
-                }
-                TokenType::Dot
-                    if !matches!(expr.expr_type, ExprType::Literal(Literal::Path(..))) =>
-                {
-                    return self.parse_field_access();
                 }
                 _ => (),
             }

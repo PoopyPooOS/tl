@@ -10,15 +10,14 @@
     clippy::arithmetic_side_effects
 )]
 #![warn(clippy::unimplemented, clippy::todo)]
+#![allow(clippy::result_large_err)]
 
 // Tests
 #[cfg(test)]
 mod tests;
 
 mod error;
-mod source;
 pub use error::Error;
-pub use source::Source;
 
 // Parsers
 pub mod parser;

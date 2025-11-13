@@ -1,94 +1,126 @@
 use super::{
-    types::{Expr, ExprType},
     ExprResult,
+    types::{Expr, ExprKind},
 };
-use crate::parser::{
-    ast::{advance, consume, err, raw_err, Context},
-    tokenizer::types::TokenType,
+use crate::{
+    merge_spans,
+    parser::{
+        ast::{
+            advance, consume,
+            types::{Error, ErrorKind, Literal},
+        },
+        lexer::types::TokenKind,
+    },
 };
-use logger::location::Section;
 
 impl super::Parser {
     pub(super) fn parse_ident(&mut self) -> ExprResult {
-        let mut is_call = false;
-        let mut is_index = false;
+        let token = advance!(self).ok_or(Error::new(
+            ErrorKind::NoTokensLeft,
+            self.source.clone(),
+            self.closest_span(),
+        ))?;
 
-        let last_context = self.context.clone();
-
-        if let Some(next_token) = self.tokens.get(self.position.saturating_add(1)) {
-            if next_token.token_type == TokenType::LParen {
-                is_call = true;
-                self.context = Context::CallArgs;
-            }
-            is_index = next_token.token_type == TokenType::LBracket;
-        }
-
-        let name = match advance!(self) {
-            Some(token) => {
-                if let TokenType::Identifier(name) = &token.token_type {
-                    (token.clone(), name.clone())
-                } else {
-                    unreachable!();
-                }
-            }
+        let mut expr = match &token.kind {
+            TokenKind::Identifier(name) => Expr::ident(name.clone(), token.span),
             _ => unreachable!(),
         };
+        let mut full_span = token.span;
 
-        if !is_call && !is_index {
-            return Ok(Expr::new(ExprType::Identifier(name.1), name.0.section));
-        }
+        loop {
+            match self.tokens.get(self.pos).map(|t| &t.kind) {
+                // Object field access: .identifier
+                // TODO: Allow for interpolation here
+                Some(TokenKind::Dot) => {
+                    self.pos = self.pos.saturating_add(1);
+                    let field_token = advance!(self).ok_or({
+                        Error::new(
+                            ErrorKind::ExpectedIdentifierAfterDot,
+                            self.source.clone(),
+                            self.closest_span(),
+                        )
+                    })?;
 
-        if is_call {
-            let name = (name.0.clone(), name.1);
-            let mut call_args = Vec::new();
-            consume!(self, LParen);
-
-            while let Some(next_token) = self.tokens.get(self.position) {
-                if next_token.token_type == TokenType::RParen {
-                    break;
+                    let field_name = match &field_token.kind {
+                        TokenKind::Identifier(name) => name.clone(),
+                        _ => {
+                            return Err(Error::new(
+                                ErrorKind::ExpectedToken {
+                                    expected: "identifier".into(),
+                                    found: None,
+                                },
+                                self.source.clone(),
+                                field_token.span,
+                            ));
+                        }
+                    };
+                    expr = Expr::new(
+                        ExprKind::ObjectAccess {
+                            base: Box::new(expr),
+                            field: field_name,
+                        },
+                        merge_spans(full_span, field_token.span),
+                    );
+                    full_span = merge_spans(full_span, field_token.span);
                 }
 
-                let expr = self.parse_expr()?;
-                call_args.push(expr);
-            }
+                // Array index access: [expr]
+                Some(TokenKind::LBracket) => {
+                    self.pos = self.pos.saturating_add(1);
+                    let index_expr = self.parse()?;
+                    let end = consume!(self, RBracket);
 
-            let end = consume!(self, RParen);
-            let start = &name.0;
-            self.context = last_context;
+                    expr = match index_expr.kind {
+                        ExprKind::Literal(Literal::Int(v)) if v >= 0 => Expr::new(
+                            ExprKind::ArrayIndex {
+                                base: Box::new(expr),
+                                index: v as usize,
+                            },
+                            merge_spans(full_span, end.span),
+                        ),
+                        _ => Expr::new(
+                            ExprKind::ArrayIndex {
+                                base: Box::new(expr),
+                                index: 0,
+                            },
+                            merge_spans(full_span, end.span),
+                        ),
+                    };
 
-            return Ok(Expr::new(
-                ExprType::Call {
-                    name: name.1,
-                    args: call_args,
-                },
-                Section::merge_start_end(&start.section, &end.section),
-            ));
-        }
+                    full_span = merge_spans(full_span, end.span);
+                }
 
-        let name_token = name.0.clone();
-        consume!(self, LBracket);
+                // Function call: (args...)
+                Some(TokenKind::LParen) => {
+                    self.pos = self.pos.saturating_add(1);
+                    let mut args = Vec::new();
+                    while let Some(token) = self.tokens.get(self.pos)
+                        && token.kind != TokenKind::RParen
+                    {
+                        if token.kind == TokenKind::Comma {
+                            self.pos = self.pos.saturating_add(1);
+                            continue;
+                        }
 
-        let index = match advance!(self) {
-            Some(token) => match &token.token_type {
-                TokenType::Int(v) => {
-                    if *v < 0 {
-                        return err!(NegativeArrayIndex, self.location_from_token(token));
+                        args.push(self.parse()?);
                     }
+                    let end = consume!(self, RParen);
 
-                    usize::try_from(*v).map_err(|_| {
-                        raw_err!(NegativeArrayIndex, self.location_from_token(token))
-                    })?
+                    expr = Expr::new(
+                        ExprKind::Call {
+                            base: Box::new(expr),
+                            args,
+                        },
+                        merge_spans(full_span, end.span),
+                    );
+
+                    full_span = merge_spans(full_span, end.span);
                 }
-                _ => return err!(ExpectedOneOfTokens(vec![TokenType::Int(0)])),
-            },
-            _ => return err!(NoTokensLeft),
-        };
 
-        let end = consume!(self, RBracket);
+                _ => break,
+            }
+        }
 
-        Ok(Expr::new(
-            ExprType::ArrayIndex(name.1, index),
-            Section::merge_start_end(&name_token.section, &end.section),
-        ))
+        Ok(expr)
     }
 }

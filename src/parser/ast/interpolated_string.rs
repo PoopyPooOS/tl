@@ -1,58 +1,49 @@
 use super::{
-    raw_err,
-    types::{Expr, ExprType, Literal, StatementType},
     ExprResult,
+    types::{Expr, ExprKind, Literal},
 };
-use crate::parser::tokenizer::types::{Token, TokenType};
+use crate::parser::{
+    ast::types::{Error, ErrorKind},
+    lexer::types::{Token, TokenKind},
+};
 
 impl super::Parser {
     pub(super) fn parse_interpolated_string(&mut self, v: &[Token]) -> ExprResult {
         let mut result = Vec::new();
-        let start = self.tokens.get(self.position).ok_or_else(|| {
-            raw_err!(
-                ExpectedOneOfTokens(vec![TokenType::InterpolatedString(vec![])]),
-                None
-            )
-        })?;
+        let start = self.tokens.get(self.pos).ok_or(Error::new(
+            ErrorKind::ExpectedToken {
+                expected: "interpolated string".into(),
+                found: None,
+            },
+            self.source.clone(),
+            self.closest_span(),
+        ))?;
 
         for token in v {
-            match &token.token_type {
-                TokenType::String(v) => {
+            match &token.kind {
+                TokenKind::String(v) => {
                     result.push(Expr::new(
-                        ExprType::Literal(Literal::String(v.clone())),
-                        token.section.clone(),
+                        ExprKind::Literal(Literal::String(v.clone())),
+                        token.span,
                     ));
                 }
-                TokenType::InterpolatedString(v) => {
+                TokenKind::InterpolatedString(v) => {
                     let ast = Self::new(v.clone(), self.source.clone()).parse()?;
-                    if let Some(first) = ast.first() {
-                        let StatementType::Expr(first) = &first.statement_type else {
-                            unreachable!("Interpolated strings can only contain expressions");
-                        };
-
-                        result.push(first.clone());
-                    }
+                    result.push(ast.clone());
                 }
                 _ => {
-                    // FIXME: Cloning `self.source` is very inefficient.
                     let ast = Self::new(vec![token.clone()], self.source.clone()).parse()?;
-                    if let Some(first) = ast.first() {
-                        let StatementType::Expr(first) = &first.statement_type else {
-                            unreachable!("Interpolated strings can only contain expressions");
-                        };
-
-                        result.push(first.clone());
-                    }
+                    result.push(ast.clone());
                 }
             }
         }
 
         // Consume the interpolated string
-        self.position = self.position.saturating_add(1);
+        self.pos = self.pos.saturating_add(1);
 
         Ok(Expr::new(
-            ExprType::Literal(Literal::InterpolatedString(result)),
-            start.section.clone(),
+            ExprKind::Literal(Literal::InterpolatedString(result)),
+            start.span,
         ))
     }
 }

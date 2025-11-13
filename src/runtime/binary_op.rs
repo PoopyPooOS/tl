@@ -1,5 +1,9 @@
-use super::{types::Value, ValueResult};
-use crate::parser::ast::types::{BinaryOperator, Expr};
+use super::{ValueResult, types::Value};
+use crate::{
+    merge_spans,
+    parser::ast::types::{BinaryOperator, Expr},
+    runtime::ValueKind,
+};
 
 impl super::Scope {
     pub(super) fn eval_binary_op(
@@ -9,27 +13,6 @@ impl super::Scope {
         right: &Expr,
     ) -> ValueResult {
         let lhs = self.eval_expr(left)?;
-
-        // // Do field access before evaluating rhs because rhs would not be a valid variable.
-        // if operator == &BinaryOperator::Dot {
-        //     match &right.expr_type {
-        //         ExprType::Identifier(v) => return Ok(lhs.access(v)),
-        //         ExprType::BinaryOp {
-        //             left,
-        //             operator,
-        //             right,
-        //         } if operator == &BinaryOperator::Dot => {
-        //             return self.eval_binary_op(left, operator, right)
-        //         }
-        //         _ => {
-        //             return Err(Box::new(Error::new(
-        //                 ErrorType::CanNotAccessWithNonIdent,
-        //                 self.location_from_expr(right),
-        //             )))
-        //         }
-        //     }
-        // }
-
         let rhs = self.eval_expr(right)?;
 
         #[allow(
@@ -42,14 +25,38 @@ impl super::Scope {
             BinaryOperator::Multiply => lhs * rhs,
             BinaryOperator::Divide => lhs / rhs,
             BinaryOperator::Modulo => lhs % rhs,
-            BinaryOperator::Eq => Value::Boolean(lhs == rhs),
-            BinaryOperator::NotEq => Value::Boolean(lhs != rhs),
-            BinaryOperator::Gt => Value::Boolean(lhs > rhs),
-            BinaryOperator::GtEq => Value::Boolean(lhs >= rhs),
-            BinaryOperator::Lt => Value::Boolean(lhs < rhs),
-            BinaryOperator::LtEq => Value::Boolean(lhs <= rhs),
-            BinaryOperator::And => Value::Boolean(lhs.and(&rhs)),
-            BinaryOperator::Or => Value::Boolean(lhs.or(&rhs)),
+            BinaryOperator::Eq => Value::new(
+                ValueKind::Boolean(lhs == rhs),
+                merge_spans(lhs.span, rhs.span),
+            ),
+            BinaryOperator::NotEq => Value::new(
+                ValueKind::Boolean(lhs != rhs),
+                merge_spans(lhs.span, rhs.span),
+            ),
+            BinaryOperator::Gt => Value::new(
+                ValueKind::Boolean(lhs > rhs),
+                merge_spans(lhs.span, rhs.span),
+            ),
+            BinaryOperator::GtEq => Value::new(
+                ValueKind::Boolean(lhs >= rhs),
+                merge_spans(lhs.span, rhs.span),
+            ),
+            BinaryOperator::Lt => Value::new(
+                ValueKind::Boolean(lhs < rhs),
+                merge_spans(lhs.span, rhs.span),
+            ),
+            BinaryOperator::LtEq => Value::new(
+                ValueKind::Boolean(lhs <= rhs),
+                merge_spans(lhs.span, rhs.span),
+            ),
+            BinaryOperator::And => Value::new(
+                ValueKind::Boolean(lhs.and(&rhs)),
+                merge_spans(lhs.span, rhs.span),
+            ),
+            BinaryOperator::Or => Value::new(
+                ValueKind::Boolean(lhs.or(&rhs)),
+                merge_spans(lhs.span, rhs.span),
+            ),
         })
     }
 }

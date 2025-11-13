@@ -1,56 +1,70 @@
 use super::{
-    types::{Expr, ExprType},
     Context, ExprResult,
+    types::{Expr, ExprKind},
 };
-use crate::parser::{
-    ast::{consume, err, raw_err},
-    tokenizer::types::TokenType,
+use crate::{
+    merge_spans,
+    parser::{
+        ast::{
+            consume,
+            types::{Error, ErrorKind, Literal},
+        },
+        lexer::types::TokenKind,
+    },
 };
-use logger::location::Section;
 
 impl super::Parser {
     pub(super) fn parse_fn_decl(&mut self) -> ExprResult {
         let start = self
             .tokens
-            .get(self.position)
-            .ok_or_else(|| raw_err!(NoTokensLeft))?
+            .get(self.pos)
+            .ok_or(Error::new(
+                ErrorKind::NoTokensLeft,
+                self.source.clone(),
+                self.closest_span(),
+            ))?
             .clone();
 
         // Args
         consume!(self, LParen);
         let mut args = Vec::new();
 
-        while let Some(next_token) = self.tokens.get(self.position) {
-            if next_token.token_type == TokenType::RParen {
+        while let Some(next_token) = self.tokens.get(self.pos) {
+            if next_token.kind == TokenKind::RParen {
                 break;
             }
 
-            let name = match self.tokens.get(self.position) {
-                Some(token) => match &token.token_type {
-                    TokenType::Identifier(name) => name.clone(),
+            let name = match self.tokens.get(self.pos) {
+                Some(token) => match &token.kind {
+                    TokenKind::Identifier(name) => name.clone(),
+                    TokenKind::Comma => {
+                        self.pos = self.pos.saturating_add(1);
+                        continue;
+                    }
                     _ => {
-                        return err!(
-                            ExpectedTokenGot(
-                                TokenType::Identifier("identifier".to_string()),
-                                token.token_type.clone()
-                            ),
-                            self.location_from_token(token)
-                        );
+                        return Err(Error::new(
+                            ErrorKind::ExpectedToken {
+                                expected: "identifier".into(),
+                                found: Some(token.kind.clone()),
+                            },
+                            self.source.clone(),
+                            token.span,
+                        ));
                     }
                 },
                 _ => {
-                    return err!(
-                        ExpectedOneOfTokens(vec![TokenType::Identifier("identifier".to_string())]),
-                        self.location_from_token(
-                            self.tokens
-                                .get(self.position)
-                                .ok_or_else(|| raw_err!(NoTokensLeft))?
-                        )
-                    );
+                    return Err(Error::new(
+                        ErrorKind::ExpectedToken {
+                            expected: "identifier".into(),
+                            found: None,
+                        },
+                        self.source.clone(),
+                        self.closest_span(),
+                    ));
                 }
             };
 
-            self.position = self.position.saturating_add(1);
+            self.pos = self.pos.saturating_add(1);
 
             args.push(name);
         }
@@ -59,16 +73,37 @@ impl super::Parser {
 
         // Body
         consume!(self, LBrace);
+
+        if self
+            .tokens
+            .get(self.pos)
+            .is_some_and(|token| token.kind == TokenKind::RBrace)
+        {
+            let end = consume!(self, RBrace);
+            let span = merge_spans(start.span, end.span);
+
+            return Ok(Expr::new(
+                ExprKind::FnDecl {
+                    args,
+                    expr: Box::new(Expr::lit(Literal::Null, span)),
+                },
+                span,
+            ));
+        }
+
         let last_context = self.context.clone();
         self.context = Context::Function;
 
-        let body = self.parse()?;
+        let expr = self.parse()?;
         let end = consume!(self, RBrace);
         self.context = last_context;
 
         Ok(Expr::new(
-            ExprType::FnDecl { args, body },
-            Section::merge_start_end(&start.section, &end.section),
+            ExprKind::FnDecl {
+                args,
+                expr: Box::new(expr),
+            },
+            merge_spans(start.span, end.span),
         ))
     }
 }
