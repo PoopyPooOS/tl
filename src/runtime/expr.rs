@@ -54,9 +54,9 @@ impl super::Scope {
                 operator,
                 right,
             } => Ok(self.eval_binary_op(left, operator, right)?),
-            ExprKind::FnDecl { args, expr: body } => Ok(Value::new(
+            ExprKind::FnDecl { arg, expr: body } => Ok(Value::new(
                 ValueKind::Function {
-                    args: args.clone(),
+                    arg: arg.clone(),
                     expr: *body.clone(),
                 },
                 expr.span,

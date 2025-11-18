@@ -31,7 +31,6 @@ pub struct Parser {
 #[derive(Debug, PartialEq, Clone)]
 enum Context {
     TopLevel,
-    Function,
     Object,
 }
 

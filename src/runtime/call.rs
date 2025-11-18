@@ -1,11 +1,9 @@
-use super::{
-    ValueResult,
-    types::{Builtin, Error, ErrorKind},
-};
+use std::collections::HashMap;
+
+use super::{ValueResult, types::Builtin};
 use crate::{
-    merge_spans,
     parser::ast::types::{Expr, ExprKind},
-    runtime::{ValueKind, types::NativeFnCtx},
+    runtime::{Error, ErrorKind, Scope, Value, ValueKind, types::NativeFnCtx},
 };
 
 impl super::Scope {
@@ -14,58 +12,45 @@ impl super::Scope {
             unreachable!()
         };
 
-        let function = self.eval_expr(base)?;
+        let mut function = self.eval_expr(base)?;
         let name = base.as_ident().unwrap_or("<unknown name>".into());
 
-        match function.kind {
-            ValueKind::Function {
-                args: ref parameters,
-                expr: ref body,
-            } => {
-                let mut evaluated_args = Vec::with_capacity(args.len());
-                for expr in args {
-                    evaluated_args.push(self.eval_expr(expr)?);
-                }
+        let mut variables: HashMap<String, Value> = self.variables.clone();
 
-                if args.len() != parameters.len() {
-                    let args = if let Some(first) = args.iter().next()
-                        && let Some(last) = args.iter().last()
-                    {
-                        merge_spans(first.span, last.span)
-                    } else {
-                        base.span
+        for arg_expr in args {
+            let arg_value = self.eval_expr(arg_expr)?;
+
+            function = match function.kind {
+                ValueKind::Function {
+                    arg: ref param,
+                    expr: ref body,
+                } => {
+                    variables.insert(param.to_owned(), arg_value.clone());
+
+                    let mut scope =
+                        Scope::new(variables.clone(), self.source.clone(), body.clone());
+                    scope.define(&name, function.clone());
+                    scope.eval()?
+                }
+                ValueKind::Builtin(Builtin(builtin)) => {
+                    let ctx = NativeFnCtx {
+                        expr: expr.clone(),
+                        variables: self.variables.clone(),
+                        source: self.source.clone(),
                     };
 
+                    return builtin(ctx);
+                }
+                _ => {
                     return Err(Error::new(
-                        ErrorKind::ArgsMismatch {
-                            len: parameters.len(),
-                            args,
-                        },
+                        ErrorKind::NotCallable,
                         self.source.clone(),
                         expr.span,
                     ));
                 }
-
-                let scope = self.create_scope(body.clone());
-
-                for (param, arg) in parameters.iter().zip(evaluated_args) {
-                    scope.define(param, arg);
-                }
-
-                scope.define(&name, function);
-
-                scope.eval()
-            }
-            ValueKind::Builtin(Builtin(builtin)) => {
-                let ctx = NativeFnCtx {
-                    expr: expr.clone(),
-                    variables: self.variables.clone(),
-                    source: self.source.clone(),
-                };
-
-                builtin(ctx)
-            }
-            _ => unreachable!("`function` was filtered before to only match for functions"),
+            };
         }
+
+        Ok(function)
     }
 }

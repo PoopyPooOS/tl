@@ -1,6 +1,4 @@
 let
-  greet = (name) {
-    "Hello, ${name}!"
-  }
+  greet = name: "Hello, ${name}!"
 in
-  greet("world")
+greet("world")

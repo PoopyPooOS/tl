@@ -198,159 +198,53 @@ fn not() {
 
 #[test]
 fn function_declaration() {
-    // No arguments
-    let input = r#"() { println("Hello!") }"#;
-    let expected = Expr::new(
-        ExprKind::FnDecl {
-            args: vec![],
-            expr: Expr::boxed(
-                ExprKind::Call {
-                    base: Expr::boxed_ident("println", span(5, 7)),
-                    args: vec![literal!(String("Hello!".to_string()), span(13, 8))],
-                },
-                span(5, 17),
-            ),
-        },
-        span(0, 24),
-    );
-    assert_eq!(parse(input).unwrap(), expected);
-
     // Single argument
-    let input = r#"(name) { "Hello, ${name}!" }"#;
+    let input = r#"name: "Hello, ${name}!""#;
     let expected = Expr::new(
         ExprKind::FnDecl {
-            args: vec!["name".to_string()],
+            arg: "name".to_owned(),
             expr: box_literal!(
                 InterpolatedString(vec![
-                    literal!(String("Hello, ".to_string()), span(10, 7)),
-                    Expr::ident("name", span(19, 4)),
-                    literal!(String("!".to_string()), span(24, 1)),
+                    literal!(String("Hello, ".to_string()), span(7, 7)),
+                    Expr::ident("name", span(16, 4)),
+                    literal!(String("!".to_string()), span(21, 1)),
                 ]),
-                span(9, 17)
+                span(6, 17)
             ),
         },
-        span(0, 28),
+        span(0, 23),
     );
     assert_eq!(parse(input).unwrap(), expected);
 
     // Multiple arguments
-    let input = r#"(name, age) { "Hello, ${name}! You are ${age} years old." }"#;
+    let input = r#"name: age: "Hello, ${name}! You are ${age} years old.""#;
     let expected = Expr::new(
         ExprKind::FnDecl {
-            args: vec!["name".to_string(), "age".to_string()],
-            expr: box_literal!(
-                InterpolatedString(vec![
-                    literal!(String("Hello, "), span(15, 7)),
-                    Expr::ident("name", span(24, 4)),
-                    literal!(String("! You are "), span(30, 10)),
-                    Expr::ident("age", span(41, 3)),
-                    literal!(String(" years old."), span(45, 11)),
-                ]),
-                span(14, 43)
-            ),
-        },
-        span(0, 59),
-    );
-    assert_eq!(parse(input).unwrap(), expected);
-
-    // Complex (declaration + call)
-    let input = r"let
-    pow = (base, exponent) {
-        if(
-            exponent == 0,
-            1,
-            base * pow(base, exponent - 1)
-        )
-    }
-in
-    pow(2, 10)";
-    let expected = Expr::new(
-        ExprKind::LetIn {
-            bindings: vec![(
-                "pow".to_string(),
-                Expr::new(
-                    ExprKind::FnDecl {
-                        args: vec!["base".to_string(), "exponent".to_string()],
-                        expr: Expr::boxed(
-                            ExprKind::Call {
-                                base: Expr::boxed_ident("if", span(41, 2)),
-                                args: vec![
-                                    Expr::new(
-                                        ExprKind::BinaryOp {
-                                            left: Expr::boxed_ident("exponent", span(57, 8)),
-                                            operator: BinaryOperator::Eq,
-                                            right: box_literal!(Int(0), span(69, 1)),
-                                        },
-                                        span(57, 13),
-                                    ),
-                                    literal!(Int(1), span(84, 1)),
-                                    Expr::new(
-                                        ExprKind::BinaryOp {
-                                            left: Expr::boxed_ident("base", span(99, 4)),
-                                            operator: BinaryOperator::Multiply,
-                                            right: Expr::boxed(
-                                                ExprKind::Call {
-                                                    base: Expr::boxed_ident("pow", span(106, 3)),
-                                                    args: vec![
-                                                        Expr::ident("base", span(110, 4)),
-                                                        Expr::new(
-                                                            ExprKind::BinaryOp {
-                                                                left: Expr::boxed_ident(
-                                                                    "exponent",
-                                                                    span(116, 8),
-                                                                ),
-                                                                operator: BinaryOperator::Minus,
-                                                                right: box_literal!(
-                                                                    Int(1),
-                                                                    span(127, 1)
-                                                                ),
-                                                            },
-                                                            span(116, 12),
-                                                        ),
-                                                    ],
-                                                },
-                                                span(106, 23),
-                                            ),
-                                        },
-                                        span(99, 30),
-                                    ),
-                                ],
-                            },
-                            span(41, 98),
-                        ),
-                    },
-                    span(14, 131),
-                ),
-            )],
+            arg: "name".to_owned(),
             expr: Expr::boxed(
-                ExprKind::Call {
-                    base: Expr::boxed_ident("pow", span(153, 3)),
-                    args: vec![
-                        literal!(Int(2), span(157, 1)),
-                        literal!(Int(10), span(160, 2)),
-                    ],
+                ExprKind::FnDecl {
+                    arg: "age".to_owned(),
+                    expr: box_literal!(
+                        InterpolatedString(vec![
+                            literal!(String("Hello, "), span(12, 7)),
+                            Expr::ident("name", span(21, 4)),
+                            literal!(String("! You are "), span(27, 10)),
+                            Expr::ident("age", span(38, 3)),
+                            literal!(String(" years old."), span(42, 11)),
+                        ]),
+                        span(11, 43)
+                    ),
                 },
-                span(153, 10),
+                span(6, 48),
             ),
         },
-        span(0, 163),
+        span(0, 54),
     );
     assert_eq!(parse(input).unwrap(), expected);
 }
 
 #[test]
 fn call() {
-    // No arguments
-    let input = "exit()";
-    let expected = Expr::new(
-        ExprKind::Call {
-            base: Expr::boxed_ident("exit", span(0, 4)),
-            args: vec![],
-        },
-        span(0, 6),
-    );
-    assert_eq!(parse(input).unwrap(), expected);
-
     // Single argument
     let input = "println(\"Hello, world!\")";
     let expected = Expr::new(

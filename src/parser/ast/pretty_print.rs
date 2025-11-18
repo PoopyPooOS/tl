@@ -204,7 +204,7 @@ impl super::Parser {
                 out.push('\n');
                 let _ = writeln!(out, "{pad}  field: {}", field.yellow());
             }
-            ExprKind::FnDecl { args, expr } => {
+            ExprKind::FnDecl { arg, expr } => {
                 let _ = write!(
                     out,
                     "{pad}{} {} {}\n",
@@ -213,10 +213,7 @@ impl super::Parser {
                     "{".dimmed(),
                 );
 
-                for arg in args {
-                    let _ = writeln!(out, "{pad}  arg: {}", arg.magenta());
-                }
-
+                let _ = writeln!(out, "{pad}  arg: {}", arg.magenta());
                 let _ = write!(out, "{pad}  expr: ");
                 out.push_str(
                     self.pretty_print_expr(expr, indent.saturating_add(1))

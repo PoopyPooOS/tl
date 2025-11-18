@@ -18,7 +18,6 @@ mod expr;
 
 #[derive(Debug)]
 pub struct Scope {
-    scopes: Vec<Scope>,
     variables: HashMap<String, Value>,
 
     ast: Rc<Expr>,
@@ -32,7 +31,6 @@ impl Scope {
     )]
     pub fn new(variables: HashMap<String, Value>, source: NamedSource<String>, ast: Expr) -> Self {
         Self {
-            scopes: Vec::new(),
             variables,
 
             ast: Rc::new(ast),
@@ -80,18 +78,31 @@ impl Scope {
                 "maybe",
                 Value::new_builtin(
                     Builtin(Rc::new(|inputs| {
-                        let cond = inputs.get_arg(0, 2)?;
+                        let cond = inputs.get_arg_evaluated(0, 2)?;
                         let then = inputs.get_arg(1, 2)?;
-
-                        let mut scope = Scope::new(inputs.variables, inputs.source, inputs.expr);
-
-                        let cond = scope.eval_expr(&cond)?;
 
                         if cond.is_truthy() {
                             return Ok(cond);
                         }
 
+                        let mut scope = Scope::new(inputs.variables, inputs.source, inputs.expr);
+
                         scope.eval_expr(&then)
+                    }))
+                    .into(),
+                ),
+            );
+
+            self.define(
+                "dbg",
+                Value::new_builtin(
+                    Builtin(Rc::new(|ctx| {
+                        let msg = ctx.get_arg_evaluated(0, 2)?;
+
+                        // TODO: Switch to `log` crate
+                        println!("{msg}");
+
+                        ctx.get_arg_evaluated(1, 2)
                     }))
                     .into(),
                 ),
@@ -334,8 +345,7 @@ impl Scope {
             //     );
             // }
 
-            let ast_clone = Rc::clone(&self.ast);
-            let value = self.eval_expr(&ast_clone)?;
+            let value = self.eval_expr(&Rc::clone(&self.ast))?;
 
             Ok(value)
         }
@@ -350,9 +360,7 @@ impl Scope {
         clippy::missing_panics_doc,
         reason = "Value that is unwraped is inserted before in the same function."
     )]
-    pub fn create_scope(&mut self, ast: Expr) -> &mut Scope {
-        self.scopes
-            .push(Scope::new(self.variables.clone(), self.source.clone(), ast));
-        self.scopes.last_mut().unwrap()
+    pub fn create_scope(&self, ast: Expr) -> Scope {
+        Scope::new(self.variables.clone(), self.source.clone(), ast)
     }
 }

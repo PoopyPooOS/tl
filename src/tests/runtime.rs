@@ -164,12 +164,11 @@ fn not() {
 #[test]
 fn function() {
     let input = r#"let
-    greet = (name) {
-        "Hello, ${name}!"
-    }
+  greet = name: "Hello, ${name}!"
 in
-    greet("John Doe")"#;
-    let expected = Value::new(ValueKind::String("Hello, John Doe!".into()), span(33, 17));
+greet("John Doe")
+"#;
+    let expected = Value::new(ValueKind::String("Hello, John Doe!".into()), span(20, 17));
     assert_eq!(run(input).unwrap(), expected);
 }
 
@@ -191,15 +190,13 @@ fn bindings() {
 #[ignore = "Weird stack overflow bug that only happens in tests"]
 fn recursion() {
     let input = r"let
-    pow = (base, exponent) {
-        if(
-            exponent == 0,
-            1,
-            base * pow(base, exponent - 1)
-        )
-    }
+  pow = base: exponent: if(
+    exponent == 0,
+    1,
+    base * pow(base, exponent - 1)
+  )
 in
-    pow(2, 10)";
-    let expected = Value::new(ValueKind::Int(1024), span(99, 99));
+pow(2, 10)";
+    let expected = Value::new(ValueKind::Int(1024), span(0, 0));
     assert_eq!(run(input).unwrap(), expected);
 }

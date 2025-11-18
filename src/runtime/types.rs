@@ -56,7 +56,7 @@ pub enum ValueKind {
     Array(Vec<Value>),
     Object(BTreeMap<String, Value>),
     Function {
-        args: Vec<String>,
+        arg: String,
         expr: Expr,
     },
     Builtin(Builtin),
@@ -307,16 +307,16 @@ impl NativeFnCtx {
     pub fn ensure_is_function(
         &self,
         value: Value,
-    ) -> Result<ExtractedValue<(Vec<String>, Expr)>, Error> {
+    ) -> Result<ExtractedValue<(String, Expr)>, Error> {
         match value.kind {
-            ValueKind::Function { args, expr } => Ok(ExtractedValue {
-                data: (args, expr),
+            ValueKind::Function { arg, expr } => Ok(ExtractedValue {
+                data: (arg, expr),
                 span: value.span,
             }),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
                     expected: ValueKind::Function {
-                        args: Vec::new(),
+                        arg: String::new(),
                         expr: Expr::default(),
                     }
                     .type_of()
@@ -812,6 +812,10 @@ pub enum ErrorKind {
         #[label("Could not find this variable in scope")]
         variable: SourceSpan,
     },
+
+    #[error("Value can not be called as a function")]
+    #[diagnostic(code(tl::runtime::call))]
+    NotCallable,
 
     #[error("Mismatch in number of function arguments")]
     #[diagnostic(code(tl::runtime::call))]

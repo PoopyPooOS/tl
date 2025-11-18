@@ -67,7 +67,7 @@ pub enum ExprKind {
         field: String,
     },
     FnDecl {
-        args: Vec<String>,
+        arg: String,
         expr: Box<Expr>,
     },
     Call {

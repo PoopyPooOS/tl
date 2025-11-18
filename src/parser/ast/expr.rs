@@ -27,18 +27,13 @@ impl super::Parser {
         let expr = match token.kind {
             TokenKind::LBrace => Some(self.parse_object()?),
             TokenKind::LBracket => Some(self.parse_array()?),
-            TokenKind::LParen => {
-                // Function Declaration
-                if let Some(next_token) = self.tokens.get(self.pos.saturating_add(1))
-                    && matches!(
-                        next_token.kind,
-                        TokenKind::Identifier(_) | TokenKind::RParen
-                    )
-                {
-                    return self.parse_fn_decl();
-                }
-
-                None
+            TokenKind::Identifier(_)
+                if self
+                    .tokens
+                    .get(self.pos.saturating_add(1))
+                    .is_some_and(|t| t.kind == TokenKind::Colon) =>
+            {
+                Some(self.parse_fn_decl()?)
             }
             TokenKind::Not => {
                 let token = self
