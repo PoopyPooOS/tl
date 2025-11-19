@@ -82,7 +82,7 @@ impl Lexer {
                                     '$' if chars.clone().nth(1) == Some('{') => {
                                         if !path_buf.is_empty() {
                                             interpolated_tokens.push(Token::new(
-                                                TokenKind::String(path_buf.clone()),
+                                                TokenKind::Path(PathBuf::from(&path_buf)),
                                                 (self.pos, path_buf.len()).into(),
                                             ));
                                             path_buf.clear();
@@ -130,7 +130,7 @@ impl Lexer {
                                 if !path_buf.is_empty() {
                                     let len = path_buf.len();
                                     interpolated_tokens.push(Token::new(
-                                        TokenKind::String(path_buf),
+                                        TokenKind::Path(PathBuf::from(&path_buf)),
                                         (pos_start, len).into(),
                                     ));
                                 }
@@ -181,7 +181,7 @@ impl Lexer {
                                         // Flush current path segment if any
                                         if !path_buf.is_empty() {
                                             interpolated_tokens.push(Token::new(
-                                                TokenKind::String(path_buf.clone()),
+                                                TokenKind::Path(PathBuf::from(&path_buf)),
                                                 (self.pos, path_buf.len()).into(),
                                             ));
                                             path_buf.clear();
@@ -229,7 +229,7 @@ impl Lexer {
                                 if !path_buf.is_empty() {
                                     let len = path_buf.len();
                                     interpolated_tokens.push(Token::new(
-                                        TokenKind::String(path_buf),
+                                        TokenKind::Path(PathBuf::from(&path_buf)),
                                         (pos_start, len).into(),
                                     ));
                                 }

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use super::{
     ExprResult,
     types::{Expr, ExprKind, Literal},
@@ -89,7 +91,7 @@ impl super::Parser {
             TokenKind::Null => literal!(Null),
             TokenKind::String(v) => literal!(String(v.clone())),
             TokenKind::InterpolatedString(v) => self.parse_interpolated_string(v)?,
-            TokenKind::Path(v) => literal!(Path(v.clone())),
+            TokenKind::Path(v) => literal!(Path(self.resolve_path(v.clone()))),
             TokenKind::InterpolatedPath(v) => self.parse_interpolated_path(v)?,
             TokenKind::Int(v) => literal!(Int(*v)),
             TokenKind::Float(v) => literal!(Float(*v)),
@@ -116,5 +118,16 @@ impl super::Parser {
         }
 
         Ok(expr)
+    }
+
+    pub(crate) fn resolve_path(&self, path: PathBuf) -> PathBuf {
+        if let Some(origin) = &self.source.path
+            && path.is_relative()
+        {
+            let base = origin.parent().unwrap_or(origin.as_path());
+            base.join(path)
+        } else {
+            path
+        }
     }
 }

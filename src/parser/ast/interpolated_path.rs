@@ -22,8 +22,14 @@ impl super::Parser {
         for token in v {
             match &token.kind {
                 TokenKind::Path(v) => {
+                    let path = if result.is_empty() {
+                        self.resolve_path(v.clone())
+                    } else {
+                        v.clone()
+                    };
+
                     result.push(Expr::new(
-                        ExprKind::Literal(Literal::Path(v.clone())),
+                        ExprKind::Literal(Literal::Path(path)),
                         token.span,
                     ));
                 }

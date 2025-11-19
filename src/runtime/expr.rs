@@ -8,7 +8,7 @@ use crate::{
     parser::ast::types::{Expr, ExprKind, Literal},
     runtime::{Scope, ValueKind},
 };
-use std::{collections::BTreeMap, path::PathBuf};
+use std::collections::BTreeMap;
 
 impl super::Scope {
     pub(super) fn eval_expr(&mut self, expr: &Expr) -> ValueResult {
@@ -96,10 +96,7 @@ impl super::Scope {
 
                 Ok(Value::new(ValueKind::String(value), span))
             }
-            Literal::Path(path) => Ok(Value::new(
-                ValueKind::Path(self.fix_relative_path_base(path.clone())),
-                span,
-            )),
+            Literal::Path(path) => Ok(Value::new(ValueKind::Path(path.clone()), span)),
             Literal::InterpolatedPath(v) => {
                 let mut value = String::new();
 
@@ -108,10 +105,7 @@ impl super::Scope {
                     value.push_str(&expr.to_string());
                 }
 
-                Ok(Value::new(
-                    ValueKind::Path(self.fix_relative_path_base(value.into())),
-                    span,
-                ))
+                Ok(Value::new(ValueKind::Path(value.into()), span))
             }
             Literal::Array(v) => {
                 let mut values = Vec::new();
@@ -131,17 +125,6 @@ impl super::Scope {
 
                 Ok(Value::new(ValueKind::Object(values), span))
             }
-        }
-    }
-
-    fn fix_relative_path_base(&self, path: PathBuf) -> PathBuf {
-        if let Some(origin) = &self.source.path
-            && path.is_relative()
-        {
-            let base = origin.parent().unwrap_or(origin.as_path());
-            base.join(path)
-        } else {
-            path
         }
     }
 }
