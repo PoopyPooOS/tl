@@ -1,9 +1,9 @@
 use crate::{
+    Source,
     parser::{ast::types::Expr, parse},
     runtime::types::ValueResult,
 };
-use miette::NamedSource;
-use std::{collections::HashMap, fmt::Debug, fs, rc::Rc};
+use std::{collections::HashMap, fmt::Debug, rc::Rc};
 pub use types::{Builtin, Error, ErrorKind, Value, ValueKind};
 
 pub mod types;
@@ -21,7 +21,7 @@ pub struct Scope {
     variables: HashMap<String, Value>,
 
     ast: Rc<Expr>,
-    source: NamedSource<String>,
+    source: Source,
 }
 
 impl Scope {
@@ -29,7 +29,7 @@ impl Scope {
         clippy::missing_panics_doc,
         reason = "The possible panic is checked beforehand"
     )]
-    pub fn new(variables: HashMap<String, Value>, source: NamedSource<String>, ast: Expr) -> Self {
+    pub fn new(variables: HashMap<String, Value>, source: Source, ast: Expr) -> Self {
         Self {
             variables,
 
@@ -203,9 +203,9 @@ impl Scope {
                             (path.data, path.span)
                         };
 
-                        let file = fs::read_to_string(&path)
+                        let source = Source::path(path)
                             .map_err(|err| Error::new(err.into(), ctx.source.clone(), path_span))?;
-                        let source = NamedSource::new(path.display().to_string(), file);
+
                         let ast = parse(&source).map_err(|err| {
                             let span = err.span;
                             let source = err.source.clone();

@@ -1,6 +1,7 @@
 #![allow(clippy::unwrap_used, reason = "Panics automatically invalidate tests")]
 
 use crate::{
+    Source,
     parser::parse,
     runtime::{
         Scope, ValueKind,
@@ -8,20 +9,19 @@ use crate::{
     },
     span,
 };
-use miette::NamedSource;
 use pretty_assertions::assert_eq;
 use std::collections::{BTreeMap, HashMap};
 
-fn run(text: impl Into<String>) -> miette::Result<Value> {
-    let source = NamedSource::new("test", text.into());
+fn run(text: impl AsRef<str>) -> miette::Result<Value> {
+    let source = Source::text_with_name("test", text);
     let ast = parse(&source)?;
 
     Ok(Scope::new(HashMap::new(), source, ast).eval()?)
 }
 
 /// Evaluate something expecting a runtime error.
-fn run_err(text: impl Into<String>) -> RuntimeError {
-    let source = NamedSource::new("test", text.into());
+fn run_err(text: impl AsRef<str>) -> RuntimeError {
+    let source = Source::text_with_name("test", text);
     let ast = parse(&source).unwrap();
 
     Scope::new(HashMap::new(), source, ast).eval().unwrap_err()
@@ -114,7 +114,7 @@ in
             length: 3,
             index: span(35, 10),
         },
-        NamedSource::new("test", input.to_string()),
+        Source::text_with_name("test", input),
         span(35, 10),
     );
     assert_eq!(run_err(input), expected);

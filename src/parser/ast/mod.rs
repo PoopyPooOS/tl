@@ -1,5 +1,5 @@
-use crate::parser::lexer::types::Token;
-use miette::{NamedSource, SourceSpan};
+use crate::{Source, parser::lexer::types::Token};
+use miette::SourceSpan;
 use types::{Error, Expr};
 
 pub mod types;
@@ -21,7 +21,7 @@ mod pretty_print;
 pub struct Parser {
     // Input
     tokens: Vec<Token>,
-    source: NamedSource<String>,
+    source: Source,
 
     // State
     pos: usize,
@@ -37,7 +37,7 @@ enum Context {
 pub type ExprResult = Result<Expr, Error>;
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>, source: NamedSource<String>) -> Self {
+    pub fn new(tokens: Vec<Token>, source: Source) -> Self {
         Self {
             tokens,
             source,

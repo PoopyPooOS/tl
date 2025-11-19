@@ -1,12 +1,16 @@
-use miette::NamedSource;
-use std::{collections::HashMap, time::Instant};
+use miette::{IntoDiagnostic, NamedSource};
+use std::{collections::HashMap, path::PathBuf, time::Instant};
 use tl::{
+    Source,
     parser::{ast, lexer},
     runtime::Scope,
 };
 
 fn main() -> miette::Result<()> {
-    let source = NamedSource::new("examples/basic.tl", String::from(include_str!("basic.tl")));
+    let source = Source::new(
+        NamedSource::new("examples/basic.tl", String::from(include_str!("basic.tl"))),
+        Some(PathBuf::from("examples/basic.tl")),
+    );
 
     // Parse
     let now = Instant::now();

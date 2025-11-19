@@ -1,18 +1,18 @@
 #![allow(clippy::unwrap_used, reason = "Panics automatically invalidate tests")]
 
 use crate::{
+    Source,
     parser::{
         self,
         ast::types::{BinaryOperator, Expr, ExprKind, Literal},
     },
     span,
 };
-use miette::NamedSource;
 use pretty_assertions::assert_eq;
 use std::{collections::BTreeMap, path::PathBuf};
 
-fn parse(text: impl Into<String>) -> miette::Result<Expr> {
-    Ok(parser::parse(&NamedSource::new("test", text.into()))?)
+fn parse(text: impl AsRef<str>) -> miette::Result<Expr> {
+    Ok(parser::parse(&Source::text_with_name("test", text))?)
 }
 
 macro_rules! literal {

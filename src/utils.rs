@@ -1,15 +1,17 @@
+#[cfg(feature = "serde")]
+use crate::Source;
 use crate::{
     parser::parse,
     runtime::{Scope, types::Value},
 };
-use miette::{NamedSource, Report, SourceSpan};
+use miette::{Report, SourceSpan};
 use std::collections::HashMap;
 
 /// Evaluate a source script and return the result as a deserialized value.
 /// # Errors
 /// This function will return an error if either an evaluation error occurs or a deserialization error occurs.
 #[cfg(feature = "serde")]
-pub fn eval<T>(source: NamedSource<String>, scope_setup: impl Fn(&mut Scope)) -> Result<T, Report>
+pub fn eval<T>(source: Source, scope_setup: impl Fn(&mut Scope)) -> Result<T, Report>
 where
     T: for<'de> serde::Deserialize<'de>,
 {
@@ -32,10 +34,7 @@ where
 /// # Errors
 /// This function will return an error if either an evaluation error occurs.
 #[cfg(feature = "serde")]
-pub fn eval_untyped(
-    source: miette::NamedSource<String>,
-    scope_setup: impl Fn(&mut Scope),
-) -> Result<Value, Report> {
+pub fn eval_untyped(source: Source, scope_setup: impl Fn(&mut Scope)) -> Result<Value, Report> {
     let ast = parse(&source)?;
     let mut scope = Scope::new(HashMap::new(), source, ast);
 
@@ -48,10 +47,7 @@ pub fn eval_untyped(
 /// # Errors
 /// This function will return an error if either an evaluation error occurs.
 #[cfg(not(feature = "serde"))]
-pub fn eval(
-    source: NamedSource<String>,
-    scope_setup: impl Fn(&mut Scope),
-) -> Result<Value, Report> {
+pub fn eval(source: Source, scope_setup: impl Fn(&mut Scope)) -> Result<Value, Report> {
     let ast = parse(&source)?;
     let mut scope = Scope::new(HashMap::new(), source, ast);
 

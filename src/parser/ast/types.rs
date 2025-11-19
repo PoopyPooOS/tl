@@ -1,5 +1,8 @@
-use crate::parser::lexer::{self, types::TokenKind};
-use miette::{Diagnostic, NamedSource, SourceSpan};
+use crate::{
+    Source,
+    parser::lexer::{self, types::TokenKind},
+};
+use miette::{Diagnostic, SourceSpan};
 use std::{collections::BTreeMap, fmt::Display, path::PathBuf};
 use thiserror::Error;
 
@@ -158,7 +161,7 @@ impl BinaryOperator {
 
                 Err(Error::new(
                     ErrorKind::UnexpectedToken,
-                    NamedSource::new("builtin", kind),
+                    Source::text("kind"),
                     (0, len).into(),
                 ))
             }

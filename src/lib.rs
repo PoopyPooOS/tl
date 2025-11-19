@@ -9,7 +9,7 @@
     clippy::float_arithmetic,
     clippy::arithmetic_side_effects
 )]
-#![warn(clippy::unimplemented, clippy::todo)]
+#![warn(clippy::unimplemented, clippy::todo, clippy::str_to_string)]
 #![allow(clippy::result_large_err)]
 
 // Tests
@@ -28,3 +28,6 @@ pub mod runtime;
 // Utils
 mod utils;
 pub use utils::*;
+
+mod source;
+pub use source::Source;

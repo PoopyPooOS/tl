@@ -1,14 +1,14 @@
 #![allow(clippy::arithmetic_side_effects, clippy::float_arithmetic)]
 
 use crate::{
-    merge_spans,
+    Source, merge_spans,
     parser::ast::{
         self,
         types::{Expr, ExprKind},
     },
     runtime::Scope,
 };
-use miette::{Diagnostic, NamedSource, SourceSpan};
+use miette::{Diagnostic, SourceSpan};
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, HashMap},
@@ -76,7 +76,7 @@ pub type NativeFn = Rc<dyn Fn(NativeFnCtx) -> ValueResult>;
 pub struct NativeFnCtx {
     pub expr: Expr,
     pub variables: HashMap<String, Value>,
-    pub source: NamedSource<String>,
+    pub source: Source,
 }
 
 impl NativeFnCtx {

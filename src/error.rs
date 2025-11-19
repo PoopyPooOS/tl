@@ -1,10 +1,11 @@
-use miette::{Diagnostic, LabeledSpan, NamedSource, Severity, SourceSpan};
+use crate::Source;
+use miette::{Diagnostic, LabeledSpan, Severity, SourceSpan};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Error<E: Diagnostic> {
     pub kind: E,
 
-    pub source: NamedSource<String>,
+    pub source: Source,
     pub span: SourceSpan,
 }
 
@@ -60,7 +61,7 @@ impl<E: Diagnostic> std::error::Error for Error<E> {
 }
 
 impl<T: Diagnostic> Error<T> {
-    pub fn new(kind: T, source: NamedSource<String>, span: SourceSpan) -> Self {
+    pub fn new(kind: T, source: Source, span: SourceSpan) -> Self {
         Self { kind, source, span }
     }
 }

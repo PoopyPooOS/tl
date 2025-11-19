@@ -1,18 +1,17 @@
-use miette::{NamedSource, SourceSpan};
+use crate::{Source, parser::lexer::types::ErrorKind};
+use miette::SourceSpan;
 use std::{iter::Peekable, path::PathBuf, str::Chars};
 use types::{Error, Token, TokenKind};
-
-use crate::parser::lexer::types::ErrorKind;
 
 pub mod types;
 
 pub struct Lexer {
-    pub(crate) source: NamedSource<String>,
+    pub(crate) source: Source,
     pub(crate) pos: usize,
 }
 
 impl Lexer {
-    pub fn new(source: NamedSource<String>) -> Self {
+    pub fn new(source: Source) -> Self {
         Self { source, pos: 0 }
     }
 
@@ -113,7 +112,7 @@ impl Lexer {
                                         }
 
                                         let mut nested_lexer = Self {
-                                            source: NamedSource::new(self.source.name(), nested),
+                                            source: self.source.clone().with_text(nested),
                                             pos: self.pos,
                                         };
                                         let nested = nested_lexer.tokenize()?;
@@ -212,7 +211,7 @@ impl Lexer {
                                         }
 
                                         let mut nested_lexer = Self {
-                                            source: NamedSource::new(self.source.name(), nested),
+                                            source: self.source.clone().with_text(nested),
                                             pos: self.pos,
                                         };
                                         let nested = nested_lexer.tokenize()?;
@@ -328,10 +327,7 @@ impl Lexer {
                                     }
 
                                     let mut nested_lexer = Self {
-                                        source: NamedSource::new(
-                                            self.source.name(),
-                                            nested_content,
-                                        ),
+                                        source: self.source.clone().with_text(nested_content),
                                         pos: nested_start,
                                     };
 
