@@ -55,7 +55,7 @@ impl super::Parser {
                         }
                     };
                     expr = Expr::new(
-                        ExprKind::ObjectAccess {
+                        ExprKind::MemberAccess {
                             base: Box::new(expr),
                             field: field_name,
                         },

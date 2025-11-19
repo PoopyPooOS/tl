@@ -163,7 +163,7 @@ fn object() {
 fn field_access() {
     let input = "package.dependencies";
     let expected = Expr::new(
-        ExprKind::ObjectAccess {
+        ExprKind::MemberAccess {
             base: Expr::boxed(ExprKind::Identifier("package".into()), span(0, 7)),
             field: "dependencies".into(),
         },

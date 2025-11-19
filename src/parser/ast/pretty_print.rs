@@ -189,11 +189,11 @@ impl super::Parser {
                 out.push('\n');
                 let _ = writeln!(out, "{pad}  index: {}", index.to_string().yellow());
             }
-            ExprKind::ObjectAccess { base, field } => {
+            ExprKind::MemberAccess { base, field } => {
                 let _ = writeln!(
                     out,
                     "{pad}{} {}",
-                    "ObjectAccess".bright_blue(),
+                    "MemberAccess".bright_blue(),
                     self.pretty_print_span(expr.span).dimmed(),
                 );
                 let _ = write!(out, "{pad}  base: ");

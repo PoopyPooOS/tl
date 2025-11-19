@@ -1,5 +1,3 @@
-use miette::SourceSpan;
-
 use super::{
     ValueResult,
     types::{Error, ErrorKind, Value},
@@ -8,6 +6,7 @@ use crate::{
     parser::ast::types::{Expr, ExprKind, Literal},
     runtime::{Scope, ValueKind},
 };
+use miette::SourceSpan;
 use std::collections::BTreeMap;
 
 impl super::Scope {
@@ -45,7 +44,7 @@ impl super::Scope {
                     )),
                 }
             }
-            ExprKind::ObjectAccess { base, field } => {
+            ExprKind::MemberAccess { base, field } => {
                 let base = self.eval_expr(base)?;
                 Ok(base.access(field))
             }

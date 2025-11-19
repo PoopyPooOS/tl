@@ -65,7 +65,7 @@ pub enum ExprKind {
         base: Box<Expr>,
         index: usize,
     },
-    ObjectAccess {
+    MemberAccess {
         base: Box<Expr>,
         field: String,
     },
@@ -225,7 +225,7 @@ pub enum ErrorKind {
     #[diagnostic(code(tl::parser::ast::expected_separator))]
     ExpectedSeparatorInObjectKV,
 
-    #[error("Expected identifier after dot in 'FieldAccess' expression")]
+    #[error("Expected identifier after dot in 'MemberAccess' expression")]
     #[diagnostic(code(tl::parser::ast::expected_identifier))]
     ExpectedIdentifierAfterDot,
 
