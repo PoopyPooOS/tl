@@ -1,4 +1,4 @@
-use miette::{IntoDiagnostic, NamedSource};
+use miette::NamedSource;
 use std::{collections::HashMap, path::PathBuf, time::Instant};
 use tl::{
     Source,
