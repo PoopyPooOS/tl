@@ -56,7 +56,7 @@ pub enum ValueKind {
     Array(Vec<Value>),
     Object(BTreeMap<String, Value>),
     Function {
-        def_scope: Scope,
+        def_scope: Box<Scope>,
         arg: String,
         expr: Expr,
     },
@@ -308,7 +308,7 @@ impl NativeFnCtx {
     pub fn ensure_is_function(
         &self,
         value: Value,
-    ) -> Result<ExtractedValue<(Scope, String, Expr)>, Error> {
+    ) -> Result<ExtractedValue<(Box<Scope>, String, Expr)>, Error> {
         match value.kind {
             ValueKind::Function {
                 def_scope,
