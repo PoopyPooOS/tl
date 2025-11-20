@@ -28,7 +28,7 @@ impl Expr {
     }
 
     pub fn ident(ident: impl AsRef<str>, span: SourceSpan) -> Self {
-        Self::new(ExprKind::Identifier(ident.as_ref().to_string()), span)
+        Self::new(ExprKind::Identifier(ident.as_ref().to_owned()), span)
     }
 
     pub fn boxed(kind: ExprKind, span: SourceSpan) -> Box<Self> {

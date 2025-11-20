@@ -70,14 +70,14 @@ fn float() {
 #[test]
 fn string() {
     let input = "\"Hello, world!\"";
-    let expected = literal!(String("Hello, world!".to_string()), span(0, 15));
+    let expected = literal!(String("Hello, world!".to_owned()), span(0, 15));
     assert_eq!(parse(input).unwrap(), expected);
 }
 
 #[test]
 fn escaped_string() {
     let input = "\"Hello, \\n\\tworld!\"";
-    let expected = literal!(String("Hello, \n\tworld!".to_string()), span(0, 19));
+    let expected = literal!(String("Hello, \n\tworld!".to_owned()), span(0, 19));
     assert_eq!(parse(input).unwrap(), expected);
 }
 
@@ -87,12 +87,12 @@ fn interpolated_string() {
     let expected = literal!(
         InterpolatedString(vec![
             Expr::new(
-                ExprKind::Literal(Literal::String("Hello, my name is ".to_string())),
+                ExprKind::Literal(Literal::String("Hello, my name is ".to_owned())),
                 span(1, 18)
             ),
-            Expr::new(ExprKind::Identifier("name".to_string()), span(21, 4)),
+            Expr::new(ExprKind::Identifier("name".to_owned()), span(21, 4)),
             Expr::new(
-                ExprKind::Literal(Literal::String("!".to_string())),
+                ExprKind::Literal(Literal::String("!".to_owned())),
                 span(26, 1)
             ),
         ]),
@@ -125,11 +125,11 @@ fn object() {
             #[rustfmt::skip]
             BTreeMap::from([
                 (
-                    "name".to_string(),
-                    Expr::new(ExprKind::Literal(Literal::String("John Doe".to_string())), span(9, 10))
+                    "name".to_owned(),
+                    Expr::new(ExprKind::Literal(Literal::String("John Doe".to_owned())), span(9, 10))
                 ),
                 (
-                    "age".to_string(),
+                    "age".to_owned(),
                     Expr::new(ExprKind::Literal(Literal::Int(42)), span(26, 2))
                 ),
             ])
@@ -205,9 +205,9 @@ fn function_declaration() {
             arg: "name".to_owned(),
             expr: box_literal!(
                 InterpolatedString(vec![
-                    literal!(String("Hello, ".to_string()), span(7, 7)),
+                    literal!(String("Hello, ".to_owned()), span(7, 7)),
                     Expr::ident("name", span(16, 4)),
-                    literal!(String("!".to_string()), span(21, 1)),
+                    literal!(String("!".to_owned()), span(21, 1)),
                 ]),
                 span(6, 17)
             ),
@@ -314,8 +314,8 @@ in
     let expected = Expr::new(
         ExprKind::LetIn {
             bindings: vec![(
-                "name".to_string(),
-                literal!(String("John Doe".to_string()), span(15, 10)),
+                "name".to_owned(),
+                literal!(String("John Doe".to_owned()), span(15, 10)),
             )],
             expr: box_literal!(Null, span(33, 4)),
         },
