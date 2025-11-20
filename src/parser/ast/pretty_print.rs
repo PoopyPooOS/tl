@@ -258,8 +258,11 @@ impl super::Parser {
                     out.push_str(self.pretty_print_expr(val, indent.saturating_add(1)).trim());
                     out.push('\n');
                 }
-                let _ = writeln!(out, "\n{pad}  expr:");
-                out.push_str(&self.pretty_print_expr(body, indent.saturating_add(2)));
+                let _ = write!(out, "\n{pad}  expr: ");
+                out.push_str(
+                    self.pretty_print_expr(body, indent.saturating_add(1))
+                        .trim_start(),
+                );
             }
         }
 
