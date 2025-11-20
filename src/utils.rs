@@ -11,16 +11,16 @@ use std::collections::HashMap;
 /// # Errors
 /// This function will return an error if either an evaluation error occurs or a deserialization error occurs.
 #[cfg(feature = "serde")]
-pub fn eval<T>(source: Source, scope_setup: impl Fn(&mut Scope)) -> Result<T, Report>
+pub fn eval<T>(source: Source, scope_setup: impl Fn(&Scope)) -> Result<T, Report>
 where
     T: for<'de> serde::Deserialize<'de>,
 {
     use serde::Deserialize;
 
     let ast = parse(&source)?;
-    let mut scope = Scope::new(HashMap::new(), source.clone(), ast);
+    let scope = Scope::new(HashMap::new(), source.clone(), ast);
 
-    scope_setup(&mut scope);
+    scope_setup(&scope);
 
     match scope.eval() {
         Ok(value) => Ok(Deserialize::deserialize(value).map_err(|err| {
@@ -34,11 +34,11 @@ where
 /// # Errors
 /// This function will return an error if either an evaluation error occurs.
 #[cfg(feature = "serde")]
-pub fn eval_untyped(source: Source, scope_setup: impl Fn(&mut Scope)) -> Result<Value, Report> {
+pub fn eval_untyped(source: Source, scope_setup: impl Fn(&Scope)) -> Result<Value, Report> {
     let ast = parse(&source)?;
-    let mut scope = Scope::new(HashMap::new(), source, ast);
+    let scope = Scope::new(HashMap::new(), source, ast);
 
-    scope_setup(&mut scope);
+    scope_setup(&scope);
 
     Ok(scope.eval()?)
 }
@@ -47,11 +47,11 @@ pub fn eval_untyped(source: Source, scope_setup: impl Fn(&mut Scope)) -> Result<
 /// # Errors
 /// This function will return an error if either an evaluation error occurs.
 #[cfg(not(feature = "serde"))]
-pub fn eval(source: Source, scope_setup: impl Fn(&mut Scope)) -> Result<Value, Report> {
+pub fn eval(source: Source, scope_setup: impl Fn(&Scope)) -> Result<Value, Report> {
     let ast = parse(&source)?;
-    let mut scope = Scope::new(HashMap::new(), source, ast);
+    let scope = Scope::new(HashMap::new(), source, ast);
 
-    scope_setup(&mut scope);
+    scope_setup(&scope);
 
     Ok(runtime.eval()?)
 }

@@ -10,23 +10,20 @@ use miette::SourceSpan;
 use std::collections::BTreeMap;
 
 impl super::Scope {
-    pub(super) fn eval_expr(&mut self, expr: &Expr) -> ValueResult {
+    pub(super) fn eval_expr(&self, expr: &Expr) -> ValueResult {
         match &expr.kind {
             ExprKind::Literal(literal) => self.eval_literal(literal, expr.span),
             ExprKind::Not(body) => Ok(Value::new(
                 ValueKind::Boolean(!self.eval_expr(body)?.is_truthy()),
                 expr.span,
             )),
-            ExprKind::Identifier(ident) => Ok(self
-                .fetch_var(ident)
-                .ok_or(Error::new(
-                    ErrorKind::VariableNotInScope {
-                        variable: expr.span,
-                    },
-                    self.source.clone(),
-                    expr.span,
-                ))?
-                .clone()),
+            ExprKind::Identifier(ident) => Ok(self.fetch_var(ident).ok_or(Error::new(
+                ErrorKind::VariableNotInScope {
+                    variable: expr.span,
+                },
+                (*self.0.source).clone(),
+                expr.span,
+            ))?),
             ExprKind::ArrayIndex { base, index } => {
                 let base = self.eval_expr(base)?;
                 let item = base.try_index(*index);
@@ -39,7 +36,7 @@ impl super::Scope {
                             // TODO: Add span for the index itself, not the full expr
                             index: expr.span,
                         },
-                        self.source.clone(),
+                        (*self.0.source).clone(),
                         expr.span,
                     )),
                 }
@@ -55,7 +52,7 @@ impl super::Scope {
             } => Ok(self.eval_binary_op(left, operator, right)?),
             ExprKind::FnDecl { arg, expr: body } => Ok(Value::new(
                 ValueKind::Function {
-                    def_scope: Box::new(self.clone()),
+                    def_scope: Box::new(Scope(self.0.clone())),
                     arg: arg.clone(),
                     expr: *body.clone(),
                 },
@@ -66,20 +63,19 @@ impl super::Scope {
                 bindings,
                 expr: body,
             } => {
-                let mut child_scope =
-                    Scope::new(self.variables.clone(), self.source.clone(), *body.clone());
+                let child_scope = self.create_scope(*body.clone());
 
                 for (name, expr) in bindings {
                     let value = child_scope.eval_expr(expr)?;
                     child_scope.define(name, value);
                 }
 
-                child_scope.eval_expr(body)
+                child_scope.eval()
             }
         }
     }
 
-    pub(super) fn eval_literal(&mut self, literal: &Literal, span: SourceSpan) -> ValueResult {
+    pub(super) fn eval_literal(&self, literal: &Literal, span: SourceSpan) -> ValueResult {
         match literal {
             Literal::Null => Ok(Value::new(ValueKind::Null, span)),
             Literal::Int(v) => Ok(Value::new(ValueKind::Int(*v), span)),

@@ -7,7 +7,7 @@ use crate::{
 
 impl super::Scope {
     pub(super) fn eval_binary_op(
-        &mut self,
+        &self,
         left: &Expr,
         operator: &BinaryOperator,
         right: &Expr,

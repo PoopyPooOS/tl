@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use super::{ValueResult, types::Builtin};
 use crate::{
@@ -7,7 +8,7 @@ use crate::{
 };
 
 impl super::Scope {
-    pub(super) fn eval_call(&mut self, expr: &Expr) -> ValueResult {
+    pub(super) fn eval_call(&self, expr: &Expr) -> ValueResult {
         let ExprKind::Call { base, args } = &expr.kind else {
             unreachable!()
         };
@@ -15,7 +16,7 @@ impl super::Scope {
         let mut function = self.eval_expr(base)?;
         let name = base.as_ident().unwrap_or("<unknown name>".into());
 
-        let mut variables: HashMap<String, Value> = self.variables.clone();
+        let mut variables: HashMap<String, Value> = HashMap::new();
 
         for arg_expr in args {
             let arg_value = self.eval_expr(arg_expr)?;
@@ -28,17 +29,21 @@ impl super::Scope {
                 } => {
                     variables.insert(param.to_owned(), arg_value.clone());
 
-                    variables.extend(def_scope.variables.clone());
-                    let mut scope =
-                        Scope::new(variables.clone(), def_scope.source.clone(), body.clone());
+                    variables.extend(def_scope.0.local_variables.borrow().clone());
+                    let scope = Scope::new(
+                        variables.clone(),
+                        (*def_scope.0.source).clone(),
+                        body.clone(),
+                    );
                     scope.define(&name, function.clone());
                     scope.eval()?
                 }
                 ValueKind::Builtin(Builtin(builtin)) => {
                     let ctx = NativeFnCtx {
                         expr: expr.clone(),
-                        variables: self.variables.clone(),
-                        source: self.source.clone(),
+                        variables: self.0.local_variables.borrow().clone(),
+                        source: self.0.source.clone(),
+                        global: Rc::clone(&self.0.global_variables),
                     };
 
                     return builtin(ctx);
@@ -46,7 +51,7 @@ impl super::Scope {
                 _ => {
                     return Err(Error::new(
                         ErrorKind::NotCallable,
-                        self.source.clone(),
+                        (*self.0.source).clone(),
                         expr.span,
                     ));
                 }

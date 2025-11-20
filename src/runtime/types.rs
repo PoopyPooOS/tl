@@ -9,6 +9,7 @@ use crate::{
     runtime::Scope,
 };
 use miette::{Diagnostic, SourceSpan};
+use std::cell::RefCell;
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, HashMap},
@@ -77,14 +78,15 @@ pub type NativeFn = Rc<dyn Fn(NativeFnCtx) -> ValueResult>;
 pub struct NativeFnCtx {
     pub expr: Expr,
     pub variables: HashMap<String, Value>,
-    pub source: Source,
+    pub source: Rc<Source>,
+    pub global: Rc<RefCell<HashMap<String, Value>>>,
 }
 
 impl NativeFnCtx {
     pub fn new_scope(&self) -> Scope {
         Scope::new(
             self.variables.clone(),
-            self.source.clone(),
+            (*self.source).clone(),
             self.expr.clone(),
         )
     }
@@ -99,7 +101,7 @@ impl NativeFnCtx {
                 len: expected_len,
                 args: self.call_args_span(),
             },
-            self.source.clone(),
+            (*self.source).clone(),
             self.expr.span,
         ))?;
 
@@ -116,7 +118,7 @@ impl NativeFnCtx {
                 len: expected_len,
                 args: self.call_args_span(),
             },
-            self.source.clone(),
+            (*self.source).clone(),
             self.expr.span,
         ))?;
 
@@ -124,9 +126,9 @@ impl NativeFnCtx {
     }
 
     pub fn eval_expr(&self, expr: Expr) -> ValueResult {
-        let mut scope = Scope::new(
+        let scope = Scope::new(
             self.variables.clone(),
-            self.source.clone(),
+            (*self.source).clone(),
             self.expr.clone(),
         );
 
@@ -142,9 +144,9 @@ impl NativeFnCtx {
     }
 
     pub fn expr_args_evaluated(&self) -> Vec<ValueResult> {
-        let mut scope = Scope::new(
+        let scope = Scope::new(
             self.variables.clone(),
-            self.source.clone(),
+            (*self.source).clone(),
             self.expr.clone(),
         );
 
@@ -177,7 +179,7 @@ impl NativeFnCtx {
                     expected: "null".to_owned(),
                     got: value.type_of().into(),
                 },
-                self.source.clone(),
+                (*self.source).clone(),
                 self.expr.span,
             )),
         }
@@ -194,7 +196,7 @@ impl NativeFnCtx {
                     expected: "boolean".to_owned(),
                     got: value.type_of().into(),
                 },
-                self.source.clone(),
+                (*self.source).clone(),
                 self.expr.span,
             )),
         }
@@ -211,7 +213,7 @@ impl NativeFnCtx {
                     expected: "int".to_owned(),
                     got: value.type_of().into(),
                 },
-                self.source.clone(),
+                (*self.source).clone(),
                 self.expr.span,
             )),
         }
@@ -228,7 +230,7 @@ impl NativeFnCtx {
                     expected: "float".to_owned(),
                     got: value.type_of().into(),
                 },
-                self.source.clone(),
+                (*self.source).clone(),
                 self.expr.span,
             )),
         }
@@ -245,7 +247,7 @@ impl NativeFnCtx {
                     expected: "string".to_owned(),
                     got: value.type_of().into(),
                 },
-                self.source.clone(),
+                (*self.source).clone(),
                 self.expr.span,
             )),
         }
@@ -262,7 +264,7 @@ impl NativeFnCtx {
                     expected: "path".to_owned(),
                     got: value.type_of().into(),
                 },
-                self.source.clone(),
+                (*self.source).clone(),
                 self.expr.span,
             )),
         }
@@ -279,7 +281,7 @@ impl NativeFnCtx {
                     expected: "array".to_owned(),
                     got: value.type_of().into(),
                 },
-                self.source.clone(),
+                (*self.source).clone(),
                 self.expr.span,
             )),
         }
@@ -299,7 +301,7 @@ impl NativeFnCtx {
                     expected: "object".to_owned(),
                     got: value.type_of().into(),
                 },
-                self.source.clone(),
+                (*self.source).clone(),
                 self.expr.span,
             )),
         }
@@ -323,7 +325,7 @@ impl NativeFnCtx {
                     expected: "function".to_owned(),
                     got: value.type_of().into(),
                 },
-                self.source.clone(),
+                (*self.source).clone(),
                 self.expr.span,
             )),
         }
@@ -340,7 +342,7 @@ impl NativeFnCtx {
                     expected: "builtin".to_owned(),
                     got: value.type_of().into(),
                 },
-                self.source.clone(),
+                (*self.source).clone(),
                 self.expr.span,
             )),
         }
