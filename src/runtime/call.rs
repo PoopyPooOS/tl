@@ -22,13 +22,15 @@ impl super::Scope {
 
             function = match function.kind {
                 ValueKind::Function {
+                    ref def_scope,
                     arg: ref param,
                     expr: ref body,
                 } => {
                     variables.insert(param.to_owned(), arg_value.clone());
 
+                    variables.extend(def_scope.variables.clone());
                     let mut scope =
-                        Scope::new(variables.clone(), self.source.clone(), body.clone());
+                        Scope::new(variables.clone(), def_scope.source.clone(), body.clone());
                     scope.define(&name, function.clone());
                     scope.eval()?
                 }

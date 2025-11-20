@@ -56,6 +56,7 @@ pub enum ValueKind {
     Array(Vec<Value>),
     Object(BTreeMap<String, Value>),
     Function {
+        def_scope: Scope,
         arg: String,
         expr: Expr,
     },
@@ -307,10 +308,14 @@ impl NativeFnCtx {
     pub fn ensure_is_function(
         &self,
         value: Value,
-    ) -> Result<ExtractedValue<(String, Expr)>, Error> {
+    ) -> Result<ExtractedValue<(Scope, String, Expr)>, Error> {
         match value.kind {
-            ValueKind::Function { arg, expr } => Ok(ExtractedValue {
-                data: (arg, expr),
+            ValueKind::Function {
+                def_scope,
+                arg,
+                expr,
+            } => Ok(ExtractedValue {
+                data: (def_scope, arg, expr),
                 span: value.span,
             }),
             _ => Err(Error::new(

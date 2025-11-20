@@ -16,7 +16,7 @@ mod binary_op;
 mod call;
 mod expr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Scope {
     variables: HashMap<String, Value>,
 
