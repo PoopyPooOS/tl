@@ -173,7 +173,7 @@ impl NativeFnCtx {
             ValueKind::Null => Ok(value),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
-                    expected: ValueKind::Null.type_of().to_owned(),
+                    expected: "null".to_owned(),
                     got: value.type_of().into(),
                 },
                 self.source.clone(),
@@ -190,7 +190,7 @@ impl NativeFnCtx {
             }),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
-                    expected: ValueKind::Boolean(false).type_of().to_owned(),
+                    expected: "boolean".to_owned(),
                     got: value.type_of().into(),
                 },
                 self.source.clone(),
@@ -207,7 +207,7 @@ impl NativeFnCtx {
             }),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
-                    expected: ValueKind::Int(0).type_of().to_owned(),
+                    expected: "int".to_owned(),
                     got: value.type_of().into(),
                 },
                 self.source.clone(),
@@ -224,7 +224,7 @@ impl NativeFnCtx {
             }),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
-                    expected: ValueKind::Float(0.0).type_of().to_owned(),
+                    expected: "float".to_owned(),
                     got: value.type_of().into(),
                 },
                 self.source.clone(),
@@ -241,7 +241,7 @@ impl NativeFnCtx {
             }),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
-                    expected: ValueKind::String(String::new()).type_of().to_owned(),
+                    expected: "string".to_owned(),
                     got: value.type_of().into(),
                 },
                 self.source.clone(),
@@ -258,7 +258,7 @@ impl NativeFnCtx {
             }),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
-                    expected: ValueKind::Path(PathBuf::new()).type_of().to_owned(),
+                    expected: "path".to_owned(),
                     got: value.type_of().into(),
                 },
                 self.source.clone(),
@@ -275,7 +275,7 @@ impl NativeFnCtx {
             }),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
-                    expected: ValueKind::Array(Vec::new()).type_of().to_owned(),
+                    expected: "array".to_owned(),
                     got: value.type_of().into(),
                 },
                 self.source.clone(),
@@ -295,7 +295,7 @@ impl NativeFnCtx {
             }),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
-                    expected: ValueKind::Object(BTreeMap::new()).type_of().to_owned(),
+                    expected: "object".to_owned(),
                     got: value.type_of().into(),
                 },
                 self.source.clone(),
@@ -315,12 +315,7 @@ impl NativeFnCtx {
             }),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
-                    expected: ValueKind::Function {
-                        arg: String::new(),
-                        expr: Expr::default(),
-                    }
-                    .type_of()
-                    .to_owned(),
+                    expected: "function".to_owned(),
                     got: value.type_of().into(),
                 },
                 self.source.clone(),
@@ -337,9 +332,7 @@ impl NativeFnCtx {
             }),
             _ => Err(Error::new(
                 ErrorKind::MismatchedTypes {
-                    expected: ValueKind::Builtin(Builtin(Rc::new(|_| Ok(Value::default()))))
-                        .type_of()
-                        .to_owned(),
+                    expected: "builtin".to_owned(),
                     got: value.type_of().into(),
                 },
                 self.source.clone(),
