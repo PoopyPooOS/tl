@@ -10,9 +10,10 @@ use crate::{
 };
 use miette::{Diagnostic, SourceSpan};
 use std::cell::RefCell;
+use indexmap::IndexMap;
 use std::{
     cmp::Ordering,
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     fmt::{self, Debug, Display},
     io,
     ops::{Add, Div, Index, Mul, Rem, Sub},
@@ -55,7 +56,7 @@ pub enum ValueKind {
     String(String),
     Path(PathBuf),
     Array(Vec<Value>),
-    Object(BTreeMap<String, Value>),
+    Object(IndexMap<String, Value>),
     Function {
         def_scope: Box<Scope>,
         arg: String,
@@ -290,7 +291,7 @@ impl NativeFnCtx {
     pub fn ensure_is_object(
         &self,
         value: Value,
-    ) -> Result<ExtractedValue<BTreeMap<String, Value>>, Error> {
+    ) -> Result<ExtractedValue<IndexMap<String, Value>>, Error> {
         match value.kind {
             ValueKind::Object(v) => Ok(ExtractedValue {
                 data: v,
@@ -405,8 +406,8 @@ impl<T: Into<Value>> From<Vec<T>> for ValueKind {
     }
 }
 
-impl<T: Into<Value>> From<BTreeMap<String, T>> for ValueKind {
-    fn from(val: BTreeMap<String, T>) -> Self {
+impl<T: Into<Value>> From<IndexMap<String, T>> for ValueKind {
+    fn from(val: IndexMap<String, T>) -> Self {
         Self::Object(val.into_iter().map(|(k, v)| (k, v.into())).collect())
     }
 }
@@ -420,7 +421,7 @@ impl From<Builtin> for ValueKind {
 #[macro_export]
 macro_rules! object {
     ($($key:ident: $val:expr),* $(,)?) => {
-        Value::new_builtin($crate::runtime::ValueKind::Object(std::collections::BTreeMap::from([
+        Value::new_builtin($crate::runtime::ValueKind::Object(indexmap::IndexMap::from([
             $(
                 (stringify!($key).to_owned(), Value::new_builtin($val.into())),
             )*

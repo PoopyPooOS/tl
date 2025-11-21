@@ -9,7 +9,8 @@ use crate::{
     span,
 };
 use pretty_assertions::assert_eq;
-use std::{collections::BTreeMap, path::PathBuf};
+use indexmap::IndexMap;
+use std::path::PathBuf;
 
 fn parse(text: impl AsRef<str>) -> miette::Result<Expr> {
     Ok(parser::parse(&Source::text_with_name("test", text))?)
@@ -123,7 +124,7 @@ fn object() {
     let expected = literal!(
         Object(
             #[rustfmt::skip]
-            BTreeMap::from([
+            IndexMap::from([
                 (
                     "name".to_owned(),
                     Expr::new(ExprKind::Literal(Literal::String("John Doe".to_owned())), span(9, 10))

@@ -7,7 +7,7 @@ use crate::{
     runtime::{Scope, ValueKind},
 };
 use miette::SourceSpan;
-use std::collections::BTreeMap;
+use indexmap::IndexMap;
 
 impl super::Scope {
     pub(super) fn eval_expr(&self, expr: &Expr) -> ValueResult {
@@ -113,7 +113,7 @@ impl super::Scope {
                 Ok(Value::new(ValueKind::Array(values), span))
             }
             Literal::Object(v) => {
-                let mut values = BTreeMap::new();
+                let mut values: IndexMap<String, Value> = IndexMap::new();
 
                 for (k, expr) in v {
                     values.insert(k.clone(), self.eval_expr(expr)?);

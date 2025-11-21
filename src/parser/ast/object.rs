@@ -12,7 +12,7 @@ use crate::{
         lexer::types::TokenKind,
     },
 };
-use std::collections::BTreeMap;
+use indexmap::IndexMap;
 
 impl super::Parser {
     pub(super) fn parse_object(&mut self) -> ExprResult {
@@ -30,7 +30,7 @@ impl super::Parser {
         let last_context = self.context.clone();
         self.context = Context::Object;
 
-        let mut fields = BTreeMap::new();
+        let mut fields = IndexMap::new();
 
         loop {
             let token = self.tokens.get(self.pos).ok_or(Error::new(
@@ -130,13 +130,13 @@ impl super::Parser {
         #[allow(clippy::unwrap_used)]
         let last = parts.pop().unwrap();
 
-        let mut inner = BTreeMap::new();
+        let mut inner = IndexMap::new();
         inner.insert(last, value.clone());
 
         let mut expr = Expr::new(ExprKind::Literal(Literal::Object(inner)), value.span);
 
         while let Some(part) = parts.pop() {
-            let mut outer = BTreeMap::new();
+            let mut outer = IndexMap::new();
             outer.insert(part, expr.clone());
             expr = Expr::new(ExprKind::Literal(Literal::Object(outer)), expr.span);
         }
@@ -144,7 +144,7 @@ impl super::Parser {
         expr
     }
 
-    fn merge_object(target: &mut BTreeMap<String, Expr>, nested: Expr) {
+    fn merge_object(target: &mut IndexMap<String, Expr>, nested: Expr) {
         if let ExprKind::Literal(Literal::Object(new_map)) = nested.kind {
             for (k, v) in new_map {
                 if let Some(existing) = target.get_mut(&k)

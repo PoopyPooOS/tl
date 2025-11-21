@@ -13,6 +13,7 @@ toml = ["serde", "dep:toml"]
 [dependencies]
 serde = { workspace = true, optional = true }
 toml = { workspace = true, optional = true }
+indexmap = { version = "2.0", features = ["serde"] }
 
 miette.workspace = true
 thiserror.workspace = true

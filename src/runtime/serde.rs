@@ -1,12 +1,13 @@
 use crate::runtime::ValueKind;
 
 use super::types::Value;
+use indexmap::{self, IndexMap};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{self, Expected, IntoDeserializer, MapAccess, SeqAccess, Visitor},
     forward_to_deserialize_any,
 };
-use std::{collections::btree_map, fmt};
+use std::fmt;
 
 impl<'de> Deserializer<'de> for Value {
     type Error = de::value::Error;
@@ -92,8 +93,10 @@ impl<'de> SeqAccess<'de> for ValueSeq {
     }
 }
 
+type ObjectIter = <IndexMap<String, Value> as IntoIterator>::IntoIter;
+
 struct ValueMap {
-    iter: btree_map::IntoIter<String, Value>,
+    iter: ObjectIter,
     value: Option<Value>,
 }
 

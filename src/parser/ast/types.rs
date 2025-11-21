@@ -3,7 +3,8 @@ use crate::{
     parser::lexer::{self, types::TokenKind},
 };
 use miette::{Diagnostic, SourceSpan};
-use std::{collections::BTreeMap, fmt::Display, path::PathBuf};
+use indexmap::IndexMap;
+use std::{fmt::Display, path::PathBuf};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -94,7 +95,7 @@ pub enum Literal {
     Path(PathBuf),
     InterpolatedPath(Vec<Expr>),
     Array(Vec<Expr>),
-    Object(BTreeMap<String, Expr>),
+    Object(IndexMap<String, Expr>),
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]

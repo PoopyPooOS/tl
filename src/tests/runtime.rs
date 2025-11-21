@@ -10,7 +10,8 @@ use crate::{
     span,
 };
 use pretty_assertions::assert_eq;
-use std::collections::{BTreeMap, HashMap};
+use indexmap::IndexMap;
+use std::collections::HashMap;
 
 fn run(text: impl AsRef<str>) -> miette::Result<Value> {
     let source = Source::text_with_name("test", text);
@@ -124,7 +125,7 @@ in
 fn object() {
     let input = "{ name = \"John Doe\" age = 42 }";
     let expected = Value::new(
-        ValueKind::Object(BTreeMap::from([
+        ValueKind::Object(IndexMap::from([
             (
                 "name".into(),
                 Value::new(ValueKind::String("John Doe".into()), span(9, 10)),
