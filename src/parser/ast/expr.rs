@@ -62,10 +62,22 @@ impl super::Parser {
             return Ok(expr);
         }
 
-        self.parse_literal()
+        let expr = self.parse_primary()?;
+        let token = self.tokens.get(self.pos);
+
+        if let Some(token) = token {
+            match &token.kind {
+                b if b.is_binary_operator() => {
+                    return self.parse_binary_op_with_left(0, expr);
+                }
+                _ => (),
+            }
+        }
+
+        Ok(expr)
     }
 
-    pub(super) fn parse_literal(&mut self) -> ExprResult {
+    pub(super) fn parse_primary(&mut self) -> ExprResult {
         let token = self
             .tokens
             .get(self.pos)
@@ -113,17 +125,6 @@ impl super::Parser {
                 ));
             }
         };
-
-        let token = self.tokens.get(self.pos);
-
-        if let Some(token) = token {
-            match &token.kind {
-                b if b.is_binary_operator() => {
-                    return self.parse_binary_op_with_left(0, expr);
-                }
-                _ => (),
-            }
-        }
 
         Ok(expr)
     }
