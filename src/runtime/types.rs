@@ -8,9 +8,9 @@ use crate::{
     },
     runtime::Scope,
 };
+use indexmap::IndexMap;
 use miette::{Diagnostic, SourceSpan};
 use std::cell::RefCell;
-use indexmap::IndexMap;
 use std::{
     cmp::Ordering,
     collections::HashMap,

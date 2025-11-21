@@ -8,8 +8,8 @@ use crate::{
     },
     span,
 };
-use pretty_assertions::assert_eq;
 use indexmap::IndexMap;
+use pretty_assertions::assert_eq;
 use std::path::PathBuf;
 
 fn parse(text: impl AsRef<str>) -> miette::Result<Expr> {
@@ -193,6 +193,30 @@ fn not() {
     let expected = Expr::new(
         ExprKind::Not(box_literal!(Bool(true), span(1, 4))),
         span(0, 5),
+    );
+    assert_eq!(parse(input).unwrap(), expected);
+}
+
+#[test]
+fn parenthesized() {
+    let input = "(1 + 3) * 2";
+    let expected = Expr::new(
+        ExprKind::BinaryOp {
+            left: Expr::boxed(
+                ExprKind::Parenthesized(Box::new(Expr::new(
+                    ExprKind::BinaryOp {
+                        left: box_literal!(Int(1), span(1, 1)),
+                        operator: BinaryOperator::Plus,
+                        right: box_literal!(Int(3), span(5, 1)),
+                    },
+                    span(1, 5),
+                ))),
+                span(0, 7),
+            ),
+            operator: BinaryOperator::Multiply,
+            right: box_literal!(Int(2), span(10, 1)),
+        },
+        span(0, 11),
     );
     assert_eq!(parse(input).unwrap(), expected);
 }

@@ -9,8 +9,8 @@ use crate::{
     },
     span,
 };
-use pretty_assertions::assert_eq;
 use indexmap::IndexMap;
+use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 
 fn run(text: impl AsRef<str>) -> miette::Result<Value> {
@@ -159,6 +159,13 @@ in
 fn not() {
     let input = "!true";
     let expected = Value::new(ValueKind::Boolean(false), span(0, 5));
+    assert_eq!(run(input).unwrap(), expected);
+}
+
+#[test]
+fn parenthesized() {
+    let input = "(1 + 3) * 2";
+    let expected = Value::new(ValueKind::Int(8), span(0, 11));
     assert_eq!(run(input).unwrap(), expected);
 }
 

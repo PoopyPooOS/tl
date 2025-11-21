@@ -23,6 +23,15 @@ impl super::Parser {
                 );
                 out.push_str(&self.pretty_print_expr(inner_expr, indent.saturating_add(1)));
             }
+            ExprKind::Parenthesized(inner_expr) => {
+                let _ = writeln!(
+                    out,
+                    "{pad}{} {}",
+                    "Parenthesized".bright_magenta(),
+                    self.pretty_print_span(expr.span).dimmed(),
+                );
+                out.push_str(&self.pretty_print_expr(inner_expr, indent.saturating_add(1)));
+            }
             ExprKind::Literal(lit) => {
                 let value = match lit {
                     Literal::Null => format!(

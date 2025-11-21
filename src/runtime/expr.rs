@@ -6,8 +6,8 @@ use crate::{
     parser::ast::types::{Expr, ExprKind, Literal},
     runtime::{Scope, ValueKind},
 };
-use miette::SourceSpan;
 use indexmap::IndexMap;
+use miette::SourceSpan;
 
 impl super::Scope {
     pub(super) fn eval_expr(&self, expr: &Expr) -> ValueResult {
@@ -17,6 +17,10 @@ impl super::Scope {
                 ValueKind::Boolean(!self.eval_expr(body)?.is_truthy()),
                 expr.span,
             )),
+            ExprKind::Parenthesized(inner_expr) => {
+                let value = self.eval_expr(inner_expr)?;
+                Ok(Value::new(value.kind, expr.span))
+            }
             ExprKind::Identifier(ident) => Ok(self.fetch_var(ident).ok_or(Error::new(
                 ErrorKind::VariableNotInScope {
                     variable: expr.span,

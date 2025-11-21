@@ -2,8 +2,8 @@ use crate::{
     Source,
     parser::lexer::{self, types::TokenKind},
 };
-use miette::{Diagnostic, SourceSpan};
 use indexmap::IndexMap;
+use miette::{Diagnostic, SourceSpan};
 use std::{fmt::Display, path::PathBuf};
 use thiserror::Error;
 
@@ -55,6 +55,7 @@ impl Expr {
 #[derive(Debug, PartialEq, Clone)]
 pub enum ExprKind {
     Not(Box<Expr>),
+    Parenthesized(Box<Expr>),
     Literal(Literal),
     Identifier(String),
     BinaryOp {

@@ -97,6 +97,14 @@ impl super::Parser {
             TokenKind::Float(v) => literal!(Float(*v)),
             TokenKind::Bool(v) => literal!(Bool(*v)),
             TokenKind::Identifier(_) => self.parse_ident()?,
+            TokenKind::LParen => {
+                let lparen_token = token.clone();
+                consume!(self, LParen);
+                let inner_expr = self.parse()?;
+                let rparen_token = consume!(self, RParen);
+                let span = merge_spans(lparen_token.span, rparen_token.span);
+                Expr::new(ExprKind::Parenthesized(Box::new(inner_expr)), span)
+            }
             _ => {
                 return Err(Error::new(
                     ErrorKind::UnexpectedToken,
