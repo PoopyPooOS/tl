@@ -32,7 +32,7 @@ pub fn change_pos(input: TokenStream) -> TokenStream {
             }
         }
         _ => quote! {
-            let amount: isize = #expr;
+            let amount: isize = #expr as isize;
 
             if amount.is_negative() {
                 self.pos = self.pos.saturating_sub(amount.unsigned_abs());

@@ -4,6 +4,7 @@ use crate::{
 };
 use miette::SourceSpan;
 use std::{iter::Peekable, path::PathBuf, str::Chars};
+use tl_macro::change_pos;
 
 pub mod types;
 
@@ -27,7 +28,7 @@ impl Lexer {
         macro_rules! push_token {
             ($token:ident, $len:expr) => {{
                 tokens.push(Token::new(TokenKind::$token, (self.pos, $len).into()));
-                self.pos = self.pos.saturating_add($len);
+                change_pos!($len);
                 chars.next();
             }};
         }
@@ -45,7 +46,7 @@ impl Lexer {
                 // Whitespace
                 ' ' | '\t' | '\n' | '\r' => {
                     chars.next();
-                    self.pos = self.pos.saturating_add(1);
+                    change_pos!(1);
                 }
                 // Comments / Slash operator
                 '/' => {
@@ -54,13 +55,13 @@ impl Lexer {
                         if next_ch == '/' {
                             chars.next();
                             chars.next();
-                            self.pos = self.pos.saturating_add(2);
+                            change_pos!(2);
                             while let Some(&ch) = chars.peek() {
                                 if ch == '\n' {
                                     break;
                                 }
                                 chars.next();
-                                self.pos = self.pos.saturating_add(1);
+                                change_pos!(1);
                             }
                             continue;
                         }
@@ -93,13 +94,13 @@ impl Lexer {
                                         // Consume `${`
                                         chars.next();
                                         chars.next();
-                                        self.pos = self.pos.saturating_add(2);
+                                        change_pos!(2);
                                         start_interpolation = true;
 
                                         let mut nested = String::new();
                                         let mut depth: i32 = 1;
                                         for nch in chars.by_ref() {
-                                            self.pos = self.pos.saturating_add(1);
+                                            change_pos!(1);
                                             match nch {
                                                 '{' => depth = depth.saturating_add(1),
                                                 '}' => {
@@ -123,7 +124,7 @@ impl Lexer {
                                     _ => {
                                         path_buf.push(ch);
                                         chars.next();
-                                        self.pos = self.pos.saturating_add(1);
+                                        change_pos!(1);
                                     }
                                 }
                             }
@@ -192,13 +193,13 @@ impl Lexer {
                                         // Consume `${`
                                         chars.next();
                                         chars.next();
-                                        self.pos = self.pos.saturating_add(2);
+                                        change_pos!(2);
                                         start_interpolation = true;
 
                                         let mut nested = String::new();
                                         let mut depth: i32 = 1;
                                         for nch in chars.by_ref() {
-                                            self.pos = self.pos.saturating_add(1);
+                                            change_pos!(1);
                                             match nch {
                                                 '{' => depth = depth.saturating_add(1),
                                                 '}' => {
@@ -222,7 +223,7 @@ impl Lexer {
                                     _ => {
                                         path_buf.push(ch);
                                         chars.next();
-                                        self.pos = self.pos.saturating_add(1);
+                                        change_pos!(1);
                                     }
                                 }
                             }
@@ -261,24 +262,24 @@ impl Lexer {
                     let mut buffer = String::new();
 
                     chars.next();
-                    self.pos = self.pos.saturating_add(1);
+                    change_pos!(1);
 
                     while let Some(&ch) = chars.peek() {
                         match ch {
                             '"' => {
                                 chars.next();
-                                self.pos = self.pos.saturating_add(1);
+                                change_pos!(1);
                                 closed = true;
                                 break;
                             }
 
                             '\\' => {
                                 chars.next();
-                                self.pos = self.pos.saturating_add(1);
+                                change_pos!(1);
                                 if let Some(&escaped_char) = chars.peek() {
                                     buffer.push(escape(escaped_char));
                                     chars.next();
-                                    self.pos = self.pos.saturating_add(1);
+                                    change_pos!(1);
                                 }
                             }
 
@@ -295,14 +296,14 @@ impl Lexer {
                                     // Consume `${`
                                     chars.next();
                                     chars.next();
-                                    self.pos = self.pos.saturating_add(2);
+                                    change_pos!(2);
 
                                     let nested_start = self.pos;
                                     let mut nested_depth: i32 = 1;
                                     let mut nested_content = String::new();
 
                                     for nested_char in &mut chars {
-                                        self.pos = self.pos.saturating_add(1);
+                                        change_pos!(1);
 
                                         match nested_char {
                                             '{' => nested_depth = nested_depth.saturating_add(1),
@@ -347,14 +348,14 @@ impl Lexer {
                                 } else {
                                     buffer.push('$');
                                     chars.next();
-                                    self.pos = self.pos.saturating_add(1);
+                                    change_pos!(1);
                                 }
                             }
 
                             _ => {
                                 buffer.push(ch);
                                 chars.next();
-                                self.pos = self.pos.saturating_add(1);
+                                change_pos!(1);
                             }
                         }
                     }
@@ -404,7 +405,7 @@ impl Lexer {
                         }
                     }
 
-                    self.pos = self.pos.saturating_add(value.len());
+                    change_pos!(value.len());
                     match value.as_str() {
                         "-" => push_token!(Minus, 1),
                         _ if value.parse::<i64>().is_ok() => {
@@ -467,7 +468,7 @@ impl Lexer {
                         }};
                     }
 
-                    self.pos = self.pos.saturating_add(value.len());
+                    change_pos!(value.len());
                     match value.as_str() {
                         // Null
                         "null" => push_long_token!(Null),
