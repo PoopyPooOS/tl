@@ -1,6 +1,11 @@
-use crate::{Source, parser::lexer::types::Token};
+use crate::{
+    Source,
+    parser::{
+        ast::types::{Error, Expr},
+        lexer::types::Token,
+    },
+};
 use miette::SourceSpan;
-use types::{Error, Expr};
 
 pub mod types;
 
@@ -87,8 +92,10 @@ macro_rules! consume {
         $crate::parser::ast::consume!(no_propagate $self, $expected($($value),*))?
     };
     (no_propagate $self:expr, $expected:ident) => {{
-        use $crate::parser::lexer::types::TokenKind;
-        use $crate::parser::ast::types::{Error, ErrorKind};
+        use $crate::parser::{
+            ast::types::{Error, ErrorKind},
+            lexer::types::TokenKind,
+        };
 
         match $crate::parser::ast::advance!($self) {
             Some(token) => {
@@ -116,8 +123,11 @@ macro_rules! consume {
         }
     }};
     (no_propagate $self:expr, $expected:ident($($value:expr),*)) => {{
-        use $crate::parser::lexer::types::TokenKind;
-        use $crate::parser::ast::types::{Error, ErrorKind};
+        use $crate::parser::{
+            ast::types::{Error, ErrorKind},
+            lexer::types::TokenKind,
+        };
+
 
         match $crate::parser::ast::advance!($self) {
             Some(token) => {

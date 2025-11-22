@@ -1,6 +1,4 @@
-use crate::runtime::ValueKind;
-
-use super::types::Value;
+use crate::runtime::{Value, ValueKind};
 use indexmap::{self, IndexMap};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
@@ -70,7 +68,7 @@ impl<'de> Deserializer<'de> for Value {
 }
 
 impl Expected for Value {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str(self.type_of())
     }
 }

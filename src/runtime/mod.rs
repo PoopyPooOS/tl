@@ -4,7 +4,8 @@ use crate::{
     runtime::types::ValueResult,
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
-pub use types::{Builtin, Error, ErrorKind, Value, ValueKind};
+
+pub use crate::runtime::types::{Builtin, Error, ErrorKind, Value, ValueKind};
 
 pub mod types;
 

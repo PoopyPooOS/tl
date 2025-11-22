@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use std::rc::Rc;
-
-use super::{ValueResult, types::Builtin};
 use crate::{
     parser::ast::types::{Expr, ExprKind},
-    runtime::{Error, ErrorKind, Scope, Value, ValueKind, types::NativeFnCtx},
+    runtime::{
+        Builtin, Error, ErrorKind, Scope, Value, ValueKind,
+        types::{NativeFnCtx, ValueResult},
+    },
 };
+use std::{collections::HashMap, rc::Rc};
 
 impl super::Scope {
     pub(super) fn eval_call(&self, expr: &Expr) -> ValueResult {

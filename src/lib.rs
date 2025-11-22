@@ -31,3 +31,5 @@ pub use utils::*;
 
 mod source;
 pub use source::Source;
+
+pub use indexmap;

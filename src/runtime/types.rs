@@ -10,8 +10,8 @@ use crate::{
 };
 use indexmap::IndexMap;
 use miette::{Diagnostic, SourceSpan};
-use std::cell::RefCell;
 use std::{
+    cell::RefCell,
     cmp::Ordering,
     collections::HashMap,
     fmt::{self, Debug, Display},
@@ -421,7 +421,7 @@ impl From<Builtin> for ValueKind {
 #[macro_export]
 macro_rules! object {
     ($($key:ident: $val:expr),* $(,)?) => {
-        Value::new_builtin($crate::runtime::ValueKind::Object(indexmap::IndexMap::from([
+        Value::new_builtin($crate::runtime::ValueKind::Object($crate::indexmap::IndexMap::from([
             $(
                 (stringify!($key).to_owned(), Value::new_builtin($val.into())),
             )*

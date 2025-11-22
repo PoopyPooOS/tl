@@ -1,6 +1,6 @@
 #[cfg(feature = "serde")]
-use crate::Source;
 use crate::{
+    Source,
     parser::parse,
     runtime::{Scope, types::Value},
 };
@@ -53,7 +53,7 @@ pub fn eval(source: Source, scope_setup: impl Fn(&Scope)) -> Result<Value, Repor
 
     scope_setup(&scope);
 
-    Ok(runtime.eval()?)
+    Ok(scope.eval()?)
 }
 
 #[allow(dead_code)]

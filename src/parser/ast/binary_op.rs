@@ -1,10 +1,9 @@
-use super::{
-    ExprResult,
-    types::{BinaryOperator, Expr, ExprKind},
-};
 use crate::{
     merge_spans,
-    parser::ast::types::{Error, ErrorKind},
+    parser::ast::{
+        ExprResult,
+        types::{BinaryOperator, Error, ErrorKind, Expr, ExprKind},
+    },
 };
 
 impl super::Parser {

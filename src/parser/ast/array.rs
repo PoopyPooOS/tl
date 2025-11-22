@@ -1,13 +1,9 @@
-use super::{
-    ExprResult,
-    types::{Expr, ExprKind, Literal},
-};
 use crate::{
     merge_spans,
     parser::{
         ast::{
-            consume,
-            types::{Error, ErrorKind},
+            ExprResult, consume,
+            types::{Error, ErrorKind, Expr, ExprKind, Literal},
         },
         lexer::types::TokenKind,
     },

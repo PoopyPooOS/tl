@@ -1,7 +1,9 @@
-use crate::{Source, parser::lexer::types::ErrorKind};
+use crate::{
+    Source,
+    parser::lexer::types::{Error, ErrorKind, Token, TokenKind},
+};
 use miette::SourceSpan;
 use std::{iter::Peekable, path::PathBuf, str::Chars};
-use types::{Error, Token, TokenKind};
 
 pub mod types;
 

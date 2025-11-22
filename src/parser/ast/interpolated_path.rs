@@ -1,9 +1,8 @@
-use super::{
-    ExprResult,
-    types::{Expr, ExprKind, Literal},
-};
 use crate::parser::{
-    ast::types::{Error, ErrorKind},
+    ast::{
+        Expr, ExprResult,
+        types::{Error, ErrorKind, ExprKind, Literal},
+    },
     lexer::types::{Token, TokenKind},
 };
 

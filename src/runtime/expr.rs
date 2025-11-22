@@ -1,10 +1,6 @@
-use super::{
-    ValueResult,
-    types::{Error, ErrorKind, Value},
-};
 use crate::{
     parser::ast::types::{Expr, ExprKind, Literal},
-    runtime::{Scope, ValueKind},
+    runtime::{Error, ErrorKind, Scope, Value, ValueKind, types::ValueResult},
 };
 use indexmap::IndexMap;
 use miette::SourceSpan;

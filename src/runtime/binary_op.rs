@@ -1,8 +1,7 @@
-use super::{ValueResult, types::Value};
 use crate::{
     merge_spans,
     parser::ast::types::{BinaryOperator, Expr},
-    runtime::ValueKind,
+    runtime::{Value, ValueKind, types::ValueResult},
 };
 
 impl super::Scope {

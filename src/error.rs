@@ -1,5 +1,6 @@
 use crate::Source;
 use miette::{Diagnostic, LabeledSpan, Severity, SourceSpan};
+use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Error<E: Diagnostic> {
@@ -48,9 +49,9 @@ impl<E: Diagnostic> Diagnostic for Error<E> {
     }
 }
 
-impl<E: Diagnostic> std::fmt::Display for Error<E> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.kind, f)
+impl<E: Diagnostic> Display for Error<E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.kind, f)
     }
 }
 
