@@ -66,3 +66,15 @@ pub(crate) fn merge_spans(start: SourceSpan, end: SourceSpan) -> SourceSpan {
     let len = (end.offset().saturating_add(end.len())).saturating_sub(start.offset());
     SourceSpan::new(offset, len)
 }
+
+macro_rules! export_modules {
+    ($($ident:ident),* $(,)?) => {
+        $(
+            pub mod $ident;
+            #[allow(unused_imports)]
+            pub use $ident::*;
+        )*
+    };
+}
+
+pub(crate) use export_modules;

@@ -1,7 +1,7 @@
 use crate::{
     Source,
     parser::{
-        ast::types::{Error, ErrorKind},
+        ast::types::error::{Error, ErrorKind},
         lexer::Lexer,
     },
 };

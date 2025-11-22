@@ -1,8 +1,8 @@
 use crate::{
     Source,
     parser::{
-        ast::types::{Error, Expr},
-        lexer::types::Token,
+        ast::types::{error::Error, expr::Expr},
+        lexer::types::token::Token,
     },
 };
 use miette::SourceSpan;
@@ -93,8 +93,8 @@ macro_rules! consume {
     };
     (no_propagate $self:expr, $expected:ident) => {{
         use $crate::parser::{
-            ast::types::{Error, ErrorKind},
-            lexer::types::TokenKind,
+            ast::types::error::{Error, ErrorKind},
+            lexer::types::token::TokenKind,
         };
 
         match $crate::parser::ast::advance!($self) {
@@ -124,8 +124,8 @@ macro_rules! consume {
     }};
     (no_propagate $self:expr, $expected:ident($($value:expr),*)) => {{
         use $crate::parser::{
-            ast::types::{Error, ErrorKind},
-            lexer::types::TokenKind,
+            ast::types::error::{Error, ErrorKind},
+            lexer::types::token::TokenKind,
         };
 
 

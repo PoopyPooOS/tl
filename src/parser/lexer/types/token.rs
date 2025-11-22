@@ -1,11 +1,8 @@
-use miette::{Diagnostic, SourceSpan};
+use miette::SourceSpan;
 use std::{
     fmt::{self, Display},
-    io,
-    num::{ParseFloatError, ParseIntError},
     path::PathBuf,
 };
-use thiserror::Error;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Token {
@@ -22,10 +19,10 @@ impl Token {
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
     // Literals
-    InterpolatedString(Vec<Token>),
     String(String),
-    InterpolatedPath(Vec<Token>),
+    InterpolatedString(Vec<Token>),
     Path(PathBuf),
+    InterpolatedPath(Vec<Token>),
     Int(isize),
     Float(f64),
     Bool(bool),
@@ -168,36 +165,5 @@ impl Display for TokenKind {
             Self::Colon => write!(f, ":"),
             Self::Dot => write!(f, "."),
         }
-    }
-}
-
-pub type Error = crate::Error<ErrorKind>;
-
-#[derive(Error, Diagnostic, Debug)]
-#[error("Lexer error")]
-pub enum ErrorKind {
-    #[error(transparent)]
-    ParseIntError(#[from] ParseIntError),
-    #[error(transparent)]
-    ParseFloatError(#[from] ParseFloatError),
-
-    #[error("Unclosed string literal")]
-    #[diagnostic(code(tl::parser::lexer::unclosed_string))]
-    UnclosedString,
-    #[error("Unclosed interpolation")]
-    #[diagnostic(code(tl::parser::lexer::unclosed_interpolation))]
-    UnclosedInterpolation,
-
-    #[error("Unexpected token")]
-    #[diagnostic(code(tl::parser::lexer::unexpected_token))]
-    UnexpectedToken,
-
-    #[error(transparent)]
-    IO(#[from] io::Error),
-}
-
-impl PartialEq for Error {
-    fn eq(&self, other: &Self) -> bool {
-        std::mem::discriminant(&self.kind) == std::mem::discriminant(&other.kind)
     }
 }

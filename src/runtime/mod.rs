@@ -1,11 +1,15 @@
 use crate::{
     Source,
     parser::{ast::types::Expr, parse},
-    runtime::types::ValueResult,
+    runtime::types::value::ValueResult,
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
-pub use crate::runtime::types::{Builtin, Error, ErrorKind, Value, ValueKind};
+pub use crate::runtime::types::{
+    builtin::Builtin,
+    error::{Error, ErrorKind},
+    value::{Value, ValueKind},
+};
 
 pub mod types;
 
