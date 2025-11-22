@@ -1,22 +1,17 @@
 use crate::parser::{
     ast::{
-        Expr, ExprResult,
-        types::{Error, ErrorKind, ExprKind, Literal},
+        ExprResult,
+        types::{Expr, ExprKind, Literal},
     },
     lexer::types::{Token, TokenKind},
 };
+use tl_macro::consume;
 
 impl super::Parser {
     pub(super) fn parse_interpolated_path(&mut self, v: &[Token]) -> ExprResult {
+        let start = consume!("interpolated path", TokenKind::InterpolatedPath(_))?;
+
         let mut result = Vec::new();
-        let start = self.tokens.get(self.pos).ok_or(Error::new(
-            ErrorKind::ExpectedToken {
-                expected: "interpolated path".into(),
-                found: None,
-            },
-            self.source.clone(),
-            self.closest_span(),
-        ))?;
 
         for token in v {
             match &token.kind {
@@ -42,9 +37,6 @@ impl super::Parser {
                 }
             }
         }
-
-        // Consume the interpolated string
-        self.pos = self.pos.saturating_add(1);
 
         Ok(Expr::new(
             ExprKind::Literal(Literal::InterpolatedPath(result)),

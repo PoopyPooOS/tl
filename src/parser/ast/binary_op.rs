@@ -5,6 +5,7 @@ use crate::{
         types::{BinaryOperator, Error, ErrorKind, Expr, ExprKind},
     },
 };
+use tl_macro::{change_pos, peek};
 
 impl super::Parser {
     pub(super) fn parse_binary_op_with_left(
@@ -12,34 +13,22 @@ impl super::Parser {
         min_precedence: u8,
         mut left: Expr,
     ) -> ExprResult {
-        while let Some(next_token) = self.tokens.get(self.pos) {
-            if !next_token.kind.is_binary_operator() {
-                break;
-            }
-
-            let operator = BinaryOperator::from_token(next_token.kind.clone())?;
+        while let Some(operator_token) = peek!(0)
+            && operator_token.kind.is_binary_operator()
+        {
+            let operator = BinaryOperator::from_token(operator_token.kind.clone())?;
             let precedence = operator.precedence();
             if precedence < min_precedence {
                 break;
             }
 
-            let operator_token = self
-                .tokens
-                .get(self.pos)
-                .ok_or(Error::new(
-                    ErrorKind::NoTokensLeft,
-                    self.source.clone(),
-                    self.closest_span(),
-                ))?
-                .clone();
+            change_pos!(1);
 
-            self.pos = self.pos.saturating_add(1);
-
-            if self.tokens.get(self.pos).is_none() {
+            if peek!(0).is_none() {
                 return Err(Error::new(
                     ErrorKind::MissingRightSide,
                     self.source.clone(),
-                    operator_token.span,
+                    merge_spans(left.span, operator_token.span),
                 ));
             }
 

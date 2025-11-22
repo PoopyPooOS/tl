@@ -2,48 +2,33 @@ use crate::{
     merge_spans,
     parser::{
         ast::{
-            ExprResult, consume,
-            types::{Error, ErrorKind, Expr, ExprKind, Literal},
+            ExprResult,
+            types::{Expr, ExprKind, Literal},
         },
         lexer::types::TokenKind,
     },
 };
+use tl_macro::{change_pos, consume, peek};
 
 impl super::Parser {
     pub(super) fn parse_array(&mut self) -> ExprResult {
-        let start = self
-            .tokens
-            .get(self.pos)
-            .ok_or(Error::new(
-                ErrorKind::ExpectedToken {
-                    expected: "'{'".into(),
-                    found: None,
-                },
-                self.source.clone(),
-                self.closest_span(),
-            ))?
-            .clone();
+        let start = consume!("'{'", TokenKind::LBracket)?.clone();
 
-        consume!(self, LBracket);
-
-        let mut array = Vec::new();
-        while let Some(next_token) = self.tokens.get(self.pos).cloned() {
+        let mut items = Vec::new();
+        while let Some(next_token) = peek!(0) {
             if next_token.kind == TokenKind::RBracket {
-                consume!(self, RBracket);
+                change_pos!(1);
                 break;
             }
 
             let expr = self.parse()?;
-            array.push(expr);
+            items.push(expr);
         }
 
-        let end = self
-            .tokens
-            .get(self.pos.saturating_sub(1))
-            .unwrap_or(&start);
+        let end = peek!(-1).unwrap_or(&start);
 
         Ok(Expr::new(
-            ExprKind::Literal(Literal::Array(array)),
+            ExprKind::Literal(Literal::Array(items)),
             merge_spans(start.span, end.span),
         ))
     }

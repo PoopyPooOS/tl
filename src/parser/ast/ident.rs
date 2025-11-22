@@ -2,34 +2,39 @@ use crate::{
     merge_spans,
     parser::{
         ast::{
-            ExprResult, advance, consume,
+            ExprResult,
             types::{Error, ErrorKind, Expr, ExprKind, Literal},
         },
         lexer::types::TokenKind,
     },
 };
+use tl_macro::{advance, change_pos, check, consume, peek};
 
 impl super::Parser {
     pub(super) fn parse_ident(&mut self) -> ExprResult {
-        let token = advance!(self).ok_or(Error::new(
-            ErrorKind::NoTokensLeft,
-            self.source.clone(),
-            self.closest_span(),
-        ))?;
+        let token = consume!("identifier", TokenKind::Identifier(_))?.clone();
 
         let mut expr = match &token.kind {
+            TokenKind::Identifier(_) if check!(0, TokenKind::Colon) => {
+                // The current identifier would be the function's argument,
+                // so we have to go back so that `parse_fn_decl` can parse the identifier as the function argument.
+                change_pos!(-1);
+                self.parse_fn_decl()?
+            }
             TokenKind::Identifier(name) => Expr::ident(name.clone(), token.span),
             _ => unreachable!(),
         };
+
         let mut full_span = token.span;
 
         loop {
-            match self.tokens.get(self.pos).map(|t| &t.kind) {
+            match peek!(0).map(|t| &t.kind) {
                 // Object field access: .identifier
                 // TODO: Allow for interpolation here
                 Some(TokenKind::Dot) => {
-                    self.pos = self.pos.saturating_add(1);
-                    let field_token = advance!(self).ok_or({
+                    // Consume dot
+                    change_pos!(1);
+                    let field_token = advance!().ok_or({
                         Error::new(
                             ErrorKind::ExpectedIdentifierAfterDot,
                             self.source.clone(),
@@ -62,9 +67,9 @@ impl super::Parser {
 
                 // Array index access: [expr]
                 Some(TokenKind::LBracket) => {
-                    self.pos = self.pos.saturating_add(1);
+                    change_pos!(1);
                     let index_expr = self.parse()?;
-                    let end = consume!(self, RBracket);
+                    let end = consume!("']'", TokenKind::RBracket)?;
 
                     expr = match index_expr.kind {
                         ExprKind::Literal(Literal::Int(v)) if v >= 0 => Expr::new(
@@ -88,19 +93,21 @@ impl super::Parser {
 
                 // Function call: (args...)
                 Some(TokenKind::LParen) => {
-                    self.pos = self.pos.saturating_add(1);
+                    change_pos!(1);
                     let mut args = Vec::new();
-                    while let Some(token) = self.tokens.get(self.pos)
+
+                    while let Some(token) = peek!(0)
                         && token.kind != TokenKind::RParen
                     {
                         if token.kind == TokenKind::Comma {
-                            self.pos = self.pos.saturating_add(1);
+                            change_pos!(1);
                             continue;
                         }
 
                         args.push(self.parse()?);
                     }
-                    let end = consume!(self, RParen);
+
+                    let end = consume!("')'", TokenKind::RParen)?;
 
                     expr = Expr::new(
                         ExprKind::Call {

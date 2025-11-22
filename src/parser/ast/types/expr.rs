@@ -1,4 +1,4 @@
-use crate::parser::ast::types::Literal;
+use crate::parser::ast::types::{BinaryOperator, Literal};
 use miette::SourceSpan;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -54,7 +54,7 @@ pub enum ExprKind {
     Identifier(String),
     BinaryOp {
         left: Box<Expr>,
-        operator: super::binary_op::BinaryOperator,
+        operator: BinaryOperator,
         right: Box<Expr>,
     },
     ArrayIndex {

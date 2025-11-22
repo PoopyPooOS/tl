@@ -222,7 +222,7 @@ fn parenthesized() {
 }
 
 #[test]
-fn function_declaration() {
+fn function() {
     // Single argument
     let input = r#"name: "Hello, ${name}!""#;
     let expected = Expr::new(

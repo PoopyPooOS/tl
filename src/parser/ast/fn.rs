@@ -2,49 +2,35 @@ use crate::{
     merge_spans,
     parser::{
         ast::{
-            ExprResult, advance, consume,
+            ExprResult,
             types::{Error, ErrorKind, Expr, ExprKind},
         },
-        lexer::types::{Token, TokenKind},
+        lexer::types::TokenKind,
     },
 };
+use tl_macro::{consume, peek_or_err};
 
 impl super::Parser {
     pub(super) fn parse_fn_decl(&mut self) -> ExprResult {
-        let start = self
-            .tokens
-            .get(self.pos)
-            .ok_or(Error::new(
-                ErrorKind::NoTokensLeft,
-                self.source.clone(),
-                self.closest_span(),
-            ))?
-            .clone();
+        let start_span = peek_or_err!(0)?.span;
 
         // Arg
-        let arg = match advance!(self) {
-            Some(Token {
-                kind: TokenKind::Identifier(name),
-                ..
-            }) => name.clone(),
-            _ => {
-                return Err(Error::new(
-                    ErrorKind::ExpectedToken {
-                        expected: "argument".into(),
-                        found: None,
-                    },
-                    self.source.clone(),
-                    self.closest_span(),
-                ));
-            }
+        let arg = consume!(
+            "identifier (as function argument)",
+            TokenKind::Identifier(_)
+        )?
+        .kind
+        .clone();
+        let TokenKind::Identifier(arg) = arg else {
+            unreachable!("checked by `consume!` macro")
         };
 
         // Body
-        consume!(self, Colon);
+        consume!("':'", TokenKind::Colon)?;
 
         let expr = self.parse()?;
 
-        let span = merge_spans(start.span, expr.span);
+        let span = merge_spans(start_span, expr.span);
 
         Ok(Expr::new(
             ExprKind::FnDecl {

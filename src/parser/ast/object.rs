@@ -2,47 +2,44 @@ use crate::{
     merge_spans,
     parser::{
         ast::{
-            Context, ExprResult, advance, consume,
+            Context, ExprResult,
             types::{Error, ErrorKind, Expr, ExprKind, Literal},
         },
         lexer::types::TokenKind,
     },
 };
 use indexmap::IndexMap;
+use tl_macro::{advance, change_pos, check, consume, peek, peek_or_err};
 
 impl super::Parser {
     pub(super) fn parse_object(&mut self) -> ExprResult {
-        let start = self
-            .tokens
-            .get(self.pos)
-            .ok_or(Error::new(
-                ErrorKind::NoTokensLeft,
-                self.source.clone(),
-                self.closest_span(),
-            ))?
-            .clone();
+        let start = consume!("'{'", TokenKind::LBrace)?.clone();
 
-        consume!(self, LBrace);
         let last_context = self.context.clone();
         self.context = Context::Object;
 
         let mut fields = IndexMap::new();
 
         loop {
-            let token = self.tokens.get(self.pos).ok_or(Error::new(
-                ErrorKind::NoTokensLeft,
-                self.source.clone(),
-                self.closest_span(),
-            ))?;
+            let token = peek!(0)
+                .ok_or(Error::new(
+                    ErrorKind::ExpectedToken {
+                        expected: "'}'".to_owned(),
+                        found: None,
+                    },
+                    self.source.clone(),
+                    self.closest_span(),
+                ))?
+                .clone();
 
             if token.kind == TokenKind::RBrace {
-                consume!(self, RBrace);
+                change_pos!(1);
                 break;
             }
 
             let mut key_parts = Vec::new();
             loop {
-                let token = advance!(self).ok_or(Error::new(
+                let token = advance!().ok_or(Error::new(
                     ErrorKind::NoTokensLeft,
                     self.source.clone(),
                     token.span,
@@ -64,16 +61,15 @@ impl super::Parser {
                     }
                 }
 
-                if let Some(next) = self.tokens.get(self.pos)
-                    && matches!(next.kind, TokenKind::Dot)
-                {
-                    advance!(self);
+                if check!(0, TokenKind::Dot) {
+                    advance!();
                     continue;
                 }
+
                 break;
             }
 
-            match advance!(self) {
+            match advance!() {
                 Some(token) => match token.kind {
                     TokenKind::Equals => (),
                     TokenKind::Colon => {
@@ -107,14 +103,7 @@ impl super::Parser {
         }
 
         self.context = last_context;
-        let end = self
-            .tokens
-            .get(self.pos.saturating_sub(1))
-            .ok_or(Error::new(
-                ErrorKind::NoTokensLeft,
-                self.source.clone(),
-                self.closest_span(),
-            ))?;
+        let end = peek_or_err!(-1)?;
 
         Ok(Expr::new(
             ExprKind::Literal(Literal::Object(fields)),

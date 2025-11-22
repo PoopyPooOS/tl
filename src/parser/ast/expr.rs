@@ -2,50 +2,28 @@ use crate::{
     merge_spans,
     parser::{
         ast::{
-            ExprResult, consume,
+            ExprResult,
             types::{Error, ErrorKind, Expr, ExprKind, Literal},
         },
         lexer::types::TokenKind,
     },
 };
 use std::path::PathBuf;
+use tl_macro::{check, consume, peek_or_err};
 
 impl super::Parser {
     /// Generates an AST based on the tokens of this [`Parser`].
     /// # Errors
     /// This function will return an error if a AST generation error occurs.
     pub fn parse(&mut self) -> ExprResult {
-        let token = self.tokens.get(self.pos).ok_or(Error::new(
-            ErrorKind::NoTokensLeft,
-            self.source.clone(),
-            self.closest_span(),
-        ))?;
+        let token = peek_or_err!(0)?;
 
         let expr = match token.kind {
-            TokenKind::LBrace => Some(self.parse_object()?),
-            TokenKind::LBracket => Some(self.parse_array()?),
-            TokenKind::Identifier(_)
-                if self
-                    .tokens
-                    .get(self.pos.saturating_add(1))
-                    .is_some_and(|t| t.kind == TokenKind::Colon) =>
-            {
-                Some(self.parse_fn_decl()?)
-            }
             TokenKind::Not => {
-                let token = self
-                    .tokens
-                    .get(self.pos)
-                    .ok_or(Error::new(
-                        ErrorKind::NoTokensLeft,
-                        self.source.clone(),
-                        self.closest_span(),
-                    ))?
-                    .clone();
-
-                consume!(self, Not);
+                let not_span = consume!("'!' (Not)", TokenKind::Not)?.span;
                 let expr = self.parse()?;
-                let span = merge_spans(token.span, expr.span);
+
+                let span = merge_spans(not_span, expr.span);
 
                 Some(Expr::new(ExprKind::Not(Box::new(expr)), span))
             }
@@ -58,38 +36,24 @@ impl super::Parser {
         }
 
         let expr = self.parse_primary()?;
-        let token = self.tokens.get(self.pos);
 
-        if let Some(token) = token {
-            match &token.kind {
-                b if b.is_binary_operator() => {
-                    return self.parse_binary_op_with_left(0, expr);
-                }
-                _ => (),
-            }
+        if check!(0, t if t.is_binary_operator()) {
+            return self.parse_binary_op_with_left(0, expr);
         }
 
         Ok(expr)
     }
 
     pub(super) fn parse_primary(&mut self) -> ExprResult {
-        let token = self
-            .tokens
-            .get(self.pos)
-            .ok_or(Error::new(
-                ErrorKind::NoTokensLeft,
-                self.source.clone(),
-                self.closest_span(),
-            ))?
-            .clone();
+        let token = peek_or_err!(0)?.clone();
 
         macro_rules! literal {
             ($variant:ident) => {{
-                self.pos = self.pos.saturating_add(1);
+                tl_macro::change_pos!(1);
                 Expr::new(ExprKind::Literal(Literal::$variant), token.span)
             }};
             ($variant:ident($value:expr)) => {{
-                self.pos = self.pos.saturating_add(1);
+                tl_macro::change_pos!(1);
                 Expr::new(ExprKind::Literal(Literal::$variant($value)), token.span)
             }};
         }
@@ -104,12 +68,15 @@ impl super::Parser {
             TokenKind::Float(v) => literal!(Float(*v)),
             TokenKind::Bool(v) => literal!(Bool(*v)),
             TokenKind::Identifier(_) => self.parse_ident()?,
+            TokenKind::LBrace => self.parse_object()?,
+            TokenKind::LBracket => self.parse_array()?,
             TokenKind::LParen => {
-                let lparen_token = token.clone();
-                consume!(self, LParen);
+                let lparen_span = consume!("'('", TokenKind::LParen)?.span;
                 let inner_expr = self.parse()?;
-                let rparen_token = consume!(self, RParen);
-                let span = merge_spans(lparen_token.span, rparen_token.span);
+                let rparen_span = consume!("'('", TokenKind::RParen)?.span;
+
+                let span = merge_spans(lparen_span, rparen_span);
+
                 Expr::new(ExprKind::Parenthesized(Box::new(inner_expr)), span)
             }
             _ => {

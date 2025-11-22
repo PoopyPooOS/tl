@@ -2,45 +2,29 @@ use crate::{
     merge_spans,
     parser::{
         ast::{
-            ExprResult, advance, consume,
+            ExprResult,
             types::{Error, ErrorKind, Expr, ExprKind},
         },
         lexer::types::TokenKind,
     },
 };
+use tl_macro::{advance, consume, peek_or_err};
 
 impl super::Parser {
     pub(super) fn parse_let(&mut self) -> ExprResult {
-        let start = self
-            .tokens
-            .get(self.pos)
-            .ok_or(Error::new(
-                ErrorKind::NoTokensLeft,
-                self.source.clone(),
-                self.closest_span(),
-            ))?
-            .clone();
-
-        consume!(self, Let);
+        let start = consume!("'let'", TokenKind::Let)?.clone();
 
         let mut bindings = Vec::new();
 
         loop {
-            let token = self
-                .tokens
-                .get(self.pos)
-                .ok_or(Error::new(
-                    ErrorKind::NoTokensLeft,
-                    self.source.clone(),
-                    self.closest_span(),
-                ))?
-                .clone();
+            let token = peek_or_err!(0)?.clone();
 
             if token.kind == TokenKind::In {
                 break;
             }
 
-            let name_token = advance!(self).ok_or(Error::new(
+            // TODO: Use `self.parse_attr_path()` here
+            let name_token = advance!().ok_or(Error::new(
                 ErrorKind::NoTokensLeft,
                 self.source.clone(),
                 token.span,
@@ -59,13 +43,13 @@ impl super::Parser {
                 ));
             };
 
-            consume!(self, Equals);
+            consume!("'='", TokenKind::Equals)?;
 
             let value = self.parse()?;
             bindings.push((name, value));
         }
 
-        consume!(self, In);
+        consume!("'in'", TokenKind::In)?;
 
         let body = self.parse()?;
         let end_span = body.span;

@@ -11,6 +11,8 @@ serde = ["dep:serde"]
 toml = ["serde", "dep:toml"]
 
 [dependencies]
+tl-macro.path = "./tl-macro"
+
 serde = { workspace = true, optional = true }
 toml = { workspace = true, optional = true }
 indexmap = { version = "2.0", features = ["serde"] }

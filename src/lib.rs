@@ -1,4 +1,4 @@
-#![feature(stmt_expr_attributes)]
+#![feature(if_let_guard, stmt_expr_attributes)]
 // Lints
 #![deny(
     clippy::panic,
@@ -10,7 +10,7 @@
     clippy::arithmetic_side_effects
 )]
 #![warn(clippy::unimplemented, clippy::todo, clippy::str_to_string)]
-#![allow(clippy::result_large_err)]
+#![allow(clippy::result_large_err, clippy::ignored_unit_patterns)]
 
 // Tests
 #[cfg(test)]
@@ -32,4 +32,5 @@ pub use utils::*;
 mod source;
 pub use source::Source;
 
+// Re-exports for macros to be able to work outside of this crate
 pub use indexmap;
