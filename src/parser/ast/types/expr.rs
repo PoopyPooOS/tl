@@ -18,7 +18,7 @@ impl Expr {
         Self { kind, span }
     }
 
-    pub const fn lit(literal: super::literal::Literal, span: SourceSpan) -> Self {
+    pub const fn lit(literal: Literal, span: SourceSpan) -> Self {
         Self::new(ExprKind::Literal(literal), span)
     }
 
@@ -30,7 +30,7 @@ impl Expr {
         Box::new(Self::new(kind, span))
     }
 
-    pub fn boxed_lit(literal: super::literal::Literal, span: SourceSpan) -> Box<Self> {
+    pub fn boxed_lit(literal: Literal, span: SourceSpan) -> Box<Self> {
         Box::new(Self::lit(literal, span))
     }
 
@@ -50,7 +50,7 @@ impl Expr {
 pub enum ExprKind {
     Not(Box<Expr>),
     Parenthesized(Box<Expr>),
-    Literal(super::literal::Literal),
+    Literal(Literal),
     Identifier(String),
     BinaryOp {
         left: Box<Expr>,
