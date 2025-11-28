@@ -478,6 +478,7 @@ impl Lexer {
                         "false" => push_long_token!(Bool(false)),
 
                         // Keywords
+                        "with" => push_long_token!(With),
                         "let" => push_long_token!(Let),
                         "in" => push_long_token!(In),
 

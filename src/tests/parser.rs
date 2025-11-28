@@ -30,14 +30,14 @@ macro_rules! literal {
 }
 
 macro_rules! box_literal {
-    (String($string:expr), $span:expr) => {
-        Expr::boxed_lit(Literal::String($string.to_string()), $span)
+    (String($string:expr), $span:expr $(,)?) => {
+        Expr::boxed_lit(Literal::String($string.to_owned()), $span)
     };
 
-    ($literal:ident, $span:expr) => {
+    ($literal:ident, $span:expr $(,)?) => {
         Expr::boxed_lit(Literal::$literal, $span)
     };
-    ($literal:ident($value:expr), $span:expr) => {
+    ($literal:ident($value:expr), $span:expr $(,)?) => {
         Expr::boxed_lit(Literal::$literal($value), $span)
     };
 }
@@ -331,20 +331,22 @@ fn binary_op() {
 
 #[test]
 fn bindings() {
-    let input = r#"let
-    name = "John Doe"
-in
-    null
-"#;
+    let input = r#"with {
+	name = "John Doe"
+}
+name"#;
     let expected = Expr::new(
-        ExprKind::LetIn {
-            bindings: vec![(
-                Expr::ident("name", span(8, 4)),
-                literal!(String("John Doe".to_owned()), span(15, 10)),
-            )],
-            expr: box_literal!(Null, span(33, 4)),
+        ExprKind::With {
+            object: box_literal!(
+                Object(IndexMap::from([(
+                    "name".to_owned(),
+                    Expr::lit(Literal::String("John Doe".to_owned()), span(15, 10)),
+                )])),
+                span(5, 22),
+            ),
+            expr: Expr::boxed_ident("name", span(28, 4)),
         },
-        span(0, 37),
+        span(0, 32),
     );
     assert_eq!(parse(input).unwrap(), expected);
 }

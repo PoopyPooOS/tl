@@ -112,6 +112,25 @@ impl super::Scope {
 
                 child_scope.eval()
             }
+            ExprKind::With { object, expr: body } => {
+                let child_scope = self.create_scope(*body.clone());
+
+                let object = child_scope.eval_expr(object)?;
+
+                let ValueKind::Object(object) = object.kind else {
+                    return Err(Error::new(
+                        ErrorKind::NonObjectInWithExpr,
+                        (*self.0.source).clone(),
+                        object.span,
+                    ));
+                };
+
+                for (key, value) in object {
+                    child_scope.define(key, value);
+                }
+
+                child_scope.eval()
+            }
         }
     }
 

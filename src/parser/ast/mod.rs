@@ -20,6 +20,7 @@ mod interpolated_path;
 mod interpolated_string;
 mod r#let;
 mod object;
+mod with;
 
 mod pretty_print;
 

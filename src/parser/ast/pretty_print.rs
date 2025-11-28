@@ -273,6 +273,24 @@ impl super::Parser {
                         .trim_start(),
                 );
             }
+            ExprKind::With { object, expr: body } => {
+                let _ = writeln!(
+                    out,
+                    "{pad}{} {}",
+                    "With".bright_magenta(),
+                    self.pretty_print_span(expr.span).dimmed(),
+                );
+                let _ = write!(out, "\n{pad}  object: ");
+                out.push_str(
+                    self.pretty_print_expr(object, indent.saturating_add(1))
+                        .trim_start(),
+                );
+                let _ = write!(out, "\n{pad}  expr: ");
+                out.push_str(
+                    self.pretty_print_expr(body, indent.saturating_add(1))
+                        .trim_start(),
+                );
+            }
         }
 
         out

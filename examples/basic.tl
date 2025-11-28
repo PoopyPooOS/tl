@@ -1,4 +1,4 @@
-let
+with {
   greet = name: "Hello, ${name}!"
-in
+}
 greet("world")

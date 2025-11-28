@@ -19,6 +19,10 @@ pub enum ErrorKind {
     #[diagnostic(code(tl::runtime::call))]
     NotCallable,
 
+    #[error("A value that isn't an object was used in a with expression")]
+    #[diagnostic(code(tl::runtime::with_expr))]
+    NonObjectInWithExpr,
+
     #[error("Mismatch in number of function arguments")]
     #[diagnostic(code(tl::runtime::call))]
     ArgsMismatch {

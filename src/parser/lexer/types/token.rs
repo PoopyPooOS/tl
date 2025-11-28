@@ -32,6 +32,7 @@ pub enum TokenKind {
     Identifier(String),
 
     // Keywords
+    With,
     Let,
     In,
 
@@ -130,6 +131,7 @@ impl Display for TokenKind {
             Self::Identifier(v) => write!(f, "{v}"),
 
             // Keywords
+            Self::With => write!(f, "with"),
             Self::Let => write!(f, "let"),
             Self::In => write!(f, "in"),
 

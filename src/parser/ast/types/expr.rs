@@ -77,4 +77,8 @@ pub enum ExprKind {
         bindings: Vec<(Expr, Expr)>,
         expr: Box<Expr>,
     },
+    With {
+        object: Box<Expr>,
+        expr: Box<Expr>,
+    },
 }
