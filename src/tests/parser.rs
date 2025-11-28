@@ -339,7 +339,7 @@ in
     let expected = Expr::new(
         ExprKind::LetIn {
             bindings: vec![(
-                "name".to_owned(),
+                Expr::ident("name", span(8, 4)),
                 literal!(String("John Doe".to_owned()), span(15, 10)),
             )],
             expr: box_literal!(Null, span(33, 4)),

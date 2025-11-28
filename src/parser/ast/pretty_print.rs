@@ -263,7 +263,7 @@ impl super::Parser {
                     self.pretty_print_span(expr.span).dimmed(),
                 );
                 for (name, val) in bindings {
-                    let _ = write!(out, "{pad}  {name} {} ", "=".cyan());
+                    let _ = write!(out, "{pad}  {name:?} {} ", "=".cyan());
                     out.push_str(self.pretty_print_expr(val, indent.saturating_add(1)).trim());
                     out.push('\n');
                 }

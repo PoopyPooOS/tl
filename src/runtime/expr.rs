@@ -5,6 +5,28 @@ use crate::{
 use indexmap::IndexMap;
 use miette::SourceSpan;
 
+fn extract_path(expr: &Expr) -> Option<Vec<String>> {
+    match &expr.kind {
+        ExprKind::Identifier(ident) => Some(vec![ident.clone()]),
+        ExprKind::MemberAccess { base, field } => {
+            let mut path = extract_path(base)?;
+            path.push(field.clone());
+            Some(path)
+        }
+        _ => None,
+    }
+}
+
+fn create_nested_object(path: &[String], value: Value) -> Value {
+    if let Some((first, rest)) = path.split_first() {
+        let mut map = IndexMap::new();
+        map.insert(first.clone(), create_nested_object(rest, value));
+        Value::new_builtin(ValueKind::Object(map))
+    } else {
+        value
+    }
+}
+
 impl super::Scope {
     pub(super) fn eval_expr(&self, expr: &Expr) -> ValueResult {
         match &expr.kind {
@@ -65,9 +87,27 @@ impl super::Scope {
             } => {
                 let child_scope = self.create_scope(*body.clone());
 
-                for (name, expr) in bindings {
+                for (key, expr) in bindings {
                     let value = child_scope.eval_expr(expr)?;
-                    child_scope.define(name, value);
+                    if let Some(path) = extract_path(key) {
+                        if let Some(first) = path.first() {
+                            if path.len() == 1 {
+                                child_scope.define(first.clone(), value);
+                            } else if let Some(rest) = path.get(1..) {
+                                let obj = create_nested_object(rest, value);
+                                child_scope.define(first.clone(), obj);
+                            }
+                        }
+                    } else {
+                        return Err(Error::new(
+                            ErrorKind::MismatchedTypes {
+                                expected: "identifier or member access".to_owned(),
+                                got: format!("{:?}", key.kind),
+                            },
+                            (*self.0.source).clone(),
+                            key.span,
+                        ));
+                    }
                 }
 
                 child_scope.eval()

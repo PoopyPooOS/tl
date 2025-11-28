@@ -35,7 +35,7 @@ impl super::Scope {
                         (*def_scope.0.source).clone(),
                         body.clone(),
                     );
-                    scope.define(&name, function.clone());
+                    scope.define(name.clone(), function.clone());
                     scope.eval()?
                 }
                 ValueKind::Builtin(Builtin(builtin)) => {

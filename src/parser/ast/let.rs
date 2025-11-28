@@ -8,7 +8,7 @@ use crate::{
         lexer::types::TokenKind,
     },
 };
-use tl_macro::{advance, consume, peek_or_err};
+use tl_macro::{consume, peek_or_err};
 
 impl super::Parser {
     pub(super) fn parse_let(&mut self) -> ExprResult {
@@ -23,30 +23,11 @@ impl super::Parser {
                 break;
             }
 
-            // TODO: Use `self.parse_attr_path()` here
-            let name_token = advance!().ok_or(Error::new(
-                ErrorKind::NoTokensLeft,
-                self.source.clone(),
-                token.span,
-            ))?;
-
-            let name = if let TokenKind::Identifier(name) = &name_token.kind {
-                name.clone()
-            } else {
-                return Err(Error::new(
-                    ErrorKind::ExpectedToken {
-                        expected: "identifier".into(),
-                        found: None,
-                    },
-                    self.source.clone(),
-                    token.span,
-                ));
-            };
-
+            let key = self.parse()?;
             consume!("'='", TokenKind::Equals)?;
-
             let value = self.parse()?;
-            bindings.push((name, value));
+
+            bindings.push((key, value));
         }
 
         consume!("'in'", TokenKind::In)?;

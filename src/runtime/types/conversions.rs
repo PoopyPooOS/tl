@@ -62,6 +62,66 @@ impl From<super::builtin::Builtin> for ValueKind {
     }
 }
 
+impl From<()> for Value {
+    fn from(val: ()) -> Self {
+        Self::new_builtin(ValueKind::from(val))
+    }
+}
+
+impl From<bool> for Value {
+    fn from(val: bool) -> Self {
+        Self::new_builtin(ValueKind::from(val))
+    }
+}
+
+impl From<isize> for Value {
+    fn from(val: isize) -> Self {
+        Self::new_builtin(ValueKind::from(val))
+    }
+}
+
+impl From<f64> for Value {
+    fn from(val: f64) -> Self {
+        Self::new_builtin(ValueKind::from(val))
+    }
+}
+
+impl<'a> From<&'a str> for Value {
+    fn from(val: &'a str) -> Self {
+        Self::new_builtin(ValueKind::from(val))
+    }
+}
+
+impl From<String> for Value {
+    fn from(val: String) -> Self {
+        Self::new_builtin(ValueKind::from(val))
+    }
+}
+
+impl From<PathBuf> for Value {
+    fn from(val: PathBuf) -> Self {
+        Self::new_builtin(ValueKind::from(val))
+    }
+}
+
+impl<T: Into<Value>> From<Vec<T>> for Value {
+    fn from(val: Vec<T>) -> Self {
+        Self::new_builtin(ValueKind::from(val))
+    }
+}
+
+impl<T: Into<Value>> From<IndexMap<String, T>> for Value {
+    fn from(val: IndexMap<String, T>) -> Self {
+        Self::new_builtin(ValueKind::from(val))
+    }
+}
+
+impl From<super::builtin::Builtin> for Value {
+    fn from(val: super::builtin::Builtin) -> Self {
+        Self::new_builtin(ValueKind::from(val))
+    }
+}
+
 #[macro_export]
 macro_rules! object {
     ($($key:ident: $val:expr),* $(,)?) => {
