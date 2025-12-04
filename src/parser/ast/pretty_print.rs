@@ -203,7 +203,12 @@ impl super::Parser {
                         .trim(),
                 );
                 out.push('\n');
-                let _ = writeln!(out, "{pad}  index: {}", index.to_string().yellow());
+                let _ = write!(out, "{pad}  index: ");
+                out.push_str(
+                    self.pretty_print_expr(index, indent.saturating_add(1))
+                        .trim(),
+                );
+                out.push('\n');
             }
             ExprKind::MemberAccess { base, field } => {
                 let _ = writeln!(

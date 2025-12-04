@@ -60,7 +60,7 @@ pub enum ExprKind {
     },
     ArrayIndex {
         base: Box<Expr>,
-        index: usize,
+        index: Box<Expr>,
     },
     MemberAccess {
         base: Box<Expr>,

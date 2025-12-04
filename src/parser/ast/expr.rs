@@ -147,25 +147,16 @@ impl super::Parser {
                 // Array index access: [expr]
                 Some(TokenKind::LBracket) => {
                     change_pos!(1);
-                    let index_expr = self.parse()?;
+                    let index = self.parse()?;
                     let end = consume!("']'", TokenKind::RBracket)?;
 
-                    expr = match index_expr.kind {
-                        ExprKind::Literal(Literal::Int(v)) if v >= 0 => Expr::new(
-                            ExprKind::ArrayIndex {
-                                base: Box::new(expr),
-                                index: v as usize,
-                            },
-                            merge_spans(full_span, end.span),
-                        ),
-                        _ => Expr::new(
-                            ExprKind::ArrayIndex {
-                                base: Box::new(expr),
-                                index: 0,
-                            },
-                            merge_spans(full_span, end.span),
-                        ),
-                    };
+                    expr = Expr::new(
+                        ExprKind::ArrayIndex {
+                            base: Box::new(expr),
+                            index: Box::new(index),
+                        },
+                        merge_spans(full_span, end.span),
+                    );
 
                     full_span = merge_spans(full_span, end.span);
                 }

@@ -113,8 +113,7 @@ numbers[3]";
     let expected = RuntimeError::new(
         RuntimeErrorKind::IndexOutOfBounds {
             length: 3,
-            // TODO: The span start here should be `41` after making the index an expr
-            index: span(33, 10),
+            index: span(41, 1),
         },
         Source::text_with_name("test", input),
         span(33, 10),

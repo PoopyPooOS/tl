@@ -33,6 +33,10 @@ pub enum ErrorKind {
         args: SourceSpan,
     },
 
+    #[error("Can not index array with {0}")]
+    #[diagnostic(code(tl::runtime::invalid_index))]
+    InvalidIndex(String),
+
     #[error("Index out of bounds")]
     #[diagnostic(code(tl::runtime::expr))]
     IndexOutOfBounds {

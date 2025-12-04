@@ -34,17 +34,29 @@ impl super::Scope {
                 (*self.0.source).clone(),
                 expr.span,
             ))?),
-            ExprKind::ArrayIndex { base, index } => {
+            ExprKind::ArrayIndex {
+                base,
+                index: index_expr,
+            } => {
                 let base = self.eval_expr(base)?;
-                let item = base.try_index(*index);
+                let index = match self.eval_expr(index_expr)?.kind {
+                    ValueKind::Int(index) => index as usize,
+                    invalid => {
+                        return Err(Error::new(
+                            ErrorKind::InvalidIndex(invalid.type_of().to_owned()),
+                            (*self.0.source).clone(),
+                            index_expr.span,
+                        ));
+                    }
+                };
+                let item = base.try_index(index);
 
                 match item {
                     Ok(item) => Ok(item.clone()),
                     Err(len) => Err(Error::new(
                         ErrorKind::IndexOutOfBounds {
                             length: len,
-                            // TODO: Add span for the index itself, not the full expr
-                            index: expr.span,
+                            index: index_expr.span,
                         },
                         (*self.0.source).clone(),
                         expr.span,
