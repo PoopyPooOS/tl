@@ -1,7 +1,7 @@
 use crate::{
     Source,
     parser::{ast::types::Expr, parse},
-    runtime::types::value::ValueResult,
+    runtime::types::{NativeFn, value::ValueResult},
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
@@ -123,18 +123,25 @@ impl Scope {
         }))
     }
 
-    pub fn define(&self, key: impl Into<Value>, value: Value) {
+    pub fn define(&self, key: impl Into<Value>, value: impl Into<Value>) {
         self.0
             .local_variables
             .borrow_mut()
-            .insert(key.into().to_string(), value);
+            .insert(key.into().to_string(), value.into());
     }
 
-    pub fn define_global(&self, key: impl Into<Value>, value: Value) {
+    pub fn define_global(&self, key: impl Into<Value>, value: impl Into<Value>) {
         self.0
             .global_variables
             .borrow_mut()
-            .insert(key.into().to_string(), value);
+            .insert(key.into().to_string(), value.into());
+    }
+
+    pub fn define_builtin(&self, key: impl Into<Value>, value: NativeFn) {
+        self.0
+            .global_variables
+            .borrow_mut()
+            .insert(key.into().to_string(), Builtin(value).into());
     }
 
     /// Evaluates an AST expression.
