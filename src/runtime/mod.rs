@@ -1,7 +1,10 @@
 use crate::{
     Source,
-    parser::{ast::types::Expr, parse},
-    runtime::types::{NativeFn, value::ValueResult},
+    parser::ast::types::Expr,
+    runtime::{
+        stdlib::stdlib,
+        types::{NativeFn, value::ValueResult},
+    },
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
@@ -20,6 +23,7 @@ pub mod serde;
 mod binary_op;
 mod call;
 mod expr;
+mod stdlib;
 
 #[derive(Debug, Clone)]
 struct ScopeInner {
@@ -35,87 +39,10 @@ struct ScopeInner {
 #[derive(Debug, Clone)]
 pub struct Scope(Rc<ScopeInner>);
 
-pub fn get_global_builtins() -> HashMap<String, Value> {
-    let mut map = HashMap::new();
-
-    map.insert(
-        "if".to_owned(),
-        Value::new_builtin(ValueKind::Builtin(Builtin(Rc::new(|ctx| {
-            let args_len = 3;
-
-            let cond = ctx.get_arg(0, args_len)?;
-            let then_branch = ctx.get_arg(1, args_len)?;
-            let else_branch = ctx.get_arg(2, args_len)?;
-
-            let scope = ctx.new_scope();
-
-            let cond = scope.eval_expr(&cond)?;
-
-            if cond.is_truthy() {
-                return scope.eval_expr(&then_branch);
-            }
-
-            scope.eval_expr(&else_branch)
-        })))),
-    );
-
-    map.insert(
-        "maybe".to_owned(),
-        Value::new_builtin(ValueKind::Builtin(Builtin(Rc::new(|inputs| {
-            let cond = inputs.get_arg_evaluated(0, 2)?;
-            let then = inputs.get_arg(1, 2)?;
-
-            if cond.is_truthy() {
-                return Ok(cond);
-            }
-
-            let scope = inputs.new_scope();
-
-            scope.eval_expr(&then)
-        })))),
-    );
-
-    map.insert(
-        "dbg".to_owned(),
-        Value::new_builtin(ValueKind::Builtin(Builtin(Rc::new(|ctx| {
-            let msg = ctx.get_arg_evaluated(0, 2)?;
-
-            // TODO: Switch to `log` crate
-            println!("{msg}");
-
-            ctx.get_arg_evaluated(1, 2)
-        })))),
-    );
-
-    map.insert(
-        "import".to_owned(),
-        Value::new_builtin(ValueKind::Builtin(Builtin(Rc::new(move |ctx| {
-            let (path, path_span) = {
-                let path = ctx.ensure_is_path(ctx.get_arg_evaluated(0, 1)?)?;
-                (path.data, path.span)
-            };
-
-            let source = Source::path(path)
-                .map_err(|err| Error::new(err.into(), (*ctx.source).clone(), path_span))?;
-
-            let ast = parse(&source).map_err(|err| {
-                let span = err.span;
-                let source = err.source.clone();
-                Error::new(err.into(), source, span)
-            })?;
-
-            Scope::new(HashMap::new(), source, ast).eval()
-        })))),
-    );
-
-    map
-}
-
 impl Scope {
     pub fn new(variables: HashMap<String, Value>, source: Source, ast: Expr) -> Self {
-        let builtins = get_global_builtins();
         Self(Rc::new(ScopeInner {
-            global_variables: Rc::new(RefCell::new(builtins)),
+            global_variables: Rc::new(RefCell::new(stdlib())),
             parent: None,
             local_variables: RefCell::new(variables),
             ast: Rc::new(ast),

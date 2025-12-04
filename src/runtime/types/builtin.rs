@@ -305,3 +305,8 @@ impl Debug for Builtin {
             .finish()
     }
 }
+
+/// Shorthand to construct a builtin
+pub fn builtin(function: impl Fn(NativeFnCtx) -> ValueResult + 'static) -> Value {
+    Value::new_builtin(ValueKind::Builtin(Builtin(Rc::new(function))))
+}
