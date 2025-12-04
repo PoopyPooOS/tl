@@ -1,3 +1,4 @@
+use derive_more::PartialEq;
 use miette::Diagnostic;
 use std::{
     io,
@@ -7,7 +8,7 @@ use thiserror::Error;
 
 pub type Error = crate::Error<ErrorKind>;
 
-#[derive(Error, Diagnostic, Debug)]
+#[derive(Error, Diagnostic, Debug, PartialEq)]
 #[error("Lexer error")]
 pub enum ErrorKind {
     #[error(transparent)]
@@ -27,11 +28,9 @@ pub enum ErrorKind {
     UnexpectedToken,
 
     #[error(transparent)]
-    IO(#[from] io::Error),
-}
-
-impl PartialEq for Error {
-    fn eq(&self, other: &Self) -> bool {
-        std::mem::discriminant(&self.kind) == std::mem::discriminant(&other.kind)
-    }
+    IO(
+        #[partial_eq(skip)]
+        #[from]
+        io::Error,
+    ),
 }

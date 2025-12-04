@@ -1,10 +1,11 @@
-use crate::parser::lexer::types::token::TokenKind;
+use crate::parser::lexer::types::{error::Error as LexerError, token::TokenKind};
+use derive_more::PartialEq;
 use miette::{Diagnostic, SourceSpan};
 use thiserror::Error;
 
 pub type Error = crate::Error<ErrorKind>;
 
-#[derive(Error, Diagnostic, Debug)]
+#[derive(Error, Diagnostic, Debug, PartialEq)]
 #[error("Parser error")]
 pub enum ErrorKind {
     #[error("Missing right side of binary operation")]
@@ -53,11 +54,5 @@ pub enum ErrorKind {
     NoTokensLeft,
 
     #[error(transparent)]
-    TokenizationError(#[from] super::super::super::lexer::types::Error),
-}
-
-impl PartialEq for Error {
-    fn eq(&self, other: &Self) -> bool {
-        std::mem::discriminant(&self.kind) == std::mem::discriminant(&other.kind)
-    }
+    LexerError(#[from] LexerError),
 }

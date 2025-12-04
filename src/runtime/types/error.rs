@@ -1,11 +1,12 @@
 use crate::parser::ast::types;
+use derive_more::PartialEq;
 use miette::{Diagnostic, SourceSpan};
 use std::io;
 use thiserror::Error;
 
 pub type Error = crate::Error<ErrorKind>;
 
-#[derive(Error, Diagnostic, Debug)]
+#[derive(Error, Diagnostic, Debug, PartialEq)]
 #[error("Runtime error")]
 pub enum ErrorKind {
     #[error("This variable is not in scope")]
@@ -49,15 +50,13 @@ pub enum ErrorKind {
     ParseError(#[from] types::Error),
 
     #[error(transparent)]
-    IOError(#[from] io::Error),
+    IOError(
+        #[partial_eq(skip)]
+        #[from]
+        io::Error,
+    ),
 
     #[cfg(feature = "toml")]
     #[error(transparent)]
     TomlParsingError(#[from] toml::de::Error),
-}
-
-impl PartialEq for ErrorKind {
-    fn eq(&self, other: &Self) -> bool {
-        std::mem::discriminant(self) == std::mem::discriminant(other)
-    }
 }
