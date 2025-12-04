@@ -8,7 +8,6 @@ use crate::{
     },
     span,
 };
-use indexmap::IndexMap;
 use pretty_assertions::assert_eq;
 use std::path::PathBuf;
 
@@ -122,19 +121,19 @@ fn absolute_path() {
 fn object() {
     let input = "{ name = \"John Doe\" age = 42 }";
     let expected = literal!(
-        Object(
-            #[rustfmt::skip]
-            IndexMap::from([
-                (
-                    "name".to_owned(),
-                    Expr::new(ExprKind::Literal(Literal::String("John Doe".to_owned())), span(9, 10))
+        Object(vec![
+            (
+                Expr::ident("name", span(2, 4)),
+                Expr::new(
+                    ExprKind::Literal(Literal::String("John Doe".to_owned())),
+                    span(9, 10),
                 ),
-                (
-                    "age".to_owned(),
-                    Expr::new(ExprKind::Literal(Literal::Int(42)), span(26, 2))
-                ),
-            ])
-        ),
+            ),
+            (
+                Expr::ident("age", span(20, 3)),
+                Expr::new(ExprKind::Literal(Literal::Int(42)), span(26, 2)),
+            ),
+        ]),
         span(0, 30)
     );
     assert_eq!(parse(input).unwrap(), expected);
@@ -338,10 +337,10 @@ name"#;
     let expected = Expr::new(
         ExprKind::With {
             object: box_literal!(
-                Object(IndexMap::from([(
-                    "name".to_owned(),
-                    Expr::lit(Literal::String("John Doe".to_owned()), span(15, 10)),
-                )])),
+                Object(vec![(
+                    Expr::ident("name", span(8, 4)),
+                    Expr::lit(Literal::String("John Doe".to_owned()), span(15, 10))
+                )]),
                 span(5, 22),
             ),
             expr: Expr::boxed_ident("name", span(28, 4)),

@@ -260,6 +260,7 @@ impl Lexer {
                     let mut closed = false;
                     let mut values = Vec::new();
                     let mut buffer = String::new();
+                    let mut has_interpolation = false;
 
                     chars.next();
                     change_pos!(1);
@@ -285,6 +286,7 @@ impl Lexer {
 
                             '$' => {
                                 if chars.clone().nth(1) == Some('{') {
+                                    has_interpolation = true;
                                     if !buffer.is_empty() {
                                         values.push(Token::new(
                                             TokenKind::String(buffer.clone()),
@@ -375,7 +377,7 @@ impl Lexer {
                         ));
                     }
 
-                    if values.len() <= 1 {
+                    if !has_interpolation && values.len() <= 1 {
                         tokens.push(Token::new(
                             TokenKind::String(buffer),
                             (start, self.pos.saturating_sub(start)).into(),
@@ -479,8 +481,6 @@ impl Lexer {
 
                         // Keywords
                         "with" => push_long_token!(With),
-                        "let" => push_long_token!(Let),
-                        "in" => push_long_token!(In),
 
                         // Logic operators
                         "==" => push_long_token!(Eq),

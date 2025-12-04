@@ -36,7 +36,7 @@ impl Value {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub enum ValueKind {
     #[default]
     Null,
@@ -53,6 +53,31 @@ pub enum ValueKind {
         expr: Expr,
     },
     Builtin(Builtin),
+}
+
+impl Debug for ValueKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValueKind::Null => f.debug_tuple("Null ").finish(),
+            ValueKind::Boolean(v) => f.debug_tuple("Boolean").field(v).finish(),
+            ValueKind::Int(v) => f.debug_tuple("Int").field(v).finish(),
+            ValueKind::Float(v) => f.debug_tuple("Float").field(v).finish(),
+            ValueKind::String(v) => f.debug_tuple("String").field(v).finish(),
+            ValueKind::Path(v) => f.debug_tuple("Path").field(v).finish(),
+            ValueKind::Array(v) => f.debug_tuple("Array").field(v).finish(),
+            ValueKind::Object(v) => f.debug_tuple("Object").field(v).finish(),
+            ValueKind::Function {
+                def_scope: _,
+                arg,
+                expr,
+            } => f // Dont include `def_scope` here, otherwise it would loop forever
+                .debug_struct("Function")
+                .field("arg", arg)
+                .field("expr", expr)
+                .finish_non_exhaustive(),
+            ValueKind::Builtin(v) => f.debug_tuple("Builtin").field(v).finish(),
+        }
+    }
 }
 
 impl ValueKind {

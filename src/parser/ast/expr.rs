@@ -27,7 +27,6 @@ impl super::Parser {
 
                 Some(Expr::new(ExprKind::Not(Box::new(expr)), span))
             }
-            TokenKind::Let => Some(self.parse_let()?),
             TokenKind::With => Some(self.parse_with()?),
             _ => None,
         };

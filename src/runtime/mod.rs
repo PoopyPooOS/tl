@@ -123,18 +123,18 @@ impl Scope {
         }))
     }
 
-    pub fn define(&self, key: impl Into<Value>, value: impl Into<Value>) {
+    pub fn define(&self, key: impl Into<Value>, value: Value) {
         self.0
             .local_variables
             .borrow_mut()
-            .insert(key.into().to_string(), value.into());
+            .insert(key.into().to_string(), value);
     }
 
-    pub fn define_global(&self, key: impl Into<Value>, value: impl Into<Value>) {
+    pub fn define_global(&self, key: impl Into<Value>, value: Value) {
         self.0
             .global_variables
             .borrow_mut()
-            .insert(key.into().to_string(), value.into());
+            .insert(key.into().to_string(), value);
     }
 
     /// Evaluates an AST expression.

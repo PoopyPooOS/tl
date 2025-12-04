@@ -132,11 +132,18 @@ impl super::Parser {
                             "{".dimmed()
                         );
                         for (key, value) in v {
-                            let _ = write!(s, "{pad}  {key} {} ", "=".cyan());
+                            let _ = write!(s, "{pad}  {} {}\n", "Element".cyan(), "{".dimmed());
+                            let _ = write!(s, "{pad}    key: ");
                             s.push_str(
-                                self.pretty_print_expr(value, indent.saturating_add(1))
-                                    .trim_start(),
+                                self.pretty_print_expr(key, indent.saturating_add(2)).trim(),
                             );
+                            let _ = write!(s, "\n{pad}    value: ");
+                            s.push_str(
+                                self.pretty_print_expr(value, indent.saturating_add(2))
+                                    .trim(),
+                            );
+                            s.push('\n');
+                            let _ = write!(s, "{pad}  {}\n", "}".dimmed());
                         }
                         let _ = write!(s, "{pad}{}", "}".dimmed());
                         s
@@ -150,7 +157,7 @@ impl super::Parser {
                     out,
                     "{pad}{} {} {}\n",
                     "Identifier".bright_cyan(),
-                    format!("\"{name}\"").yellow(),
+                    name.yellow(),
                     self.pretty_print_span(expr.span).dimmed(),
                 );
             }
@@ -252,27 +259,6 @@ impl super::Parser {
                     );
                 }
             }
-            ExprKind::LetIn {
-                bindings,
-                expr: body,
-            } => {
-                let _ = writeln!(
-                    out,
-                    "{pad}{} {}",
-                    "LetIn".bright_magenta(),
-                    self.pretty_print_span(expr.span).dimmed(),
-                );
-                for (name, val) in bindings {
-                    let _ = write!(out, "{pad}  {name:?} {} ", "=".cyan());
-                    out.push_str(self.pretty_print_expr(val, indent.saturating_add(1)).trim());
-                    out.push('\n');
-                }
-                let _ = write!(out, "\n{pad}  expr: ");
-                out.push_str(
-                    self.pretty_print_expr(body, indent.saturating_add(1))
-                        .trim_start(),
-                );
-            }
             ExprKind::With { object, expr: body } => {
                 let _ = writeln!(
                     out,
@@ -280,12 +266,12 @@ impl super::Parser {
                     "With".bright_magenta(),
                     self.pretty_print_span(expr.span).dimmed(),
                 );
-                let _ = write!(out, "\n{pad}  object: ");
+                let _ = write!(out, "{pad}  object: ");
                 out.push_str(
                     self.pretty_print_expr(object, indent.saturating_add(1))
                         .trim_start(),
                 );
-                let _ = write!(out, "\n{pad}  expr: ");
+                let _ = write!(out, "{pad}  expr: ");
                 out.push_str(
                     self.pretty_print_expr(body, indent.saturating_add(1))
                         .trim_start(),
@@ -297,25 +283,6 @@ impl super::Parser {
     }
 
     fn pretty_print_span(&self, span: SourceSpan) -> String {
-        let mut line: usize = 1;
-        let mut col: usize = 1;
-        let mut byte_index = 0;
-
-        for c in self.source.inner().chars() {
-            if byte_index == span.offset().saturating_add(span.len()) {
-                break;
-            }
-
-            if c == '\n' {
-                line = line.saturating_add(1);
-                col = 1;
-            } else {
-                col = col.saturating_add(1);
-            }
-
-            byte_index = byte_index.saturating_add(c.len_utf8());
-        }
-
-        format!("{line}:{col}")
+        format!("{}:{}", span.offset(), span.len())
     }
 }

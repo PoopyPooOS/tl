@@ -41,6 +41,7 @@ impl Expr {
     pub fn as_ident(&self) -> Option<String> {
         match &self.kind {
             ExprKind::Identifier(ident) => Some(ident.clone()),
+            ExprKind::MemberAccess { field, .. } => Some(field.clone()),
             _ => None,
         }
     }
@@ -72,10 +73,6 @@ pub enum ExprKind {
     Call {
         base: Box<Expr>,
         args: Vec<Expr>,
-    },
-    LetIn {
-        bindings: Vec<(Expr, Expr)>,
-        expr: Box<Expr>,
     },
     With {
         object: Box<Expr>,

@@ -18,7 +18,6 @@ mod r#fn;
 mod ident;
 mod interpolated_path;
 mod interpolated_string;
-mod r#let;
 mod object;
 mod with;
 
@@ -32,13 +31,6 @@ pub struct Parser {
 
     // State
     pos: usize,
-    context: Context,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-enum Context {
-    TopLevel,
-    Object,
 }
 
 pub type ExprResult = Result<Expr, Error>;
@@ -50,7 +42,6 @@ impl Parser {
             source,
 
             pos: 0,
-            context: Context::TopLevel,
         }
     }
 

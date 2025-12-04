@@ -5,18 +5,6 @@ use crate::{
 use indexmap::IndexMap;
 use miette::SourceSpan;
 
-fn extract_path(expr: &Expr) -> Option<Vec<String>> {
-    match &expr.kind {
-        ExprKind::Identifier(ident) => Some(vec![ident.clone()]),
-        ExprKind::MemberAccess { base, field } => {
-            let mut path = extract_path(base)?;
-            path.push(field.clone());
-            Some(path)
-        }
-        _ => None,
-    }
-}
-
 fn create_nested_object(path: &[String], value: Value) -> Value {
     if let Some((first, rest)) = path.split_first() {
         let mut map = IndexMap::new();
@@ -81,37 +69,6 @@ impl super::Scope {
                 expr.span,
             )),
             ExprKind::Call { .. } => self.eval_call(expr),
-            ExprKind::LetIn {
-                bindings,
-                expr: body,
-            } => {
-                let child_scope = self.create_scope(*body.clone());
-
-                for (key, expr) in bindings {
-                    let value = child_scope.eval_expr(expr)?;
-                    if let Some(path) = extract_path(key) {
-                        if let Some(first) = path.first() {
-                            if path.len() == 1 {
-                                child_scope.define(first.clone(), value);
-                            } else if let Some(rest) = path.get(1..) {
-                                let obj = create_nested_object(rest, value);
-                                child_scope.define(first.clone(), obj);
-                            }
-                        }
-                    } else {
-                        return Err(Error::new(
-                            ErrorKind::MismatchedTypes {
-                                expected: "identifier or member access".to_owned(),
-                                got: format!("{:?}", key.kind),
-                            },
-                            (*self.0.source).clone(),
-                            key.span,
-                        ));
-                    }
-                }
-
-                child_scope.eval()
-            }
             ExprKind::With { object, expr: body } => {
                 let child_scope = self.create_scope(*body.clone());
 
@@ -172,14 +129,56 @@ impl super::Scope {
                 Ok(Value::new(ValueKind::Array(values), span))
             }
             Literal::Object(v) => {
-                let mut values: IndexMap<String, Value> = IndexMap::new();
+                let scope = self.create_scope(Expr::default());
+                let mut values = IndexMap::new();
 
-                for (k, expr) in v {
-                    values.insert(k.clone(), self.eval_expr(expr)?);
+                for (key, expr) in v {
+                    let value = scope.eval_expr(expr)?;
+
+                    let path = scope.extract_path(key)?;
+                    if let Some(first) = path.first() {
+                        if path.len() == 1 {
+                            scope.define(first.clone(), value.clone());
+                            values.insert(first.clone(), value);
+                        } else if let Some(rest) = path.get(1..) {
+                            let obj = create_nested_object(rest, value);
+                            scope.define(first.clone(), obj.clone());
+                            values.insert(first.clone(), obj);
+                        }
+                    }
                 }
 
                 Ok(Value::new(ValueKind::Object(values), span))
             }
+        }
+    }
+
+    pub(super) fn extract_path(&self, expr: &Expr) -> Result<Vec<String>, Error> {
+        match &expr.kind {
+            ExprKind::Identifier(ident) | ExprKind::Literal(Literal::String(ident)) => {
+                Ok(vec![ident.clone()])
+            }
+            ExprKind::Literal(Literal::InterpolatedString(v)) => {
+                let mut value = String::new();
+                for expr in v {
+                    let expr_val = self.eval_expr(expr)?;
+                    value.push_str(&expr_val.to_string());
+                }
+                Ok(vec![value])
+            }
+            ExprKind::MemberAccess { base, field } => {
+                let mut path = self.extract_path(base)?;
+                path.push(field.clone());
+                Ok(path)
+            }
+            _ => Err(Error::new(
+                ErrorKind::MismatchedTypes {
+                    expected: "identifier or member access".to_owned(),
+                    got: format!("{:?}", expr.kind),
+                },
+                (*self.0.source).clone(),
+                expr.span,
+            )),
         }
     }
 }

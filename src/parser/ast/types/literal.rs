@@ -1,5 +1,4 @@
 use crate::parser::ast::types::Expr;
-use indexmap::IndexMap;
 use std::path::PathBuf;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -13,5 +12,5 @@ pub enum Literal {
     Path(PathBuf),
     InterpolatedPath(Vec<Expr>),
     Array(Vec<Expr>),
-    Object(IndexMap<String, Expr>),
+    Object(Vec<(Expr, Expr)>),
 }

@@ -70,14 +70,14 @@ fn escaped_string() {
 
 #[test]
 fn interpolated_string() {
-    let input = r#"let
+    let input = r#"with {
     name = "John Doe"
-in
-    "Hello, my name is ${name}!"
+}
+"Hello, my name is ${name}!"
 "#;
     let expected = Value::new(
         ValueKind::String("Hello, my name is John Doe!".into()),
-        span(33, 28),
+        span(31, 28),
     );
     assert_eq!(run(input).unwrap(), expected);
 }
@@ -98,25 +98,26 @@ fn array() {
 
 #[test]
 fn array_indexing() {
-    let input = r"let
+    let input = r"with {
     numbers = [ 1 2 3 ]
-in
-    numbers[1]";
-    let expected = Value::new(ValueKind::Int(2), span(22, 1));
+}
+numbers[1]";
+    let expected = Value::new(ValueKind::Int(2), span(25, 1));
     assert_eq!(run(input).unwrap(), expected);
 
     // Out of bounds index
-    let input = r"let
+    let input = r"with {
     numbers = [ 1 2 3 ]
-in
-    numbers[3]";
+}
+numbers[3]";
     let expected = RuntimeError::new(
         RuntimeErrorKind::IndexOutOfBounds {
             length: 3,
-            index: span(35, 10),
+            // TODO: The span start here should be `41` after making the index an expr
+            index: span(33, 10),
         },
         Source::text_with_name("test", input),
-        span(35, 10),
+        span(33, 10),
     );
     assert_eq!(run_err(input), expected);
 }
@@ -125,13 +126,15 @@ in
 fn object() {
     let input = "{ name = \"John Doe\" age = 42 }";
     let expected = Value::new(
-        ValueKind::Object(IndexMap::from([
-            (
+        ValueKind::Object({
+            let mut map = IndexMap::new();
+            map.insert(
                 "name".into(),
                 Value::new(ValueKind::String("John Doe".into()), span(9, 10)),
-            ),
-            ("age".into(), Value::new(ValueKind::Int(42), span(26, 2))),
-        ])),
+            );
+            map.insert("age".into(), Value::new(ValueKind::Int(42), span(26, 2)));
+            map
+        }),
         span(0, 30),
     );
     assert_eq!(run(input).unwrap(), expected);
@@ -139,18 +142,18 @@ fn object() {
 
 #[test]
 fn field_access() {
-    let input = r#"let
+    let input = r#"with {
     package = {
         dependencies = [ "other_package" ]
     }
-in
-    package.dependencies"#;
+}
+package.dependencies"#;
     let expected = Value::new(
         ValueKind::Array(vec![Value::new(
             ValueKind::String("other_package".into()),
-            span(45, 15),
+            span(48, 15),
         )]),
-        span(43, 19),
+        span(46, 19),
     );
     assert_eq!(run(input).unwrap(), expected);
 }
@@ -171,12 +174,12 @@ fn parenthesized() {
 
 #[test]
 fn function() {
-    let input = r#"let
+    let input = r#"with {
   greet = name: "Hello, ${name}!"
-in
+}
 greet("John Doe")
 "#;
-    let expected = Value::new(ValueKind::String("Hello, John Doe!".into()), span(20, 17));
+    let expected = Value::new(ValueKind::String("Hello, John Doe!".into()), span(23, 17));
     assert_eq!(run(input).unwrap(), expected);
 }
 
@@ -189,21 +192,21 @@ fn binary_op() {
 
 #[test]
 fn bindings() {
-    let input = "let name = \"John Doe\" in name";
-    let expected = Value::new(ValueKind::String("John Doe".into()), span(11, 10));
+    let input = "with { name = \"John Doe\" } name";
+    let expected = Value::new(ValueKind::String("John Doe".into()), span(14, 10));
     assert_eq!(run(input).unwrap(), expected);
 }
 
 #[test]
 #[ignore = "Weird stack overflow bug that only happens in tests"]
 fn recursion() {
-    let input = r"let
+    let input = r"with {
   pow = base: exponent: if(
     exponent == 0,
     1,
     base * pow(base, exponent - 1)
   )
-in
+}
 pow(2, 10)";
     let expected = Value::new(ValueKind::Int(1024), span(0, 0));
     assert_eq!(run(input).unwrap(), expected);

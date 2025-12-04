@@ -33,8 +33,6 @@ pub enum TokenKind {
 
     // Keywords
     With,
-    Let,
-    In,
 
     // Logic Operators
     /// ==
@@ -132,8 +130,6 @@ impl Display for TokenKind {
 
             // Keywords
             Self::With => write!(f, "with"),
-            Self::Let => write!(f, "let"),
-            Self::In => write!(f, "in"),
 
             // Logic Operators
             Self::Eq => write!(f, "=="),

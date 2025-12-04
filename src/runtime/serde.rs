@@ -1,5 +1,5 @@
 use crate::runtime::{Value, ValueKind};
-use indexmap::{self, IndexMap};
+use indexmap::IndexMap;
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{self, Expected, IntoDeserializer, MapAccess, SeqAccess, Visitor},

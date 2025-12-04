@@ -22,10 +22,12 @@ pub enum ErrorKind {
     #[diagnostic(code(tl::parser::ast::array_index))]
     NegativeArrayIndex,
 
-    #[error("Unexpected ':' between object key-value pairs")]
-    #[diagnostic(help("Use '=' instead"))]
-    #[diagnostic(code(tl::parser::ast::colon_separator))]
-    UnexpectedColonInObjectKV,
+    #[error("Invalid expression for object key")]
+    #[diagnostic(code(tl::parser::ast::object::invalid_key))]
+    #[diagnostic(help(
+        "The only allowed expressions for an object key are identifiers, strings, interpolated strings, or member accesses (nested objects)"
+    ))]
+    InvalidObjectKey,
 
     #[error("Expected '=' after object key")]
     #[diagnostic(code(tl::parser::ast::expected_separator))]

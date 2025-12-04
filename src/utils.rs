@@ -1,4 +1,3 @@
-#[cfg(feature = "serde")]
 use crate::{
     Source,
     parser::parse,
