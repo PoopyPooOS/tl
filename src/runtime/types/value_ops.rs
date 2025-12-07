@@ -251,6 +251,7 @@ impl PartialEq for Value {
             (ValueKind::String(lhs), ValueKind::String(rhs)) => lhs == rhs,
             (ValueKind::Array(lhs), ValueKind::Array(rhs)) => lhs == rhs,
             (ValueKind::Object(lhs), ValueKind::Object(rhs)) => lhs == rhs,
+            (ValueKind::Thunk { expr: lhs, .. }, ValueKind::Thunk { expr: rhs, .. }) => lhs == rhs,
             _ => false,
         }
     }

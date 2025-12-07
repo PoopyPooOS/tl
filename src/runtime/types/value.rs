@@ -53,6 +53,10 @@ pub enum ValueKind {
         expr: Expr,
     },
     Builtin(Builtin),
+    Thunk {
+        def_scope: Box<Scope>,
+        expr: Expr,
+    },
 }
 
 impl Debug for ValueKind {
@@ -76,6 +80,10 @@ impl Debug for ValueKind {
                 .field("expr", expr)
                 .finish_non_exhaustive(),
             ValueKind::Builtin(v) => f.debug_tuple("Builtin").field(v).finish(),
+            ValueKind::Thunk { expr, .. } => f
+                .debug_struct("Thunk")
+                .field("expr", expr)
+                .finish_non_exhaustive(),
         }
     }
 }
@@ -93,6 +101,7 @@ impl ValueKind {
             ValueKind::Object(_) => "object",
             ValueKind::Function { .. } => "function",
             ValueKind::Builtin(..) => "builtin",
+            ValueKind::Thunk { .. } => "thunk",
         }
     }
 
@@ -105,7 +114,10 @@ impl ValueKind {
             ValueKind::Path(p) => !p.exists(),
             ValueKind::Array(arr) => !arr.is_empty(),
             ValueKind::Object(map) => !map.is_empty(),
-            ValueKind::Function { .. } | ValueKind::Builtin(..) | ValueKind::Null => false,
+            ValueKind::Function { .. }
+            | ValueKind::Builtin(..)
+            | ValueKind::Thunk { .. }
+            | ValueKind::Null => false,
         }
     }
 
@@ -119,6 +131,22 @@ impl ValueKind {
 
     pub fn or(&self, rhs: &Value) -> bool {
         self.is_truthy() || rhs.is_truthy()
+    }
+
+    /// Helper function to create thunks with an empty scope as they don't get accounted for in the `PartialEq` impl.
+    #[cfg(test)]
+    pub fn thunk(expr: Expr) -> Self {
+        use crate::Source;
+        use std::collections::HashMap;
+
+        Self::Thunk {
+            def_scope: Box::new(Scope::new(
+                HashMap::new(),
+                Source::text(""),
+                Expr::default(),
+            )),
+            expr,
+        }
     }
 }
 
@@ -179,17 +207,20 @@ impl Display for Value {
             ValueKind::Path(v) => f.write_str(&v.display().to_string()),
             ValueKind::Array(v) => {
                 let formatted = v.iter().map(ToString::to_string).collect::<Vec<_>>();
-                f.write_str(&format!("[ {} ]", formatted.join(" ")))
+                f.write_str("{\n  ")?;
+                f.write_str(&format!("{}\n]", formatted.join("\n  ")))
             }
             ValueKind::Object(v) => {
                 let formatted = v
                     .iter()
                     .map(|(k, v)| format!("{k} = {v}"))
                     .collect::<Vec<_>>();
-                f.write_str(&format!("{{ {} }}", formatted.join("; ")))
+                f.write_str("{\n  ")?;
+                f.write_str(&format!("{}\n}}", formatted.join("\n  ")))
             }
             ValueKind::Function { .. } => f.write_str("function"),
             ValueKind::Builtin { .. } => f.write_str("builtin"),
+            ValueKind::Thunk { .. } => f.write_str("<thunk>"),
         }
     }
 }

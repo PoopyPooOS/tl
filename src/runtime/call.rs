@@ -5,7 +5,7 @@ use crate::{
         types::{NativeFnCtx, ValueResult},
     },
 };
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 impl super::Scope {
     pub(super) fn eval_call(&self, expr: &Expr) -> ValueResult {
@@ -19,14 +19,14 @@ impl super::Scope {
         let mut variables: HashMap<String, Value> = HashMap::new();
 
         for arg_expr in args {
-            let arg_value = self.eval_expr(arg_expr)?;
-
             function = match function.kind {
                 ValueKind::Function {
                     ref def_scope,
                     arg: ref param,
                     expr: ref body,
                 } => {
+                    let arg_value = self.eval_expr(arg_expr)?;
+
                     variables.insert(param.to_owned(), arg_value.clone());
 
                     variables.extend(def_scope.0.local_variables.borrow().clone());
@@ -40,10 +40,8 @@ impl super::Scope {
                 }
                 ValueKind::Builtin(Builtin(builtin)) => {
                     let ctx = NativeFnCtx {
+                        call_site: self.clone(),
                         expr: expr.clone(),
-                        variables: self.0.local_variables.borrow().clone(),
-                        source: self.0.source.clone(),
-                        global: Rc::clone(&self.0.global_variables),
                     };
 
                     return builtin(ctx);

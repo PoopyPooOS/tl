@@ -27,7 +27,7 @@ impl super::Scope {
                 let value = self.eval_expr(inner_expr)?;
                 Ok(Value::new(value.kind, expr.span))
             }
-            ExprKind::Identifier(ident) => Ok(self.fetch_var(ident).ok_or(Error::new(
+            ExprKind::Identifier(ident) => self.force(self.fetch_var(ident).ok_or(Error::new(
                 ErrorKind::VariableNotInScope {
                     variable: expr.span,
                 },
@@ -52,7 +52,7 @@ impl super::Scope {
                 let item = base.try_index(index);
 
                 match item {
-                    Ok(item) => Ok(item.clone()),
+                    Ok(item) => self.force(item.clone()),
                     Err(len) => Err(Error::new(
                         ErrorKind::IndexOutOfBounds {
                             length: len,
@@ -65,7 +65,7 @@ impl super::Scope {
             }
             ExprKind::MemberAccess { base, field } => {
                 let base = self.eval_expr(base)?;
-                Ok(base.access(field))
+                self.force(base.access(field))
             }
             ExprKind::BinaryOp {
                 left,

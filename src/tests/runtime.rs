@@ -2,14 +2,17 @@
 
 use crate::{
     Source,
-    parser::parse,
+    parser::{
+        ast::types::{Expr, ExprKind, Literal},
+        parse,
+    },
     runtime::{
         Scope, ValueKind,
         types::{Error as RuntimeError, ErrorKind as RuntimeErrorKind, Value},
     },
     span,
 };
-use indexmap::IndexMap;
+use indexmap::{IndexMap, indexmap};
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 
@@ -208,5 +211,39 @@ fn recursion() {
 }
 pow(2, 10)";
     let expected = Value::new(ValueKind::Int(1024), span(0, 0));
+    assert_eq!(run(input).unwrap(), expected);
+}
+
+#[test]
+fn lazy_eval() {
+    let input = r#"with {
+  pkgs = {
+    foo = lazy(dbg("lazy value printed", "bar"))
+    bar = "baz"
+  }
+}
+pkgs"#;
+    let expected = Value::new(
+        ValueKind::Object(indexmap! {
+            "foo".to_owned() => Value::new(
+                ValueKind::thunk(Expr::new(
+                    ExprKind::Call {
+                        base: Expr::boxed_ident("dbg", span(33, 3)),
+                        args: vec![
+                            Expr::lit(
+                                Literal::String("lazy value printed".to_owned()),
+                                span(37, 20),
+                            ),
+                            Expr::lit(Literal::String("bar".to_owned()), span(59, 5)),
+                        ],
+                    },
+                    span(33, 32),
+                )),
+                span(28, 38),
+            ),
+            "bar".to_owned() => Value::new(ValueKind::String("baz".to_owned()), span(77, 5))
+        }),
+        span(16, 70),
+    );
     assert_eq!(run(input).unwrap(), expected);
 }

@@ -103,4 +103,11 @@ impl Scope {
             source: Rc::clone(&self.0.source),
         }))
     }
+
+    pub fn force(&self, value: Value) -> ValueResult {
+        match value.kind {
+            ValueKind::Thunk { def_scope, expr } => def_scope.eval_expr(&expr),
+            _ => Ok(value),
+        }
+    }
 }

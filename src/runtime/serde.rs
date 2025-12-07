@@ -41,6 +41,7 @@ impl<'de> Deserializer<'de> for Value {
                 Err(de::Error::custom("Functions cannot be deserialized"))
             }
             ValueKind::Builtin(..) => Err(de::Error::custom("Builtins cannot be deserialized")),
+            ValueKind::Thunk { .. } => Err(de::Error::custom("Thunks cannot be deserialized")),
         }
     }
 
@@ -136,9 +137,10 @@ impl Serialize for Value {
             ValueKind::Path(v) => serializer.serialize_str(&v.display().to_string()),
             ValueKind::Array(v) => v.serialize(serializer),
             ValueKind::Object(v) => v.serialize(serializer),
-            ValueKind::Null | ValueKind::Function { .. } | ValueKind::Builtin(..) => {
-                serializer.serialize_unit()
-            }
+            ValueKind::Null
+            | ValueKind::Function { .. }
+            | ValueKind::Builtin(..)
+            | ValueKind::Thunk { .. } => serializer.serialize_unit(),
         }
     }
 }

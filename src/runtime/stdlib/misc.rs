@@ -26,8 +26,9 @@ pub(super) fn misc(map: &mut HashMap<String, Value>) {
                 (path.data, path.span)
             };
 
-            let source = Source::path(path)
-                .map_err(|err| Error::new(err.into(), (*ctx.source).clone(), path_span))?;
+            let source = Source::path(path).map_err(|err| {
+                Error::new(err.into(), (*ctx.call_site.0.source).clone(), path_span)
+            })?;
 
             let ast = parse(&source).map_err(|err| {
                 let span = err.span;
