@@ -50,6 +50,14 @@ pub enum ErrorKind {
     #[diagnostic(code(tl::runtime::expr))]
     MismatchedTypes { expected: String, got: String },
 
+    #[error("Error loading runtime extension")]
+    #[diagnostic(code(tl::runtime::extension))]
+    RuntimeExtError(
+        #[partial_eq(skip)]
+        #[from]
+        libloading::Error,
+    ),
+
     #[error(transparent)]
     ParseError(#[from] types::Error),
 
@@ -59,8 +67,4 @@ pub enum ErrorKind {
         #[from]
         io::Error,
     ),
-
-    #[cfg(feature = "toml")]
-    #[error(transparent)]
-    TomlParsingError(#[from] toml::de::Error),
 }

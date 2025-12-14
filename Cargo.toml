@@ -8,18 +8,18 @@ default = ["serde", "fs"]
 fs = []
 
 serde = ["dep:serde"]
-toml = ["serde", "dep:toml"]
 
 [dependencies]
 tl-macro.path = "./tl-macro"
 
 serde = { workspace = true, optional = true }
-toml = { workspace = true, optional = true }
 indexmap = { version = "2.0", features = ["serde"] }
 
 miette.workspace = true
 thiserror.workspace = true
 derive_more = { version = "2.1.0", features = ["eq"] }
+
+libloading = "0.9"
 
 colored.workspace = true
 

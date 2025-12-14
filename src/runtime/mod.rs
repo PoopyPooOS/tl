@@ -19,6 +19,8 @@ pub mod types;
 #[cfg(feature = "serde")]
 pub mod serde;
 
+pub mod extension;
+
 // Runtime Implementations
 mod binary_op;
 mod call;
@@ -26,7 +28,7 @@ mod expr;
 mod stdlib;
 
 #[derive(Debug, Clone)]
-struct ScopeInner {
+pub struct ScopeInner {
     global_variables: Rc<RefCell<HashMap<String, Value>>>,
     local_variables: RefCell<HashMap<String, Value>>,
 
@@ -37,7 +39,7 @@ struct ScopeInner {
 }
 
 #[derive(Debug, Clone)]
-pub struct Scope(Rc<ScopeInner>);
+pub struct Scope(pub Rc<ScopeInner>);
 
 impl Scope {
     pub fn new(variables: HashMap<String, Value>, source: Source, ast: Expr) -> Self {
