@@ -42,4 +42,25 @@ pub(super) fn lists(map: &mut HashMap<String, Value>) {
             Ok(Value::new(ValueKind::Boolean(false), ctx.expr.span))
         }),
     );
+
+    map.insert(
+        "all".to_owned(),
+        builtin(|ctx| {
+            let args_len = 2;
+            let list = ctx.ensure_is_array(ctx.get_arg_evaluated(0, args_len)?)?;
+            let callback = ctx.ensure_is_function(ctx.get_arg_evaluated(1, args_len)?)?;
+            let (_, arg, expr) = callback.data;
+
+            for item in &list.data {
+                let scope = ctx.call_site.create_scope(expr.clone());
+                scope.define(arg.clone(), item.clone());
+                let res = scope.eval()?;
+                if !res.is_truthy() {
+                    return Ok(Value::new(ValueKind::Boolean(false), ctx.expr.span));
+                }
+            }
+
+            Ok(Value::new(ValueKind::Boolean(true), ctx.expr.span))
+        }),
+    );
 }
