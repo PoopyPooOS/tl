@@ -9,7 +9,7 @@ Basic literals like numbers, strings, booleans are the same as in every other la
 <br>
 Paths use either a `./`, `../` or `/` prefix and end when a whitespace character other than space is met.
 <br>
-Objects use an equals sign to seperate the key and value:
+Objects use an equals sign to separate the key and value:
 ```tl
 {
   key = value

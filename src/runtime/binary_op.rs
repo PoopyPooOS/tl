@@ -16,7 +16,7 @@ impl super::Scope {
 
         #[allow(
             clippy::arithmetic_side_effects,
-            reason = "Arthimetic operation implementations for `Value` uses saturating ops where it can."
+            reason = "Arithmetic operation implementations for `Value` uses saturating ops where it can."
         )]
         Ok(match operator {
             BinaryOperator::Plus => lhs + rhs,
