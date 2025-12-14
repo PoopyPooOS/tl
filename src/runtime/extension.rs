@@ -1,7 +1,8 @@
 #![allow(non_camel_case_types)]
 
 use crate::runtime::{Error, Scope, Value};
-use std::mem::ManuallyDrop;
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fs::File, mem::ManuallyDrop, path::PathBuf};
 
 pub type tl_ext_name = unsafe extern "C" fn() -> *const std::ffi::c_char;
 pub type tl_ext_init = unsafe extern "C" fn(scope: *mut Scope) -> FFIResult<Value, Error>;
@@ -34,6 +35,23 @@ macro_rules! extension {
             FFIResult::from(init(scope))
         }
     };
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Registry(pub HashMap<String, RegistryEntry>);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegistryEntry {
+    pub path: PathBuf,
+}
+
+impl Registry {
+    pub fn read() -> Option<Self> {
+        let registry_path = PathBuf::from(std::env::var("TL_REGISTRY").ok()?);
+        let file = File::open(registry_path).ok()?;
+
+        serde_json::from_reader(file).ok()
+    }
 }
 
 /// Value that can be converted to and from `Result` to send rust values over the C ABI

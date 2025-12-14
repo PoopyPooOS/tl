@@ -2,6 +2,7 @@ use crate::{
     Source,
     parser::ast::types::Expr,
     runtime::{
+        extension::Registry,
         stdlib::stdlib,
         types::{NativeFn, value::ValueResult},
     },
@@ -16,7 +17,6 @@ pub use crate::runtime::types::{
 
 pub mod types;
 
-#[cfg(feature = "serde")]
 pub mod serde;
 
 pub mod extension;
@@ -43,8 +43,24 @@ pub struct Scope(pub Rc<ScopeInner>);
 
 impl Scope {
     pub fn new(variables: HashMap<String, Value>, source: Source, ast: Expr) -> Self {
+        let mut global_variables = stdlib();
+
+        let registry = Registry::read();
+
+        if let Some(Registry(registry)) = registry {
+            let extensions = registry
+                .into_iter()
+                .map(|(name, entry)| (name, Value::new_builtin(ValueKind::Path(entry.path))))
+                .collect();
+
+            global_variables.insert(
+                "ext".to_owned(),
+                Value::new_builtin(ValueKind::Object(extensions)),
+            );
+        }
+
         Self(Rc::new(ScopeInner {
-            global_variables: Rc::new(RefCell::new(stdlib())),
+            global_variables: Rc::new(RefCell::new(global_variables)),
             parent: None,
             local_variables: RefCell::new(variables),
             ast: Rc::new(ast),

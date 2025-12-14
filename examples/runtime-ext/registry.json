@@ -1,0 +1,6 @@
+{
+  "_comment": "Example extension registry for this runtime extension",
+  "greet": {
+    "path": "/path/to/target/release/libtl_runtime_ext_example.so"
+  }
+}

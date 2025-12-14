@@ -9,7 +9,6 @@ use std::collections::HashMap;
 /// Evaluate a source script and return the result as a deserialized value.
 /// # Errors
 /// This function will return an error if either an evaluation error occurs or a deserialization error occurs.
-#[cfg(feature = "serde")]
 pub fn eval<T>(source: Source, scope_setup: impl Fn(&Scope)) -> Result<T, Report>
 where
     T: for<'de> serde::Deserialize<'de>,
@@ -32,21 +31,7 @@ where
 /// Evaluate a source script.
 /// # Errors
 /// This function will return an error if either an evaluation error occurs.
-#[cfg(feature = "serde")]
 pub fn eval_untyped(source: Source, scope_setup: impl Fn(&Scope)) -> Result<Value, Report> {
-    let ast = parse(&source)?;
-    let scope = Scope::new(HashMap::new(), source, ast);
-
-    scope_setup(&scope);
-
-    Ok(scope.eval()?)
-}
-
-/// Evaluate a source script.
-/// # Errors
-/// This function will return an error if either an evaluation error occurs.
-#[cfg(not(feature = "serde"))]
-pub fn eval(source: Source, scope_setup: impl Fn(&Scope)) -> Result<Value, Report> {
     let ast = parse(&source)?;
     let scope = Scope::new(HashMap::new(), source, ast);
 
