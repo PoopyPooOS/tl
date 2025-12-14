@@ -207,7 +207,7 @@ impl Display for Value {
             ValueKind::Path(v) => f.write_str(&v.display().to_string()),
             ValueKind::Array(v) => {
                 let formatted = v.iter().map(ToString::to_string).collect::<Vec<_>>();
-                f.write_str("{\n  ")?;
+                f.write_str("[\n  ")?;
                 f.write_str(&format!("{}\n]", formatted.join("\n  ")))
             }
             ValueKind::Object(v) => {
