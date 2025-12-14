@@ -17,4 +17,4 @@ macro_rules! def_stdlib {
     };
 }
 
-def_stdlib!(conditionals, lazy, import, misc);
+def_stdlib!(conditionals, lists, lazy, import, misc);
