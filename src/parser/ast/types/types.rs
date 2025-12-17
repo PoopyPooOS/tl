@@ -30,9 +30,8 @@ pub enum Type {
     #[display("thunk<{_0}>")]
     Thunk(Box<Type>),
 
-    // TODO: Proper display impl for `Expr`
-    #[display("{:#?}", _0)]
     /// User-defined types
+    #[display("{}", _0.to_string().trim())]
     Runtime(Expr),
 }
 
