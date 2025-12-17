@@ -1,13 +1,12 @@
-use crate::parser::ast::types::Expr;
+use crate::parser::ast::{pretty_print::pretty_print_type, types::Expr};
 use derive_more::Display;
+use std::fmt::{self, Display};
 
-#[derive(Debug, Clone, PartialEq, Default, Display)]
-#[display(rename_all = "lowercase")]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum Type {
     #[default]
     Any,
     Nothing,
-    #[display("bool")]
     Boolean,
 
     Int,
@@ -19,20 +18,21 @@ pub enum Type {
     String,
     Path,
 
-    #[display("list<{_0}>")]
     List(Box<Type>),
-    #[display("object<{}>", _0.iter().map(|(name, ty)| format!("{name}: {ty}")).collect::<Vec<String>>().join(", "))]
     Object(Box<[(String, Type)]>),
-    #[display("either<{}>", _0.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "))]
     Either(Box<[Type]>),
 
     Function,
-    #[display("thunk<{_0}>")]
     Thunk(Box<Type>),
 
     /// User-defined types
-    #[display("{}", _0.to_string().trim())]
     Runtime(Expr),
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&pretty_print_type(self, 0)?)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Display)]

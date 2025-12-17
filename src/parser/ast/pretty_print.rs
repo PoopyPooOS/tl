@@ -9,7 +9,7 @@ impl Display for Expr {
     }
 }
 
-fn pretty_print_expr(expr: &Expr, indent: usize) -> Result<String, fmt::Error> {
+pub(crate) fn pretty_print_expr(expr: &Expr, indent: usize) -> Result<String, fmt::Error> {
     let pad = "  ".repeat(indent);
     let mut out = String::new();
 
@@ -83,10 +83,11 @@ fn pretty_print_expr(expr: &Expr, indent: usize) -> Result<String, fmt::Error> {
             Literal::InterpolatedString(v) => {
                 writeln!(
                     out,
-                    "{}{} {}",
+                    "{}{} {} {}",
                     pad,
                     "InterpolatedString".bright_blue(),
                     pretty_print_span(expr.span),
+                    "[".dimmed()
                 )?;
 
                 for item in v {
@@ -96,6 +97,8 @@ fn pretty_print_expr(expr: &Expr, indent: usize) -> Result<String, fmt::Error> {
                         &pretty_print_expr(item, indent.saturating_add(1))?.trim()
                     )?;
                 }
+
+                writeln!(out, "{pad}{}", "]".dimmed())?;
             }
             Literal::Path(v) => writeln!(
                 out,
@@ -188,9 +191,10 @@ fn pretty_print_expr(expr: &Expr, indent: usize) -> Result<String, fmt::Error> {
         } => {
             writeln!(
                 out,
-                "{pad}{} {}",
+                "{pad}{} {} {}",
                 "BinaryOp".bright_blue(),
                 pretty_print_span(expr.span),
+                "{".dimmed(),
             )?;
 
             writeln!(
@@ -208,6 +212,8 @@ fn pretty_print_expr(expr: &Expr, indent: usize) -> Result<String, fmt::Error> {
                 "{pad}  right: {}",
                 pretty_print_expr(right, indent.saturating_add(1))?.trim()
             )?;
+
+            writeln!(out, "{pad}{}", "}".dimmed())?;
         }
         ExprKind::ArrayIndex { base, index } => {
             writeln!(
@@ -257,21 +263,15 @@ fn pretty_print_expr(expr: &Expr, indent: usize) -> Result<String, fmt::Error> {
                     out,
                     "{pad}  arg: {}: {}",
                     arg.name.magenta(),
-                    arg.ty.to_string().yellow(),
+                    pretty_print_type(&arg.ty, indent.saturating_add(1))?
                 )?;
             }
 
-            let returns = match &**ret_ty {
-                Type::Runtime(expr) => format!(
-                    "{}{}{}{}",
-                    "Type".yellow(),
-                    "(".dimmed(),
-                    pretty_print_expr(expr, indent.saturating_add(1))?.trim(),
-                    ")".dimmed()
-                ),
-                _ => ret_ty.to_string().yellow().to_string(),
-            };
-            writeln!(out, "{pad}  returns: {returns}")?;
+            writeln!(
+                out,
+                "{pad}  returns: {}\n",
+                pretty_print_type(ret_ty, indent)?
+            )?;
             writeln!(
                 out,
                 "{pad}  expr: {}",
@@ -310,7 +310,7 @@ fn pretty_print_expr(expr: &Expr, indent: usize) -> Result<String, fmt::Error> {
             )?;
             writeln!(
                 out,
-                "{pad}  object: {}",
+                "{pad}  object: {}\n",
                 pretty_print_expr(object, indent.saturating_add(1))?.trim()
             )?;
             writeln!(
@@ -324,6 +324,73 @@ fn pretty_print_expr(expr: &Expr, indent: usize) -> Result<String, fmt::Error> {
     Ok(out)
 }
 
-fn pretty_print_span(span: SourceSpan) -> ColoredString {
+pub(crate) fn pretty_print_type(ty: &Type, indent: usize) -> Result<String, fmt::Error> {
+    Ok(match ty {
+        Type::Any => "any".yellow().to_string(),
+        Type::Nothing => "nothing".yellow().to_string(),
+        Type::Boolean => "bool".yellow().to_string(),
+        Type::Int => "int".yellow().to_string(),
+        Type::UInt => "uint".yellow().to_string(),
+        Type::Float => "float".yellow().to_string(),
+        Type::Number => "number".yellow().to_string(),
+        Type::String => "string".yellow().to_string(),
+        Type::Path => "path".yellow().to_string(),
+        Type::List(ty) => format!(
+            "{}{}{}{}",
+            "list".yellow(),
+            "<".dimmed(),
+            pretty_print_type(ty, indent.saturating_add(1))?.trim(),
+            ">".dimmed()
+        ),
+        Type::Object(items) => format!(
+            "{}{}{}{}",
+            "object".yellow(),
+            "<".dimmed(),
+            items
+                .iter()
+                .map(|(name, ty)| -> Result<String, fmt::Error> {
+                    Ok(format!(
+                        "{name}: {}",
+                        pretty_print_type(ty, indent.saturating_add(1))?.trim()
+                    ))
+                })
+                .try_collect::<Vec<String>>()?
+                .join(", "),
+            ">".dimmed()
+        ),
+        Type::Either(items) => format!(
+            "{}{}{}{}",
+            "either".yellow(),
+            "<".dimmed(),
+            items
+                .iter()
+                .map(|ty| -> Result<String, fmt::Error> {
+                    Ok(pretty_print_type(ty, indent.saturating_add(1))?
+                        .trim()
+                        .to_owned())
+                })
+                .try_collect::<Vec<String>>()?
+                .join(", "),
+            ">".dimmed()
+        ),
+        Type::Function => "function".yellow().to_string(),
+        Type::Thunk(ty) => format!(
+            "{}{}{}{}",
+            "thunk".yellow(),
+            "<".dimmed(),
+            pretty_print_type(ty, indent.saturating_add(1))?.trim(),
+            ">".dimmed()
+        ),
+        Type::Runtime(expr) => format!(
+            "{}{}{}{}",
+            "runtime".yellow(),
+            "<".dimmed(),
+            pretty_print_expr(expr, indent.saturating_add(1))?.trim(),
+            ">".dimmed()
+        ),
+    })
+}
+
+pub(crate) fn pretty_print_span(span: SourceSpan) -> ColoredString {
     format!("{}:{}", span.offset(), span.len()).dimmed()
 }
