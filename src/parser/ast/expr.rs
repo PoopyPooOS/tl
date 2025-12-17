@@ -38,7 +38,9 @@ impl super::Parser {
         let expr = self.parse_primary()?;
         let expr = self.parse_expr_suffixes(expr)?;
 
-        if check!(0, t if t.is_binary_operator() && self.context != Context::Type) {
+        // TODO: Maybe there's a better way to tell when to stop parsing here? This doesn't allow for `>` to be used in a binary op for inline type sigs
+        if check!(0, t if t.is_binary_operator() && !(*t == TokenKind::Gt && self.context == Context::Type))
+        {
             return self.parse_binary_op_with_left(0, expr);
         }
 

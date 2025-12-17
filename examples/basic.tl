@@ -1,4 +1,4 @@
 with {
-  greet = |name: string|: test "Hello, ${name}!"
+  greet = |name: string|: string "Hello, ${name}!"
 }
 greet("world")
