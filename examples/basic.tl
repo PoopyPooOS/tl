@@ -1,4 +1,4 @@
 with {
-  greet = |name: string|: list<foobar> "Hello, ${name}!"
+  greet = |name: string|: test "Hello, ${name}!"
 }
 greet("world")

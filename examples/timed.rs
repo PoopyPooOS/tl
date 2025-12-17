@@ -18,9 +18,8 @@ fn main() -> miette::Result<()> {
     let tokens = lexer.tokenize()?;
     let tokenization_time = now.elapsed();
     let now = Instant::now();
-    let mut parser = ast::Parser::new(tokens, source.clone());
-    let ast = parser.parse()?;
-    println!("{}", parser.pretty_print_ast(&ast));
+    let ast = ast::Parser::new(tokens, source.clone()).parse()?;
+    println!("{ast}");
     let ast_gen_time = now.elapsed();
 
     // Evaluate
