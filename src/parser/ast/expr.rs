@@ -2,7 +2,7 @@ use crate::{
     merge_spans,
     parser::{
         ast::{
-            ExprResult,
+            Context, ExprResult,
             types::{Error, ErrorKind, Expr, ExprKind, Literal},
         },
         lexer::types::TokenKind,
@@ -38,7 +38,7 @@ impl super::Parser {
         let expr = self.parse_primary()?;
         let expr = self.parse_expr_suffixes(expr)?;
 
-        if check!(0, t if t.is_binary_operator()) {
+        if check!(0, t if t.is_binary_operator() && self.context != Context::Type) {
             return self.parse_binary_op_with_left(0, expr);
         }
 
@@ -69,6 +69,12 @@ impl super::Parser {
             TokenKind::Float(v) => literal!(Float(*v)),
             TokenKind::Bool(v) => literal!(Bool(*v)),
             TokenKind::Identifier(_) => self.parse_ident()?,
+            TokenKind::Pipe
+                if check!(1, TokenKind::Identifier(_))
+                    && check!(2, TokenKind::Comma | TokenKind::Colon | TokenKind::Pipe) =>
+            {
+                self.parse_fn_decl()?
+            }
             TokenKind::LBrace => self.parse_object()?,
             TokenKind::LBracket => self.parse_array()?,
             TokenKind::LParen => {

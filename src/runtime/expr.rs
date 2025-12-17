@@ -72,10 +72,15 @@ impl super::Scope {
                 operator,
                 right,
             } => Ok(self.eval_binary_op(left, operator, right)?),
-            ExprKind::FnDecl { arg, expr: body } => Ok(Value::new(
+            ExprKind::Function {
+                args,
+                ret_ty,
+                expr: body,
+            } => Ok(Value::new(
                 ValueKind::Function {
                     def_scope: Box::new(Scope(self.0.clone())),
-                    arg: arg.clone(),
+                    args: args.clone(),
+                    ret_ty: *ret_ty.clone(),
                     expr: *body.clone(),
                 },
                 expr.span,

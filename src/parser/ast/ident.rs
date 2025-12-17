@@ -1,24 +1,25 @@
 use crate::parser::{
-    ast::{ExprResult, types::Expr},
+    ast::{
+        ExprResult,
+        types::{Error, Expr},
+    },
     lexer::types::TokenKind,
 };
-use tl_macro::{change_pos, check, consume};
+use miette::SourceSpan;
+use tl_macro::consume;
 
 impl super::Parser {
     pub(super) fn parse_ident(&mut self) -> ExprResult {
+        let ident = self.parse_ident_plain()?;
+        Ok(Expr::ident(ident.0, ident.1))
+    }
+
+    pub(super) fn parse_ident_plain(&mut self) -> Result<(String, SourceSpan), Error> {
         let token = consume!("identifier", TokenKind::Identifier(_))?.clone();
 
-        let expr = match &token.kind {
-            TokenKind::Identifier(_) if check!(0, TokenKind::Colon) => {
-                // The current identifier would be the function's argument,
-                // so we have to go back so that `parse_fn_decl` can parse the identifier as the function argument.
-                change_pos!(-1);
-                self.parse_fn_decl()?
-            }
-            TokenKind::Identifier(name) => Expr::ident(name.clone(), token.span),
+        match &token.kind {
+            TokenKind::Identifier(name) => Ok((name.clone(), token.span)),
             _ => unreachable!(),
-        };
-
-        Ok(expr)
+        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::parser::ast::types::{BinaryOperator, Literal};
+use crate::parser::ast::types::{BinaryOperator, FnArg, Literal, Type};
 use miette::SourceSpan;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -66,8 +66,9 @@ pub enum ExprKind {
         base: Box<Expr>,
         field: String,
     },
-    FnDecl {
-        arg: String,
+    Function {
+        args: Vec<FnArg>,
+        ret_ty: Box<Type>,
         expr: Box<Expr>,
     },
     Call {

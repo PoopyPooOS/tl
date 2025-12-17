@@ -8,13 +8,18 @@ pub(super) fn lists(map: &mut HashMap<String, Value>) {
             let args_len = 2;
             let list = ctx.ensure_is_array(ctx.get_arg_evaluated(0, args_len)?)?;
             let callback = ctx.ensure_is_function(ctx.get_arg_evaluated(1, args_len)?)?;
-            let (_, arg, expr) = callback.data;
+            let (_, args, expr) = callback.data;
 
             let mut result = Vec::new();
 
             for item in &list.data {
                 let scope = ctx.call_site.create_scope(expr.clone());
-                scope.define(arg.clone(), item.clone());
+
+                for arg in &args {
+                    // TODO: Type check this
+                    scope.define(arg.clone().name, item.clone());
+                }
+
                 result.push(scope.eval()?);
             }
 
@@ -28,11 +33,15 @@ pub(super) fn lists(map: &mut HashMap<String, Value>) {
             let args_len = 2;
             let list = ctx.ensure_is_array(ctx.get_arg_evaluated(0, args_len)?)?;
             let callback = ctx.ensure_is_function(ctx.get_arg_evaluated(1, args_len)?)?;
-            let (_, arg, expr) = callback.data;
+            let (_, args, expr) = callback.data;
 
             for item in &list.data {
                 let scope = ctx.call_site.create_scope(expr.clone());
-                scope.define(arg.clone(), item.clone());
+                for arg in &args {
+                    // TODO: Type check this
+                    scope.define(arg.clone().name, item.clone());
+                }
+
                 let res = scope.eval()?;
                 if res.is_truthy() {
                     return Ok(Value::new(ValueKind::Boolean(true), ctx.expr.span));
@@ -49,11 +58,15 @@ pub(super) fn lists(map: &mut HashMap<String, Value>) {
             let args_len = 2;
             let list = ctx.ensure_is_array(ctx.get_arg_evaluated(0, args_len)?)?;
             let callback = ctx.ensure_is_function(ctx.get_arg_evaluated(1, args_len)?)?;
-            let (_, arg, expr) = callback.data;
+            let (_, args, expr) = callback.data;
 
             for item in &list.data {
                 let scope = ctx.call_site.create_scope(expr.clone());
-                scope.define(arg.clone(), item.clone());
+                for arg in &args {
+                    // TODO: Type check this
+                    scope.define(arg.clone().name, item.clone());
+                }
+
                 let res = scope.eval()?;
                 if !res.is_truthy() {
                     return Ok(Value::new(ValueKind::Boolean(false), ctx.expr.span));
@@ -70,13 +83,16 @@ pub(super) fn lists(map: &mut HashMap<String, Value>) {
             let args_len = 2;
             let list = ctx.ensure_is_array(ctx.get_arg_evaluated(0, args_len)?)?;
             let callback = ctx.ensure_is_function(ctx.get_arg_evaluated(1, args_len)?)?;
-            let (_, arg, expr) = callback.data;
+            let (_, args, expr) = callback.data;
 
             let mut new_list = Vec::with_capacity(list.data.len());
 
             for item in &list.data {
                 let scope = ctx.call_site.create_scope(expr.clone());
-                scope.define(arg.clone(), item.clone());
+                for arg in &args {
+                    // TODO: Type check this
+                    scope.define(arg.clone().name, item.clone());
+                }
 
                 let res = scope.eval()?;
                 if res.is_truthy() {

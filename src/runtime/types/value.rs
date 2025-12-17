@@ -1,7 +1,7 @@
 #![allow(clippy::arithmetic_side_effects, clippy::float_arithmetic)]
 
 use crate::{
-    parser::ast::types::expr::Expr,
+    parser::ast::types::{FnArg, Type, expr::Expr},
     runtime::{Builtin, Error, Scope},
 };
 use indexmap::IndexMap;
@@ -49,7 +49,8 @@ pub enum ValueKind {
     Object(IndexMap<String, Value>),
     Function {
         def_scope: Box<Scope>,
-        arg: String,
+        args: Vec<FnArg>,
+        ret_ty: Type,
         expr: Expr,
     },
     Builtin(Builtin),
@@ -72,11 +73,13 @@ impl Debug for ValueKind {
             ValueKind::Object(v) => f.debug_tuple("Object").field(v).finish(),
             ValueKind::Function {
                 def_scope: _,
-                arg,
+                args,
+                ret_ty,
                 expr,
-            } => f // Dont include `def_scope` here, otherwise it would loop forever
+            } => f // Dont include `def_scope` here, it would loop forever
                 .debug_struct("Function")
-                .field("arg", arg)
+                .field("args", args)
+                .field("ret_ty", ret_ty)
                 .field("expr", expr)
                 .finish_non_exhaustive(),
             ValueKind::Builtin(v) => f.debug_tuple("Builtin").field(v).finish(),

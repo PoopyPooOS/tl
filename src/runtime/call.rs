@@ -13,49 +13,56 @@ impl super::Scope {
             unreachable!()
         };
 
-        let mut function = self.eval_expr(base)?;
+        let function = self.eval_expr(base)?;
         let name = base.as_ident().unwrap_or("<unknown name>".into());
 
-        let mut variables: HashMap<String, Value> = HashMap::new();
-
-        for arg_expr in args {
-            function = match function.kind {
-                ValueKind::Function {
-                    ref def_scope,
-                    arg: ref param,
-                    expr: ref body,
-                } => {
-                    let arg_value = self.eval_expr(arg_expr)?;
-
-                    variables.insert(param.to_owned(), arg_value.clone());
-
-                    variables.extend(def_scope.0.local_variables.borrow().clone());
-                    let scope = Scope::new(
-                        variables.clone(),
-                        (*def_scope.0.source).clone(),
-                        body.clone(),
-                    );
-                    scope.define(name.clone(), function.clone());
-                    scope.eval()?
-                }
-                ValueKind::Builtin(Builtin(builtin)) => {
-                    let ctx = NativeFnCtx {
-                        call_site: self.clone(),
-                        expr: expr.clone(),
-                    };
-
-                    return builtin(ctx);
-                }
-                _ => {
+        match function.kind {
+            ValueKind::Function {
+                ref def_scope,
+                args: ref params,
+                ref ret_ty,
+                ref expr,
+            } => {
+                if params.len() != args.len() {
                     return Err(Error::new(
-                        ErrorKind::NotCallable,
+                        ErrorKind::ArgsMismatch {
+                            len: params.len(),
+                            args: expr.span,
+                        },
                         (*self.0.source).clone(),
                         expr.span,
                     ));
                 }
-            };
-        }
 
-        Ok(function)
+                let mut evaluated_args = Vec::new();
+                for arg_expr in args {
+                    // TODO: Type check this against `params`
+                    evaluated_args.push(self.eval_expr(arg_expr)?);
+                }
+
+                let mut variables: HashMap<String, Value> = HashMap::new();
+                for (param, arg_value) in params.iter().zip(evaluated_args) {
+                    variables.insert(param.clone().name, arg_value);
+                }
+                variables.extend(def_scope.0.local_variables.borrow().clone());
+
+                let scope = Scope::new(variables, (*def_scope.0.source).clone(), expr.clone());
+                scope.define(name.clone(), function.clone());
+                scope.eval()
+            }
+            ValueKind::Builtin(Builtin(builtin)) => {
+                let ctx = NativeFnCtx {
+                    call_site: self.clone(),
+                    expr: expr.clone(),
+                };
+
+                builtin(ctx)
+            }
+            _ => Err(Error::new(
+                ErrorKind::NotCallable,
+                (*self.0.source).clone(),
+                expr.span,
+            )),
+        }
     }
 }

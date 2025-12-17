@@ -1,4 +1,4 @@
-#![feature(if_let_guard, stmt_expr_attributes)]
+#![feature(if_let_guard, stmt_expr_attributes, decl_macro)]
 // Lints
 #![deny(
     clippy::panic,

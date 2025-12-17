@@ -38,7 +38,7 @@ impl Lexer {
                 return false;
             }
 
-            ch.is_alphanumeric() || matches!(ch, '_' | '.' | '=' | '!' | '<' | '>' | '&' | '|')
+            ch.is_alphanumeric() || matches!(ch, '_' | '.' | '=' | '!' | '&')
         };
 
         while let Some(&ch) = chars.peek() {
@@ -158,10 +158,36 @@ impl Lexer {
                 '{' => push_token!(LBrace, 1),
                 '}' => push_token!(RBrace, 1),
 
+                // Comparison operators
+                '<' => {
+                    if chars.clone().nth(1) == Some('=') {
+                        push_token!(LtEq, 2);
+                        chars.next();
+                    } else {
+                        push_token!(Lt, 1);
+                    }
+                }
+                '>' => {
+                    if chars.clone().nth(1) == Some('=') {
+                        push_token!(GtEq, 2);
+                        chars.next();
+                    } else {
+                        push_token!(Gt, 1);
+                    }
+                }
+
                 // Binary operators
                 '+' => push_token!(Plus, 1),
                 '*' => push_token!(Multiply, 1),
                 '%' => push_token!(Modulo, 1),
+                '|' => {
+                    if chars.clone().nth(1) == Some('|') {
+                        push_token!(Or, 2);
+                        chars.next();
+                    } else {
+                        push_token!(Pipe, 1);
+                    }
+                }
 
                 // Misc
                 ',' => push_token!(Comma, 1),
@@ -487,12 +513,7 @@ impl Lexer {
                         "=" => push_long_token!(Equals),
                         "!=" => push_long_token!(NotEq),
                         "!" => push_long_token!(Not),
-                        ">=" => push_long_token!(GtEq),
-                        ">" => push_long_token!(Gt),
-                        "<=" => push_long_token!(LtEq),
-                        "<" => push_long_token!(Lt),
                         "&&" => push_long_token!(And),
-                        "||" => push_long_token!(Or),
 
                         // Identifier
                         _ => push_long_token!(Identifier(value.clone())),

@@ -4,7 +4,7 @@ use crate::{
     Source,
     parser::{
         self,
-        ast::types::{BinaryOperator, Expr, ExprKind, Literal},
+        ast::types::{BinaryOperator, Expr, ExprKind, FnArg, Literal, Type},
     },
     span,
 };
@@ -223,10 +223,10 @@ fn parenthesized() {
 #[test]
 fn function() {
     // Single argument
-    let input = r#"name: "Hello, ${name}!""#;
+    let input = r#"|name: string| "Hello, ${name}!""#;
     let expected = Expr::new(
-        ExprKind::FnDecl {
-            arg: "name".to_owned(),
+        ExprKind::Function {
+            args: vec![FnArg::new("name", Type::String)],
             expr: box_literal!(
                 InterpolatedString(vec![
                     literal!(String("Hello, ".to_owned()), span(7, 7)),
@@ -241,28 +241,25 @@ fn function() {
     assert_eq!(parse(input).unwrap(), expected);
 
     // Multiple arguments
-    let input = r#"name: age: "Hello, ${name}! You are ${age} years old.""#;
+    let input = r#"|name: string, age: uint| "Hello, ${name}! You are ${age} years old.""#;
     let expected = Expr::new(
-        ExprKind::FnDecl {
-            arg: "name".to_owned(),
-            expr: Expr::boxed(
-                ExprKind::FnDecl {
-                    arg: "age".to_owned(),
-                    expr: box_literal!(
-                        InterpolatedString(vec![
-                            literal!(String("Hello, "), span(12, 7)),
-                            Expr::ident("name", span(21, 4)),
-                            literal!(String("! You are "), span(27, 10)),
-                            Expr::ident("age", span(38, 3)),
-                            literal!(String(" years old."), span(42, 11)),
-                        ]),
-                        span(11, 43)
-                    ),
-                },
-                span(6, 48),
+        ExprKind::Function {
+            args: vec![
+                FnArg::new("name", Type::String),
+                FnArg::new("age", Type::UInt),
+            ],
+            expr: box_literal!(
+                InterpolatedString(vec![
+                    literal!(String("Hello, "), span(13, 7)),
+                    Expr::ident("name", span(22, 4)),
+                    literal!(String("! You are "), span(29, 10)),
+                    Expr::ident("age", span(39, 3)),
+                    literal!(String(" years old."), span(43, 11)),
+                ]),
+                span(12, 43)
             ),
         },
-        span(0, 54),
+        span(0, 55),
     );
     assert_eq!(parse(input).unwrap(), expected);
 }

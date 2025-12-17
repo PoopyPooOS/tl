@@ -1,5 +1,8 @@
 use crate::{
-    parser::ast::types::expr::{Expr, ExprKind},
+    parser::ast::types::{
+        FnArg,
+        expr::{Expr, ExprKind},
+    },
     runtime::{Error, ErrorKind, Scope, Value, ValueKind, types::value::ValueResult},
 };
 use indexmap::IndexMap;
@@ -240,14 +243,15 @@ impl NativeFnCtx {
     pub fn ensure_is_function(
         &self,
         value: Value,
-    ) -> Result<ExtractedValue<(Box<Scope>, String, Expr)>, Error> {
+    ) -> Result<ExtractedValue<(Box<Scope>, Vec<FnArg>, Expr)>, Error> {
         match value.kind {
             ValueKind::Function {
                 def_scope,
-                arg,
+                args,
+                ret_ty,
                 expr,
             } => Ok(ExtractedValue {
-                data: (def_scope, arg, expr),
+                data: (def_scope, args, expr),
                 span: value.span,
             }),
             _ => Err(Error::new(

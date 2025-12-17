@@ -225,16 +225,24 @@ impl super::Parser {
                 out.push('\n');
                 let _ = writeln!(out, "{pad}  field: {}", field.yellow());
             }
-            ExprKind::FnDecl { arg, expr } => {
+            ExprKind::Function { args, ret_ty, expr } => {
                 let _ = write!(
                     out,
                     "{pad}{} {} {}\n",
-                    "FnDecl".bright_blue(),
+                    "Function".bright_blue(),
                     self.pretty_print_span(expr.span).dimmed(),
                     "{".dimmed(),
                 );
 
-                let _ = writeln!(out, "{pad}  arg: {}", arg.magenta());
+                for arg in args {
+                    let _ = writeln!(
+                        out,
+                        "{pad}  arg: {}: {}",
+                        arg.name.magenta(),
+                        arg.ty.to_string().yellow(),
+                    );
+                }
+                let _ = writeln!(out, "{pad}  returns: {}", ret_ty.to_string().yellow());
                 let _ = write!(out, "{pad}  expr: ");
                 out.push_str(
                     self.pretty_print_expr(expr, indent.saturating_add(1))

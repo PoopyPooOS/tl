@@ -61,6 +61,7 @@ pub enum TokenKind {
     Multiply,
     Slash,
     Modulo,
+    Pipe,
 
     // Brackets
     /// (
@@ -148,6 +149,7 @@ impl Display for TokenKind {
             Self::Multiply => write!(f, "*"),
             Self::Slash => write!(f, "/"),
             Self::Modulo => write!(f, "%"),
+            Self::Pipe => write!(f, "|"),
 
             // Brackets
             Self::LParen => write!(f, "("),
