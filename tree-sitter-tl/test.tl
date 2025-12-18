@@ -17,20 +17,20 @@
   array = [ 1 2 3 ]
   not = !true
   function_declaration = [
-    name: "Hello, ${name}!"
-    name: age: "Hello, ${name}! You are ${age} years old."
+    |name: string|: string "Hello, ${name}!"
+    |name: string, age: uint|: string "Hello, ${name}! You are ${age} years old."
   ]
   call = [
     dbg("Hello, world!", null)
     if(
-      password == "strongpassword123"
-      "Password is correct"
-      "Password is incorrect"
+      password == "strongpassword123",
+      "Password is correct",
+      "Password is incorrect",
     )
   ]
   binary_op = 2 + 3 * 4
-  bindings = let
+  bindings = with {
     name = "John Doe"
-  in
-    null
+  }
+  null
 }

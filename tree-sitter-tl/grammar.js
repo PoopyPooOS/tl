@@ -11,9 +11,8 @@ const PREC = {
   expr: 1,
   function: 2,
   with: 3,
-  let_in: 4,
-  unary: 5,
-  binary: 6,
+  unary: 4,
+  binary: 5,
 };
 
 export default grammar({
@@ -24,7 +23,7 @@ export default grammar({
   extras: ($) => [/\s/, $.comment],
 
   rules: {
-    source_file: ($) => $.expr,
+    source_file: ($) => repeat($.expr),
 
     comment: (_) => token(seq("//", /.*/)),
 
@@ -41,31 +40,19 @@ export default grammar({
 
     call: ($) =>
       seq(
-        alias("(", $.bracket),
-        repeat(seq($.expr, optional(alias(",", $.comma)))),
-        alias(")", $.bracket),
+        "(",
+        optional(seq($.expr, repeat(seq(",", $.expr)), optional(","))),
+        ")",
       ),
 
     // TODO: Add support for interpolation here
-    member_access: ($) => seq(alias(".", $.dot), $.identifier),
+    member_access: ($) => seq(".", $.identifier),
 
-    array_index: ($) =>
-      seq(alias("[", $.bracket), $.expr, alias("]", $.bracket)),
+    array_index: ($) => seq("[", $.expr, "]"),
 
-    primary: ($) =>
-      choice($.literal, $.function, $.identifier, $.with_expr, $.let_in),
+    primary: ($) => choice($.literal, $.function, $.identifier, $.with_expr),
 
-    binding: ($) =>
-      seq(
-        field("name", $.identifier),
-        alias("=", $.equals),
-        field("expr", $.expr),
-      ),
-
-    let_in: ($) =>
-      prec(PREC.let_in, seq($.let, repeat($.binding), $.in, $.expr)),
-
-    with_expr: ($) => prec(PREC.with, seq($.with, $.expr, $.expr)),
+    with_expr: ($) => prec.left(PREC.with, seq($.with, $.expr, $.expr)),
 
     binary_expr: ($) =>
       prec.left(PREC.binary, seq($.expr, $.binary_operator, $.expr)),
@@ -105,38 +92,46 @@ export default grammar({
 
     interpolation: ($) => seq("${", field("expr", $.expr), "}"),
 
-    array: ($) =>
-      seq(alias("[", $.bracket), repeat($.expr), alias("]", $.bracket)),
+    array: ($) => seq("[", repeat($.expr), "]"),
 
-    object: ($) =>
-      seq(
-        alias("{", $.bracket),
-        repeat(
-          seq(
-            field("key", $.identifier),
-            alias("=", $.equals),
-            field("value", $.expr),
-          ),
-        ),
-        alias("}", $.bracket),
-      ),
+    object: ($) => seq("{", repeat($.element), "}"),
+    element: ($) => seq(field("key", $.expr), "=", field("value", $.expr)),
 
     function: ($) =>
       prec(
         PREC.function,
         seq(
-          field("argument", $.identifier),
-          alias(":", $.colon),
-          field("expr", $.expr),
+          "|",
+          repeat(seq($.identifier, optional(seq(":", $.type)), optional(","))),
+          "|",
+          optional(seq(":", $.type)),
+          $.expr,
         ),
       ),
 
     identifier: ($) => choice(token(/[a-zA-Z_]\w*/), $.if),
 
+    type: ($) =>
+      choice(
+        token("any"),
+        token("nothing"),
+        token("boolean"),
+        token("int"),
+        token("uint"),
+        token("float"),
+        token("number"),
+        token("string"),
+        token("path"),
+        token("function"),
+        seq(token("list"), "<", $.type, ">"),
+        seq(token("object"), "<", repeat1(seq($.identifier, ":", $.type)), ">"),
+        seq(token("either"), "<", repeat1(seq($.identifier, ",")), ">"),
+        seq(token("thunk"), "<", $.type, ">"),
+        $.expr,
+      ),
+
     // Keywords
     with: (_) => token("with"),
-    let: (_) => token("let"),
-    in: (_) => token("in"),
     if: (_) => token("if"),
   },
 });
