@@ -223,43 +223,45 @@ fn parenthesized() {
 #[test]
 fn function() {
     // Single argument
-    let input = r#"|name: string| "Hello, ${name}!""#;
+    let input = r#"|name: string|: string "Hello, ${name}!""#;
     let expected = Expr::new(
         ExprKind::Function {
             args: vec![FnArg::new("name", Type::String)],
+            ret_ty: Box::new(Type::String),
             expr: box_literal!(
                 InterpolatedString(vec![
-                    literal!(String("Hello, ".to_owned()), span(7, 7)),
-                    Expr::ident("name", span(16, 4)),
-                    literal!(String("!".to_owned()), span(21, 1)),
+                    literal!(String("Hello, ".to_owned()), span(24, 7)),
+                    Expr::ident("name", span(33, 4)),
+                    literal!(String("!".to_owned()), span(38, 1)),
                 ]),
-                span(6, 17)
+                span(23, 17)
             ),
         },
-        span(0, 23),
+        span(0, 40),
     );
     assert_eq!(parse(input).unwrap(), expected);
 
     // Multiple arguments
-    let input = r#"|name: string, age: uint| "Hello, ${name}! You are ${age} years old.""#;
+    let input = r#"|name: string, age: uint|: string "Hello, ${name}! You are ${age} years old.""#;
     let expected = Expr::new(
         ExprKind::Function {
             args: vec![
                 FnArg::new("name", Type::String),
                 FnArg::new("age", Type::UInt),
             ],
+            ret_ty: Box::new(Type::String),
             expr: box_literal!(
                 InterpolatedString(vec![
-                    literal!(String("Hello, "), span(13, 7)),
-                    Expr::ident("name", span(22, 4)),
-                    literal!(String("! You are "), span(29, 10)),
-                    Expr::ident("age", span(39, 3)),
-                    literal!(String(" years old."), span(43, 11)),
+                    literal!(String("Hello, "), span(35, 7)),
+                    Expr::ident("name", span(44, 4)),
+                    literal!(String("! You are "), span(50, 10)),
+                    Expr::ident("age", span(61, 3)),
+                    literal!(String(" years old."), span(65, 11)),
                 ]),
-                span(12, 43)
+                span(34, 43)
             ),
         },
-        span(0, 55),
+        span(0, 77),
     );
     assert_eq!(parse(input).unwrap(), expected);
 }

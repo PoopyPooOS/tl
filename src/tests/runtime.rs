@@ -177,11 +177,11 @@ fn parenthesized() {
 #[test]
 fn function() {
     let input = r#"with {
-  greet = name: "Hello, ${name}!"
+  greet = |name: string|: string "Hello, ${name}!"
 }
 greet("John Doe")
 "#;
-    let expected = Value::new(ValueKind::String("Hello, John Doe!".into()), span(23, 17));
+    let expected = Value::new(ValueKind::String("Hello, John Doe!".into()), span(40, 17));
     assert_eq!(run(input).unwrap(), expected);
 }
 
