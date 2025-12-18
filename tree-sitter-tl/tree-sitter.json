@@ -1,0 +1,26 @@
+{
+  "grammars": [
+    {
+      "name": "tl",
+      "camelcase": "TL",
+      "scope": "source.tl",
+      "file-types": [
+        ".tl"
+      ],
+      "injection-regex": "^tl$"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "GPLv3",
+    "description": "A nix-inspired language",
+    "authors": [
+      {
+        "name": "Whoman"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/PoopyPooOS/tree-sitter-tl"
+    }
+  }
+}
