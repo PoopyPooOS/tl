@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "tree-sitter-tl",
+      "peerDependencies": {
+        "tree-sitter": "^0.21.1",
+      },
+      "optionalPeers": [
+        "tree-sitter",
+      ],
+    },
+  },
+  "packages": {}
+}

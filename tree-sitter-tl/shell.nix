@@ -9,6 +9,7 @@ mkShell {
     nodejs
     gcc
     python3
+    bun
   ];
   TREE_SITTER_ABI_VERSION = "14";
 }

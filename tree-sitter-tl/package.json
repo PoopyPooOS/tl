@@ -1,0 +1,31 @@
+{
+  "name": "tree-sitter-tl",
+  "version": "0.1.0",
+  "description": "A nix-inspired language",
+  "repository": "https://github.com/PoopyPooOS/tree-sitter-tl",
+  "license": "GPLv3",
+  "author": {
+    "name": "Whoman"
+  },
+  "type": "module",
+  "files": [
+    "grammar.js",
+    "tree-sitter.json",
+    "queries/*",
+    "src/**"
+  ],
+  "peerDependencies": {
+    "tree-sitter": "^0.21.1"
+  },
+  "peerDependenciesMeta": {
+    "tree-sitter": {
+      "optional": true
+    }
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.tl",
+      "injection-regex": "^tl$"
+    }
+  ]
+}
