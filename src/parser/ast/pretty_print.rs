@@ -9,322 +9,217 @@ impl Display for Expr {
     }
 }
 
-pub(crate) fn pretty_print_expr(expr: &Expr, indent: usize) -> Result<String, fmt::Error> {
+type FmtResult = Result<String, fmt::Error>;
+
+pub(crate) fn pretty_print_expr(expr: &Expr, indent: usize) -> FmtResult {
     let pad = "  ".repeat(indent);
     let mut out = String::new();
 
+    macro_rules! fmt {
+        ($value:expr, $span:expr $(,)?) => {{
+            writeln!(
+                out,
+                "{pad}{value} {span}",
+                value = $value,
+                span = pretty_print_span($span),
+            )?
+        }};
+        (tuple $name:expr, $value:expr, $span:expr $(,)?) => {{
+            writeln!(
+                out,
+                "{pad}{name}{}{value}{} {span}",
+                "(".dimmed(),
+                ")".dimmed(),
+                name = $name,
+                value = $value,
+                span = pretty_print_span($span),
+            )?
+        }};
+        (array $name:expr, $span:expr, $item:ident => $array:expr => $value:expr) => {{
+            writeln!(
+                out,
+                "{pad}{name} {span} {}",
+                "[".dimmed(),
+                name = $name,
+                span = pretty_print_span($span),
+            )?;
+
+            for $item in $array {
+                writeln!(out, "{pad}  {}", $value)?;
+            }
+
+            writeln!(out, "{pad}{}", "]".dimmed())?;
+        }};
+        (struct $name:expr, $span:expr, { $($key:expr => $value:expr),* $(,)? } ) => {{
+            fmt!(struct_start $name, $span);
+            $(
+                fmt!(struct_field $key, $value);
+            )*
+            fmt!(struct_end);
+        }};
+        (struct_start $name:expr, $span:expr $(,)?) => {{
+            writeln!(
+                out,
+                "{pad}{name} {span} {}",
+                "{".dimmed(),
+                name = $name,
+                span = pretty_print_span($span),
+            )?;
+        }};
+        (struct_field $key:expr, $value:expr $(,)?) => {{
+            writeln!(
+                out,
+                "{pad}  {key}{colon} {value}",
+                key = $key,
+                colon = ":".dimmed(),
+                value = $value,
+            )?;
+        }};
+        (struct_end) => {{
+            writeln!(out, "{pad}{}", "}".dimmed())?;
+        }};
+        (newline) => {{
+            writeln!(out)?;
+        }}
+    }
+
     match &expr.kind {
         ExprKind::Not(inner_expr) => {
-            writeln!(
-                out,
-                "{pad}{} {}",
-                "Not".bright_magenta(),
-                pretty_print_span(expr.span),
-            )?;
-            out.push_str(&pretty_print_expr(inner_expr, indent.saturating_add(1))?);
+            fmt!(tuple "Not".bright_magenta(), &pretty_print_expr(inner_expr, indent.saturating_add(1))?.trim(), expr.span);
         }
         ExprKind::Parenthesized(inner_expr) => {
-            writeln!(
-                out,
-                "{pad}{} {}",
-                "Parenthesized".bright_magenta(),
-                pretty_print_span(expr.span),
-            )?;
-            out.push_str(&pretty_print_expr(inner_expr, indent.saturating_add(1))?);
+            fmt!(tuple "Paranthesized".bright_magenta(), &pretty_print_expr(inner_expr, indent.saturating_add(1))?.trim(), expr.span);
         }
         ExprKind::Literal(lit) => match lit {
-            Literal::Null => writeln!(
-                out,
-                "{}{} {}",
-                pad,
-                "null".yellow(),
-                pretty_print_span(expr.span),
-            )?,
-            Literal::Int(v) => writeln!(
-                out,
-                "{}{}{}{}{} {}",
-                pad,
+            Literal::Null => fmt!("null".yellow(), expr.span),
+            Literal::Int(v) => fmt!(tuple
                 "Int".bright_blue(),
-                "(".dimmed(),
                 v.to_string().yellow(),
-                ")".dimmed(),
-                pretty_print_span(expr.span),
-            )?,
-            Literal::Float(v) => writeln!(
-                out,
-                "{}{}{}{}{} {}",
-                pad,
+                expr.span
+            ),
+            Literal::Float(v) => fmt!(tuple
                 "Float".bright_blue(),
-                "(".dimmed(),
                 v.to_string().yellow(),
-                ")".dimmed(),
-                pretty_print_span(expr.span),
-            )?,
-            Literal::Bool(v) => writeln!(
-                out,
-                "{}{}{}{}{} {}",
-                pad,
+                expr.span
+            ),
+            Literal::Bool(v) => fmt!(tuple
                 "Bool".bright_blue(),
-                "(".dimmed(),
                 v.to_string().yellow(),
-                ")".dimmed(),
-                pretty_print_span(expr.span),
-            )?,
-            Literal::String(v) => writeln!(
-                out,
-                "{}{}{}{}{} {}",
-                pad,
+                expr.span
+            ),
+            Literal::String(v) => fmt!(tuple
                 "String".bright_blue(),
-                "(".dimmed(),
                 format!("\"{v}\"").green(),
-                ")".dimmed(),
-                pretty_print_span(expr.span),
-            )?,
+                expr.span
+            ),
             Literal::InterpolatedString(v) => {
-                writeln!(
-                    out,
-                    "{}{} {} {}",
-                    pad,
-                    "InterpolatedString".bright_blue(),
-                    pretty_print_span(expr.span),
-                    "[".dimmed()
-                )?;
-
-                for item in v {
-                    writeln!(
-                        out,
-                        "{pad}  {}",
-                        &pretty_print_expr(item, indent.saturating_add(1))?.trim()
-                    )?;
-                }
-
-                writeln!(out, "{pad}{}", "]".dimmed())?;
+                fmt!(array "InterpolatedString".bright_blue(), expr.span,
+                    item => v => &pretty_print_expr(item, indent.saturating_add(1))?.trim()
+                );
             }
-            Literal::Path(v) => writeln!(
-                out,
-                "{}{}{}{}{} {}",
-                pad,
+            Literal::Path(v) => fmt!(tuple
                 "Path".bright_blue(),
-                "(".dimmed(),
                 v.display().to_string().blue(),
-                ")".dimmed(),
-                pretty_print_span(expr.span),
-            )?,
+                expr.span
+            ),
             Literal::InterpolatedPath(v) => {
-                writeln!(
-                    out,
-                    "{}{} {}",
-                    pad,
-                    "InterpolatedPath".bright_blue(),
-                    pretty_print_span(expr.span),
-                )?;
-
-                for item in v {
-                    writeln!(
-                        out,
-                        "{}",
-                        &pretty_print_expr(item, indent.saturating_add(1))?.trim()
-                    )?;
-                }
+                fmt!(array "InterpolatedPath".bright_blue(), expr.span,
+                    item => v => &pretty_print_expr(item, indent.saturating_add(1))?.trim()
+                );
             }
             Literal::Array(v) => {
-                writeln!(
-                    out,
-                    "{}{} {} {}",
-                    pad,
-                    "Array".bright_blue(),
-                    pretty_print_span(expr.span),
-                    "[".dimmed()
-                )?;
-
-                for item in v {
-                    writeln!(
-                        out,
-                        "{}",
-                        &pretty_print_expr(item, indent.saturating_add(1))?.trim()
-                    )?;
-                }
-
-                writeln!(out, "{pad}{}", "]".dimmed())?;
+                fmt!(array "Array".bright_blue(), expr.span,
+                    item => v => &pretty_print_expr(item, indent.saturating_add(1))?.trim()
+                );
             }
             Literal::Object(v) => {
-                writeln!(
-                    out,
-                    "{}{} {} {}",
-                    pad,
-                    "Object".bright_blue(),
-                    pretty_print_span(expr.span),
-                    "{".dimmed()
-                )?;
+                fmt!(struct_start "Object".bright_blue(), expr.span);
 
                 for (key, value) in v {
                     writeln!(out, "{pad}  {} {}", "Element".cyan(), "{".dimmed())?;
-                    writeln!(
-                        out,
-                        "{pad}    key: {}",
+                    write!(out, "  ")?;
+                    fmt!(
+                        struct_field
+                        "key",
                         pretty_print_expr(key, indent.saturating_add(2))?.trim()
-                    )?;
-                    writeln!(
-                        out,
-                        "{pad}    value: {}",
+                    );
+                    write!(out, "  ")?;
+                    fmt!(
+                        struct_field
+                        "value",
                         pretty_print_expr(value, indent.saturating_add(2))?.trim()
-                    )?;
-                    writeln!(out, "{pad}  {}", "}".dimmed())?;
+                    );
+                    write!(out, "  ")?;
+                    fmt!(struct_end);
                 }
 
-                writeln!(out, "{pad}{}", "}".dimmed())?;
+                fmt!(struct_end);
             }
         },
         ExprKind::Identifier(name) => {
-            writeln!(
-                out,
-                "{pad}{} {} {}",
-                "Identifier".bright_cyan(),
-                name.yellow(),
-                pretty_print_span(expr.span),
-            )?;
+            fmt!(tuple "Identifier".bright_cyan(), name.yellow(), expr.span);
         }
         ExprKind::BinaryOp {
             left,
             operator,
             right,
         } => {
-            writeln!(
-                out,
-                "{pad}{} {} {}",
-                "BinaryOp".bright_blue(),
-                pretty_print_span(expr.span),
-                "{".dimmed(),
-            )?;
-
-            writeln!(
-                out,
-                "{pad}  left: {}",
-                pretty_print_expr(left, indent.saturating_add(1))?.trim()
-            )?;
-            writeln!(
-                out,
-                "{pad}  operator: {}",
-                operator.to_string().red().bold()
-            )?;
-            writeln!(
-                out,
-                "{pad}  right: {}",
-                pretty_print_expr(right, indent.saturating_add(1))?.trim()
-            )?;
-
-            writeln!(out, "{pad}{}", "}".dimmed())?;
+            fmt!(struct "BinaryOp".bright_blue(), expr.span, {
+                "left" => pretty_print_expr(left, indent.saturating_add(1))?.trim(),
+                "operator" => operator.to_string().red().bold(),
+                "right" => pretty_print_expr(right, indent.saturating_add(1))?.trim(),
+            });
         }
         ExprKind::ArrayIndex { base, index } => {
-            writeln!(
-                out,
-                "{pad}{} {}",
-                "ArrayIndex".bright_blue(),
-                pretty_print_span(expr.span),
-            )?;
-
-            writeln!(
-                out,
-                "{pad}  base: {}",
-                pretty_print_expr(base, indent.saturating_add(1))?.trim()
-            )?;
-            writeln!(
-                out,
-                "{pad}  index: {}",
-                pretty_print_expr(index, indent.saturating_add(1))?.trim()
-            )?;
+            fmt!(struct "ArrayIndex".bright_blue(), expr.span, {
+                "base" => pretty_print_expr(base, indent.saturating_add(1))?.trim(),
+                "index" => pretty_print_expr(index, indent.saturating_add(1))?.trim(),
+            });
         }
         ExprKind::MemberAccess { base, field } => {
-            writeln!(
-                out,
-                "{pad}{} {}",
-                "MemberAccess".bright_blue(),
-                pretty_print_span(expr.span),
-            )?;
-
-            writeln!(
-                out,
-                "{pad}  base: {}",
-                pretty_print_expr(base, indent.saturating_add(1))?.trim()
-            )?;
-            writeln!(out, "{pad}  field: {}", field.yellow())?;
+            fmt!(struct "MemberAccess".bright_blue(), expr.span, {
+                "base" => pretty_print_expr(base, indent.saturating_add(1))?.trim(),
+                "field" => field.yellow(),
+            });
         }
         ExprKind::Function { args, ret_ty, expr } => {
-            writeln!(
-                out,
-                "{pad}{} {} {}",
-                "Function".bright_blue(),
-                pretty_print_span(expr.span),
-                "{".dimmed(),
-            )?;
+            fmt!(struct_start "Function".bright_blue(), expr.span);
 
             for arg in args {
-                writeln!(
-                    out,
-                    "{pad}  arg: {}: {}",
-                    arg.name.magenta(),
-                    pretty_print_type(&arg.ty, indent.saturating_add(1))?
-                )?;
+                fmt!(struct_field arg.name.magenta(), pretty_print_type(&arg.ty, indent.saturating_add(1))?);
             }
 
-            writeln!(
-                out,
-                "{pad}  returns: {}\n",
-                pretty_print_type(ret_ty, indent)?
-            )?;
-            writeln!(
-                out,
-                "{pad}  expr: {}",
-                pretty_print_expr(expr, indent.saturating_add(1))?.trim()
-            )?;
+            fmt!(struct_field "returns", pretty_print_type(ret_ty, indent)?);
+            fmt!(newline);
+            fmt!(struct_field "expr", pretty_print_expr(expr, indent.saturating_add(1))?.trim());
 
-            writeln!(out, "{pad}{}", "}".dimmed())?;
+            fmt!(struct_end);
         }
         ExprKind::Call { base, args } => {
-            writeln!(
-                out,
-                "{pad}{} {}",
-                "Call".bright_blue(),
-                pretty_print_span(expr.span),
-            )?;
+            fmt!(struct_start "Call".bright_blue(), expr.span);
 
-            writeln!(
-                out,
-                "{pad}  base: {}",
-                pretty_print_expr(base, indent.saturating_add(1))?.trim()
-            )?;
+            fmt!(struct_field "base", pretty_print_expr(base, indent.saturating_add(1))?.trim());
             for arg in args {
-                writeln!(
-                    out,
-                    "{pad}  arg: {}",
-                    pretty_print_expr(arg, indent.saturating_add(1))?.trim()
-                )?;
+                fmt!(struct_field "arg", pretty_print_expr(arg, indent.saturating_add(1))?.trim());
             }
+
+            fmt!(struct_end);
         }
         ExprKind::With { object, expr: body } => {
-            writeln!(
-                out,
-                "{pad}{} {}",
-                "With".bright_magenta(),
-                pretty_print_span(expr.span),
-            )?;
-            writeln!(
-                out,
-                "{pad}  object: {}\n",
-                pretty_print_expr(object, indent.saturating_add(1))?.trim()
-            )?;
-            writeln!(
-                out,
-                "{pad}  expr: {}",
-                pretty_print_expr(body, indent.saturating_add(1))?.trim()
-            )?;
+            fmt!(struct_start "With".bright_magenta(), expr.span);
+
+            fmt!(struct_field "object", pretty_print_expr(object, indent.saturating_add(1))?.trim());
+            fmt!(newline);
+            fmt!(struct_field "expr", pretty_print_expr(body, indent.saturating_add(1))?.trim());
+
+            fmt!(struct_end);
         }
     }
 
     Ok(out)
 }
 
-pub(crate) fn pretty_print_type(ty: &Type, indent: usize) -> Result<String, fmt::Error> {
+pub(crate) fn pretty_print_type(ty: &Type, indent: usize) -> FmtResult {
     Ok(match ty {
         Type::Any => "any".yellow().to_string(),
         Type::Nothing => "nothing".yellow().to_string(),
@@ -348,7 +243,7 @@ pub(crate) fn pretty_print_type(ty: &Type, indent: usize) -> Result<String, fmt:
             "<".dimmed(),
             items
                 .iter()
-                .map(|(name, ty)| -> Result<String, fmt::Error> {
+                .map(|(name, ty)| -> FmtResult {
                     Ok(format!(
                         "{name}: {}",
                         pretty_print_type(ty, indent.saturating_add(1))?.trim()
@@ -364,7 +259,7 @@ pub(crate) fn pretty_print_type(ty: &Type, indent: usize) -> Result<String, fmt:
             "<".dimmed(),
             items
                 .iter()
-                .map(|ty| -> Result<String, fmt::Error> {
+                .map(|ty| -> FmtResult {
                     Ok(pretty_print_type(ty, indent.saturating_add(1))?
                         .trim()
                         .to_owned())
