@@ -1,4 +1,8 @@
 with {
+  types.port = |x: uint| x <= 65535
   greet = |name: string|: string "Hello, ${name}!"
 }
-greet("world")
+[
+  types.port(80)
+  greet("world")
+]

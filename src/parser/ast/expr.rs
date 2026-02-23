@@ -2,12 +2,13 @@ use crate::{
     merge_spans,
     parser::{
         ast::{
-            Context, ExprResult,
+            ExprResult,
             types::{Error, ErrorKind, Expr, ExprKind, Literal},
         },
         lexer::types::TokenKind,
     },
 };
+use miette::SourceSpan;
 use std::path::PathBuf;
 use tl_macro::{advance, change_pos, check, consume, peek, peek_or_err};
 
@@ -38,9 +39,11 @@ impl super::Parser {
         let expr = self.parse_primary()?;
         let expr = self.parse_expr_suffixes(expr)?;
 
-        // TODO: Maybe there's a better way to tell when to stop parsing here? This doesn't allow for `>` to be used in a binary op for inline type sigs
-        if check!(0, t if t.is_binary_operator() && !(*t == TokenKind::Gt && self.context == Context::Type))
-        {
+        if check!(0, TokenKind::Pipe) {
+            return self.parse_piped_expr(expr);
+        }
+
+        if check!(0, t if t.is_binary_operator()) {
             return self.parse_binary_op_with_left(0, expr);
         }
 
@@ -111,97 +114,134 @@ impl super::Parser {
         }
     }
 
-    fn parse_expr_suffixes(&mut self, mut expr: Expr) -> ExprResult {
+    /// Parses member access (dot notation): `.identifier`
+    /// Assumes the dot has not been consumed yet.
+    pub(super) fn parse_member_access(
+        &mut self,
+        base: Expr,
+        current_span: SourceSpan,
+    ) -> ExprResult {
+        // Consume dot
+        change_pos!(1);
+        let field_token = advance!().ok_or({
+            Error::new(
+                ErrorKind::ExpectedIdentifierAfterDot,
+                self.source.clone(),
+                self.closest_span(),
+            )
+        })?;
+
+        let field_name = match &field_token.kind {
+            TokenKind::Identifier(name) => name.clone(),
+            _ => {
+                return Err(Error::new(
+                    ErrorKind::ExpectedToken {
+                        expected: "identifier".into(),
+                        found: None,
+                    },
+                    self.source.clone(),
+                    field_token.span,
+                ));
+            }
+        };
+
+        Ok(Expr::new(
+            ExprKind::MemberAccess {
+                base: Box::new(base),
+                field: field_name,
+            },
+            merge_spans(current_span, field_token.span),
+        ))
+    }
+
+    /// Parses array index access: `[expr]`
+    /// Assumes the left bracket has not been consumed yet.
+    pub(super) fn parse_array_index(&mut self, base: Expr, current_span: SourceSpan) -> ExprResult {
+        change_pos!(1);
+        let index = self.parse()?;
+        let end = consume!("']'", TokenKind::RBracket)?;
+
+        Ok(Expr::new(
+            ExprKind::ArrayIndex {
+                base: Box::new(base),
+                index: Box::new(index),
+            },
+            merge_spans(current_span, end.span),
+        ))
+    }
+
+    /// Parses function call: `(args...)`
+    /// Assumes the left parenthesis has not been consumed yet.
+    pub(super) fn parse_call(&mut self, base: Expr, current_span: SourceSpan) -> ExprResult {
+        change_pos!(1);
+        let mut args = Vec::new();
+
+        while let Some(token) = peek!(0)
+            && token.kind != TokenKind::RParen
+        {
+            if token.kind == TokenKind::Comma {
+                change_pos!(1);
+                continue;
+            }
+
+            args.push(self.parse()?);
+        }
+
+        let end = consume!("')'", TokenKind::RParen)?;
+
+        Ok(Expr::new(
+            ExprKind::Call {
+                base: Box::new(base),
+                args,
+            },
+            merge_spans(current_span, end.span),
+        ))
+    }
+
+    pub(super) fn parse_expr_suffixes(&mut self, mut expr: Expr) -> ExprResult {
         let mut full_span = expr.span;
 
         loop {
             match peek!(0).map(|t| &t.kind) {
-                // Object field access: .identifier
-                // TODO: Allow for interpolation here
                 Some(TokenKind::Dot) => {
-                    // Consume dot
-                    change_pos!(1);
-                    let field_token = advance!().ok_or({
-                        Error::new(
-                            ErrorKind::ExpectedIdentifierAfterDot,
-                            self.source.clone(),
-                            self.closest_span(),
-                        )
-                    })?;
-
-                    let field_name = match &field_token.kind {
-                        TokenKind::Identifier(name) => name.clone(),
-                        _ => {
-                            return Err(Error::new(
-                                ErrorKind::ExpectedToken {
-                                    expected: "identifier".into(),
-                                    found: None,
-                                },
-                                self.source.clone(),
-                                field_token.span,
-                            ));
-                        }
-                    };
-                    expr = Expr::new(
-                        ExprKind::MemberAccess {
-                            base: Box::new(expr),
-                            field: field_name,
-                        },
-                        merge_spans(full_span, field_token.span),
-                    );
-                    full_span = merge_spans(full_span, field_token.span);
+                    expr = self.parse_member_access(expr, full_span)?;
+                    full_span = expr.span;
                 }
-
-                // Array index access: [expr]
                 Some(TokenKind::LBracket) => {
-                    change_pos!(1);
-                    let index = self.parse()?;
-                    let end = consume!("']'", TokenKind::RBracket)?;
-
-                    expr = Expr::new(
-                        ExprKind::ArrayIndex {
-                            base: Box::new(expr),
-                            index: Box::new(index),
-                        },
-                        merge_spans(full_span, end.span),
-                    );
-
-                    full_span = merge_spans(full_span, end.span);
+                    expr = self.parse_array_index(expr, full_span)?;
+                    full_span = expr.span;
                 }
-
-                // Function call: (args...)
                 Some(TokenKind::LParen) => {
-                    change_pos!(1);
-                    let mut args = Vec::new();
-
-                    while let Some(token) = peek!(0)
-                        && token.kind != TokenKind::RParen
-                    {
-                        if token.kind == TokenKind::Comma {
-                            change_pos!(1);
-                            continue;
-                        }
-
-                        args.push(self.parse()?);
-                    }
-
-                    let end = consume!("')'", TokenKind::RParen)?;
-
-                    expr = Expr::new(
-                        ExprKind::Call {
-                            base: Box::new(expr),
-                            args,
-                        },
-                        merge_spans(full_span, end.span),
-                    );
-
-                    full_span = merge_spans(full_span, end.span);
+                    expr = self.parse_call(expr, full_span)?;
+                    full_span = expr.span;
                 }
-
                 _ => break,
             }
         }
 
         Ok(expr)
+    }
+
+    fn parse_piped_expr(&mut self, input: Expr) -> ExprResult {
+        consume!("'|'", TokenKind::Pipe)?;
+
+        let right_expr = self.parse_primary()?;
+        let right_expr = self.parse_expr_suffixes(right_expr)?;
+
+        let (base, args) = match &right_expr.kind {
+            ExprKind::Call { base, args } => (base.clone(), args.clone()),
+            _ => (Box::new(right_expr.clone()), vec![]),
+        };
+
+        let span = merge_spans(input.span, right_expr.span);
+
+        Ok(Expr::new(
+            ExprKind::PipedCall {
+                input: Box::new(input),
+                base,
+                args,
+            },
+            span,
+        ))
     }
 }

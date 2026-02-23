@@ -1,4 +1,4 @@
-use crate::parser::ast::types::{Expr, ExprKind, Literal, Type};
+use crate::parser::ast::types::{Expr, ExprKind, Literal};
 use colored::{ColoredString, Colorize};
 use miette::SourceSpan;
 use std::fmt::{self, Display, Write};
@@ -186,10 +186,10 @@ pub(crate) fn pretty_print_expr(expr: &Expr, indent: usize) -> FmtResult {
             fmt!(struct_start "Function".bright_blue(), expr.span);
 
             for arg in args {
-                fmt!(struct_field arg.name.magenta(), pretty_print_type(&arg.ty, indent.saturating_add(1))?);
+                fmt!(struct_field arg.name.magenta(), pretty_print_expr(&arg.ty, indent.saturating_add(1))?.trim());
             }
 
-            fmt!(struct_field "returns", pretty_print_type(ret_ty, indent)?);
+            fmt!(struct_field "returns", pretty_print_expr(ret_ty, indent)?.trim());
             fmt!(newline);
             fmt!(struct_field "expr", pretty_print_expr(expr, indent.saturating_add(1))?.trim());
 
@@ -199,9 +199,16 @@ pub(crate) fn pretty_print_expr(expr: &Expr, indent: usize) -> FmtResult {
             fmt!(struct_start "Call".bright_blue(), expr.span);
 
             fmt!(struct_field "base", pretty_print_expr(base, indent.saturating_add(1))?.trim());
-            for arg in args {
-                fmt!(struct_field "arg", pretty_print_expr(arg, indent.saturating_add(1))?.trim());
-            }
+            fmt!(array "args", expr.span, arg => args => pretty_print_expr(arg, indent.saturating_add(1))?.trim());
+
+            fmt!(struct_end);
+        }
+        ExprKind::PipedCall { input, base, args } => {
+            fmt!(struct_start "PipedCall".bright_blue(), expr.span);
+
+            fmt!(struct_field "input", pretty_print_expr(input, indent.saturating_add(1))?.trim());
+            fmt!(struct_field "base", pretty_print_expr(base, indent.saturating_add(1))?.trim());
+            fmt!(array "args", expr.span, arg => args => pretty_print_expr(arg, indent.saturating_add(1))?.trim());
 
             fmt!(struct_end);
         }
@@ -214,76 +221,13 @@ pub(crate) fn pretty_print_expr(expr: &Expr, indent: usize) -> FmtResult {
 
             fmt!(struct_end);
         }
+        ExprKind::Value(v) => {
+            // This never makes it into an AST, only for internal value-passing
+            fmt!("Value", v.span);
+        }
     }
 
     Ok(out)
-}
-
-pub(crate) fn pretty_print_type(ty: &Type, indent: usize) -> FmtResult {
-    Ok(match ty {
-        Type::Any => "any".yellow().to_string(),
-        Type::Nothing => "nothing".yellow().to_string(),
-        Type::Boolean => "bool".yellow().to_string(),
-        Type::Int => "int".yellow().to_string(),
-        Type::UInt => "uint".yellow().to_string(),
-        Type::Float => "float".yellow().to_string(),
-        Type::Number => "number".yellow().to_string(),
-        Type::String => "string".yellow().to_string(),
-        Type::Path => "path".yellow().to_string(),
-        Type::List(ty) => format!(
-            "{}{}{}{}",
-            "list".yellow(),
-            "<".dimmed(),
-            pretty_print_type(ty, indent.saturating_add(1))?.trim(),
-            ">".dimmed()
-        ),
-        Type::Object(items) => format!(
-            "{}{}{}{}",
-            "object".yellow(),
-            "<".dimmed(),
-            items
-                .iter()
-                .map(|(name, ty)| -> FmtResult {
-                    Ok(format!(
-                        "{name}: {}",
-                        pretty_print_type(ty, indent.saturating_add(1))?.trim()
-                    ))
-                })
-                .try_collect::<Vec<String>>()?
-                .join(", "),
-            ">".dimmed()
-        ),
-        Type::Either(items) => format!(
-            "{}{}{}{}",
-            "either".yellow(),
-            "<".dimmed(),
-            items
-                .iter()
-                .map(|ty| -> FmtResult {
-                    Ok(pretty_print_type(ty, indent.saturating_add(1))?
-                        .trim()
-                        .to_owned())
-                })
-                .try_collect::<Vec<String>>()?
-                .join(", "),
-            ">".dimmed()
-        ),
-        Type::Function => "function".yellow().to_string(),
-        Type::Thunk(ty) => format!(
-            "{}{}{}{}",
-            "thunk".yellow(),
-            "<".dimmed(),
-            pretty_print_type(ty, indent.saturating_add(1))?.trim(),
-            ">".dimmed()
-        ),
-        Type::Runtime(expr) => format!(
-            "{}{}{}{}",
-            "runtime".yellow(),
-            "<".dimmed(),
-            pretty_print_expr(expr, indent.saturating_add(1))?.trim(),
-            ">".dimmed()
-        ),
-    })
 }
 
 pub(crate) fn pretty_print_span(span: SourceSpan) -> ColoredString {

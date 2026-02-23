@@ -24,36 +24,30 @@ impl super::Scope {
             BinaryOperator::Multiply => lhs * rhs,
             BinaryOperator::Divide => lhs / rhs,
             BinaryOperator::Modulo => lhs % rhs,
-            BinaryOperator::Eq => Value::new(
-                ValueKind::Boolean(lhs == rhs),
-                merge_spans(lhs.span, rhs.span),
-            ),
-            BinaryOperator::NotEq => Value::new(
-                ValueKind::Boolean(lhs != rhs),
-                merge_spans(lhs.span, rhs.span),
-            ),
-            BinaryOperator::Gt => Value::new(
-                ValueKind::Boolean(lhs > rhs),
-                merge_spans(lhs.span, rhs.span),
-            ),
-            BinaryOperator::GtEq => Value::new(
-                ValueKind::Boolean(lhs >= rhs),
-                merge_spans(lhs.span, rhs.span),
-            ),
-            BinaryOperator::Lt => Value::new(
-                ValueKind::Boolean(lhs < rhs),
-                merge_spans(lhs.span, rhs.span),
-            ),
-            BinaryOperator::LtEq => Value::new(
-                ValueKind::Boolean(lhs <= rhs),
-                merge_spans(lhs.span, rhs.span),
-            ),
+            BinaryOperator::Eq => {
+                Value::new(ValueKind::Bool(lhs == rhs), merge_spans(lhs.span, rhs.span))
+            }
+            BinaryOperator::NotEq => {
+                Value::new(ValueKind::Bool(lhs != rhs), merge_spans(lhs.span, rhs.span))
+            }
+            BinaryOperator::Gt => {
+                Value::new(ValueKind::Bool(lhs > rhs), merge_spans(lhs.span, rhs.span))
+            }
+            BinaryOperator::GtEq => {
+                Value::new(ValueKind::Bool(lhs >= rhs), merge_spans(lhs.span, rhs.span))
+            }
+            BinaryOperator::Lt => {
+                Value::new(ValueKind::Bool(lhs < rhs), merge_spans(lhs.span, rhs.span))
+            }
+            BinaryOperator::LtEq => {
+                Value::new(ValueKind::Bool(lhs <= rhs), merge_spans(lhs.span, rhs.span))
+            }
             BinaryOperator::And => Value::new(
-                ValueKind::Boolean(lhs.and(&rhs)),
+                ValueKind::Bool(lhs.and(&rhs)),
                 merge_spans(lhs.span, rhs.span),
             ),
             BinaryOperator::Or => Value::new(
-                ValueKind::Boolean(lhs.or(&rhs)),
+                ValueKind::Bool(lhs.or(&rhs)),
                 merge_spans(lhs.span, rhs.span),
             ),
         })

@@ -1,6 +1,9 @@
 use crate::{
     parser::ast::types::{Expr, ExprKind, Literal},
-    runtime::{Error, ErrorKind, Scope, Value, ValueKind, types::ValueResult},
+    runtime::{
+        Error, ErrorKind, Scope, Value, ValueKind,
+        types::{Function, ValueResult},
+    },
 };
 use indexmap::IndexMap;
 use miette::SourceSpan;
@@ -20,7 +23,7 @@ impl super::Scope {
         match &expr.kind {
             ExprKind::Literal(literal) => self.eval_literal(literal, expr.span),
             ExprKind::Not(body) => Ok(Value::new(
-                ValueKind::Boolean(!self.eval_expr(body)?.is_truthy()),
+                ValueKind::Bool(!self.eval_expr(body)?.is_truthy()),
                 expr.span,
             )),
             ExprKind::Parenthesized(inner_expr) => {
@@ -77,15 +80,47 @@ impl super::Scope {
                 ret_ty,
                 expr: body,
             } => Ok(Value::new(
-                ValueKind::Function {
-                    def_scope: Box::new(Scope(self.0.clone())),
-                    args: args.clone(),
-                    ret_ty: *ret_ty.clone(),
-                    expr: *body.clone(),
-                },
+                ValueKind::Function(Function {
+                    params: args.clone(),
+                    return_type: (**ret_ty).clone(),
+                    body: (**body).clone(),
+                    closure_scope: Box::new(Scope(self.0.clone())),
+                }),
                 expr.span,
             )),
             ExprKind::Call { .. } => self.eval_call(expr),
+            ExprKind::PipedCall { input, base, args } => {
+                let fn_value = self.eval_expr(base)?;
+                let input_param_idx = match &fn_value.kind {
+                    ValueKind::Function(f) => f.params.iter().position(|p| p.name == "in"),
+                    ValueKind::Builtin(_) => None,
+                    _ => {
+                        return Err(Error::new(
+                            ErrorKind::NotCallable,
+                            (*self.0.source).clone(),
+                            expr.span,
+                        ));
+                    }
+                };
+
+                let mut final_args = args.clone();
+
+                if let Some(pos) = input_param_idx {
+                    final_args.insert(pos, *input.clone());
+                } else {
+                    final_args.push(*input.clone());
+                }
+
+                let normal_call = Expr::new(
+                    ExprKind::Call {
+                        base: base.clone(),
+                        args: final_args,
+                    },
+                    expr.span,
+                );
+
+                self.eval_call(&normal_call)
+            }
             ExprKind::With { object, expr: body } => {
                 let child_scope = self.create_scope(*body.clone());
 
@@ -105,6 +140,7 @@ impl super::Scope {
 
                 child_scope.eval()
             }
+            ExprKind::Value(v) => Ok(*v.clone()),
         }
     }
 
@@ -113,7 +149,7 @@ impl super::Scope {
             Literal::Null => Ok(Value::new(ValueKind::Null, span)),
             Literal::Int(v) => Ok(Value::new(ValueKind::Int(*v), span)),
             Literal::Float(v) => Ok(Value::new(ValueKind::Float(*v), span)),
-            Literal::Bool(v) => Ok(Value::new(ValueKind::Boolean(*v), span)),
+            Literal::Bool(v) => Ok(Value::new(ValueKind::Bool(*v), span)),
             Literal::String(v) => Ok(Value::new(ValueKind::String(v.clone()), span)),
             Literal::InterpolatedString(v) => {
                 let mut value = String::new();

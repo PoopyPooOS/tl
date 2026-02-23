@@ -32,13 +32,6 @@ pub struct Parser {
 
     // State
     pos: usize,
-    context: Context,
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-enum Context {
-    Toplevel,
-    Type,
 }
 
 pub type ExprResult = Result<Expr, Error>;
@@ -50,7 +43,6 @@ impl Parser {
             source,
 
             pos: 0,
-            context: Context::Toplevel,
         }
     }
 

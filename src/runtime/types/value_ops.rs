@@ -236,14 +236,14 @@ impl Ord for Value {
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         #[cfg(test)]
-        if self.span != other.span {
+        if crate::tests::runtime::IS_ASSERT.with(|v| v.get().is_some()) && self.span != other.span {
             return false;
         }
 
         match (&self.kind, &other.kind) {
             (ValueKind::Null, ValueKind::Null) => true,
-            (ValueKind::Boolean(lhs), ValueKind::Boolean(rhs)) => lhs == rhs,
-            (ValueKind::Boolean(bool), other) => *bool && other.is_truthy(),
+            (ValueKind::Bool(lhs), ValueKind::Bool(rhs)) => lhs == rhs,
+            (ValueKind::Bool(bool), other) => *bool && other.is_truthy(),
             (ValueKind::Int(lhs), ValueKind::Int(rhs)) => lhs == rhs,
             (ValueKind::Int(lhs), ValueKind::Float(rhs)) => *lhs == (*rhs as isize),
             (ValueKind::Float(lhs), ValueKind::Float(rhs)) => lhs == rhs,

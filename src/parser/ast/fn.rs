@@ -3,11 +3,12 @@ use crate::{
     parser::{
         ast::{
             ExprResult,
-            types::{Expr, ExprKind, FnArg, Type},
+            types::{Expr, ExprKind, FnArg},
         },
         lexer::types::TokenKind,
     },
 };
+use miette::SourceSpan;
 use tl_macro::{change_pos, check, consume};
 
 impl super::Parser {
@@ -31,7 +32,7 @@ impl super::Parser {
                 change_pos!(1);
                 self.parse_type()?
             } else {
-                Type::default()
+                Expr::ident("any", SourceSpan::new(0.into(), 0))
             };
 
             args.push(FnArg { name, ty });
@@ -49,7 +50,7 @@ impl super::Parser {
             change_pos!(1);
             self.parse_type()?
         } else {
-            Type::default()
+            Expr::ident("any", SourceSpan::new(0.into(), 0))
         };
 
         // Body

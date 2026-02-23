@@ -107,11 +107,19 @@
           "named": true
         },
         {
+          "type": "pipe_expr",
+          "named": true
+        },
+        {
           "type": "postfix_expr",
           "named": true
         },
         {
           "type": "unary_expr",
+          "named": true
+        },
+        {
+          "type": "with_expr",
           "named": true
         }
       ]
@@ -120,7 +128,18 @@
   {
     "type": "function",
     "named": true,
-    "fields": {},
+    "fields": {
+      "type": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "expr",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
       "multiple": true,
       "required": true,
@@ -131,10 +150,6 @@
         },
         {
           "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "type",
           "named": true
         }
       ]
@@ -241,6 +256,21 @@
     }
   },
   {
+    "type": "pipe_expr",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "postfix_expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "postfix_expr",
     "named": true,
     "fields": {
@@ -293,10 +323,6 @@
         {
           "type": "literal",
           "named": true
-        },
-        {
-          "type": "with_expr",
-          "named": true
         }
       ]
     }
@@ -337,29 +363,6 @@
     }
   },
   {
-    "type": "type",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": false,
-      "types": [
-        {
-          "type": "expr",
-          "named": true
-        },
-        {
-          "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "type",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "unary_expr",
     "named": true,
     "fields": {},
@@ -381,15 +384,32 @@
   {
     "type": "with_expr",
     "named": true,
-    "fields": {},
+    "fields": {
+      "body": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expr",
+            "named": true
+          }
+        ]
+      },
+      "variables": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expr",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": true,
       "types": [
-        {
-          "type": "expr",
-          "named": true
-        },
         {
           "type": "with",
           "named": true
@@ -426,15 +446,7 @@
     "named": false
   },
   {
-    "type": "<",
-    "named": false
-  },
-  {
     "type": "=",
-    "named": false
-  },
-  {
-    "type": ">",
     "named": false
   },
   {
@@ -450,10 +462,6 @@
     "named": false
   },
   {
-    "type": "any",
-    "named": false
-  },
-  {
     "type": "binary_operator",
     "named": true
   },
@@ -462,44 +470,16 @@
     "named": true
   },
   {
-    "type": "boolean",
-    "named": false
-  },
-  {
     "type": "comment",
     "named": true,
     "extra": true
-  },
-  {
-    "type": "either",
-    "named": false
-  },
-  {
-    "type": "float",
-    "named": false
-  },
-  {
-    "type": "function",
-    "named": false
   },
   {
     "type": "if",
     "named": true
   },
   {
-    "type": "int",
-    "named": false
-  },
-  {
-    "type": "list",
-    "named": false
-  },
-  {
     "type": "n",
-    "named": false
-  },
-  {
-    "type": "nothing",
     "named": false
   },
   {
@@ -508,38 +488,14 @@
   },
   {
     "type": "number",
-    "named": false
-  },
-  {
-    "type": "number",
-    "named": true
-  },
-  {
-    "type": "object",
-    "named": false
-  },
-  {
-    "type": "path",
     "named": true
   },
   {
     "type": "path",
-    "named": false
-  },
-  {
-    "type": "string",
-    "named": false
+    "named": true
   },
   {
     "type": "t",
-    "named": false
-  },
-  {
-    "type": "thunk",
-    "named": false
-  },
-  {
-    "type": "uint",
     "named": false
   },
   {

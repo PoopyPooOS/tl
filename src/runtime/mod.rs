@@ -4,28 +4,26 @@ use crate::{
     runtime::{
         extension::Registry,
         stdlib::stdlib,
-        types::{NativeFn, value::ValueResult},
+        types::{function::Builtin, value::ValueResult},
     },
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 pub use crate::runtime::types::{
-    builtin::Builtin,
     error::{Error, ErrorKind},
     value::{Value, ValueKind},
 };
 
-pub mod types;
-
-pub mod serde;
-
 pub mod extension;
+pub mod serde;
+pub mod types;
 
 // Runtime Implementations
 mod binary_op;
 mod call;
 mod expr;
 mod stdlib;
+mod r#type;
 
 #[derive(Debug, Clone)]
 pub struct ScopeInner {
@@ -82,11 +80,11 @@ impl Scope {
             .insert(key.into().to_string(), value.into());
     }
 
-    pub fn define_builtin(&self, key: impl Into<Value>, value: NativeFn) {
-        self.0
-            .global_variables
-            .borrow_mut()
-            .insert(key.into().to_string(), Builtin(value).into());
+    pub fn define_builtin(&self, key: impl Into<Value>, value: Builtin) {
+        self.0.global_variables.borrow_mut().insert(
+            key.into().to_string(),
+            Value::new_builtin(ValueKind::Builtin(value)),
+        );
     }
 
     /// Evaluates an AST expression.

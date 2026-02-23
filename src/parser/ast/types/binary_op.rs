@@ -38,9 +38,16 @@ pub enum BinaryOperator {
 impl BinaryOperator {
     pub fn precedence(&self) -> u8 {
         match self {
-            Self::Plus | Self::Minus => 1,
-            Self::Multiply | Self::Divide => 2,
-            _ => 0,
+            // Logical OR (lowest)
+            Self::Or => 1,
+            // Logical AND
+            Self::And => 2,
+            // Comparison operators
+            Self::Eq | Self::NotEq | Self::Gt | Self::GtEq | Self::Lt | Self::LtEq => 3,
+            // Addition and subtraction
+            Self::Plus | Self::Minus => 4,
+            // Multiplication, division, and modulo (highest)
+            Self::Multiply | Self::Divide | Self::Modulo => 5,
         }
     }
 

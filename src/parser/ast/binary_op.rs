@@ -50,6 +50,7 @@ impl super::Parser {
 
     fn parse_binary_op(&mut self, min_precedence: u8) -> ExprResult {
         let left = self.parse_primary()?;
+        let left = self.parse_expr_suffixes(left)?;
         self.parse_binary_op_with_left(min_precedence, left)
     }
 }

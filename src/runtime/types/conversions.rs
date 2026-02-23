@@ -31,7 +31,7 @@ macro_rules! impl_conversion {
 }
 
 impl_conversion!((), value => Self::Null);
-impl_conversion!(bool, v => Self::Boolean(v));
+impl_conversion!(bool, v => Self::Bool(v));
 impl_conversion!(isize, v => Self::Int(v));
 impl_conversion!(f64, v => Self::Float(v));
 impl_conversion!(String, v => Self::String(v));

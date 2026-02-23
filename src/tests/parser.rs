@@ -4,7 +4,7 @@ use crate::{
     Source,
     parser::{
         self,
-        ast::types::{BinaryOperator, Expr, ExprKind, FnArg, Literal, Type},
+        ast::types::{BinaryOperator, Expr, ExprKind, FnArg, Literal},
     },
     span,
 };
@@ -138,25 +138,23 @@ fn object() {
     );
     assert_eq!(parse(input).unwrap(), expected);
 
-    // TODO: Fix this syntax in parser
-    // let input = "{ foo.bar = 3 }";
-    // let expected = literal!(
-    //     Object(BTreeMap::from([(
-    //         "foo".to_string(),
-    //         Expr::new(
-    //             ExprKind::Literal(Literal::Object(BTreeMap::from([(
-    //                 "bar".to_string(),
-    //                 Expr::new(
-    //                     ExprKind::Literal(Literal::Int(3)),
-    //                     Span::new(0..=0, 12..=12)
-    //                 )
-    //             )]))),
-    //             Span::new(0..=0, 7..=13)
-    //         )
-    //     )])),
-    //     Span::new(0..=0, 0..=15)
-    // );
-    // assert_eq!(parse(input).unwrap(), expected);
+    let input = "{ foo.bar = 3 }";
+    let expected = literal!(
+        Object(vec![(
+            Expr::new(
+                ExprKind::MemberAccess {
+                    base: Box::new(Expr::ident("foo", span(2, 3))),
+                    field: "bar".to_owned()
+                },
+                span(2, 7)
+            ),
+            literal!(Int(3), span(12, 1))
+        )]),
+        span(0, 15)
+    );
+    let a = parse(input).unwrap();
+    dbg!(&a);
+    assert_eq!(a, expected);
 }
 
 #[test]
@@ -226,8 +224,8 @@ fn function() {
     let input = r#"|name: string|: string "Hello, ${name}!""#;
     let expected = Expr::new(
         ExprKind::Function {
-            args: vec![FnArg::new("name", Type::String)],
-            ret_ty: Box::new(Type::String),
+            args: vec![FnArg::new("name", Expr::ident("string", span(7, 6)))],
+            ret_ty: Box::new(Expr::ident("string", span(16, 6))),
             expr: box_literal!(
                 InterpolatedString(vec![
                     literal!(String("Hello, ".to_owned()), span(24, 7)),
@@ -246,10 +244,10 @@ fn function() {
     let expected = Expr::new(
         ExprKind::Function {
             args: vec![
-                FnArg::new("name", Type::String),
-                FnArg::new("age", Type::UInt),
+                FnArg::new("name", Expr::ident("string", span(7, 6))),
+                FnArg::new("age", Expr::ident("uint", span(20, 4))),
             ],
-            ret_ty: Box::new(Type::String),
+            ret_ty: Box::new(Expr::ident("string", span(27, 6))),
             expr: box_literal!(
                 InterpolatedString(vec![
                     literal!(String("Hello, "), span(35, 7)),
@@ -323,6 +321,34 @@ fn binary_op() {
             ),
         },
         span(0, 9),
+    );
+    assert_eq!(parse(input).unwrap(), expected);
+}
+
+#[test]
+fn binary_op_nested() {
+    let input = "x > start && x < end";
+    let expected = Expr::new(
+        ExprKind::BinaryOp {
+            left: Expr::boxed(
+                ExprKind::BinaryOp {
+                    left: Expr::boxed_ident("x", span(0, 1)),
+                    operator: BinaryOperator::Gt,
+                    right: Expr::boxed_ident("start", span(4, 5)),
+                },
+                span(0, 9),
+            ),
+            operator: BinaryOperator::And,
+            right: Expr::boxed(
+                ExprKind::BinaryOp {
+                    left: Expr::boxed_ident("x", span(13, 1)),
+                    operator: BinaryOperator::Lt,
+                    right: Expr::boxed_ident("end", span(17, 3)),
+                },
+                span(13, 7),
+            ),
+        },
+        span(0, 20),
     );
     assert_eq!(parse(input).unwrap(), expected);
 }

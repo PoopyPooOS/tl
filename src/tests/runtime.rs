@@ -13,8 +13,21 @@ use crate::{
     span,
 };
 use indexmap::{IndexMap, indexmap};
-use pretty_assertions::assert_eq;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::OnceLock};
+
+// Very bad hacky fix for comparing spans in PartialEq<Value>
+thread_local! {
+    pub(crate) static IS_ASSERT: OnceLock<()> = const { OnceLock::new() };
+}
+
+macro_rules! assert_eq {
+    ($a:expr, $b:expr) => {{
+        IS_ASSERT.with(|v| {
+            v.get_or_init(|| ());
+        });
+        pretty_assertions::assert_eq!($a, $b);
+    }};
+}
 
 fn run(text: impl AsRef<str>) -> miette::Result<Value> {
     let source = Source::text_with_name("test", text);
@@ -34,11 +47,11 @@ fn run_err(text: impl AsRef<str>) -> RuntimeError {
 #[test]
 fn boolean() {
     let input = "true";
-    let expected = Value::new(ValueKind::Boolean(true), span(0, 4));
+    let expected = Value::new(ValueKind::Bool(true), span(0, 4));
     assert_eq!(run(input).unwrap(), expected);
 
     let input = "false";
-    let expected = Value::new(ValueKind::Boolean(false), span(0, 5));
+    let expected = Value::new(ValueKind::Bool(false), span(0, 5));
     assert_eq!(run(input).unwrap(), expected);
 }
 
@@ -163,7 +176,7 @@ package.dependencies"#;
 #[test]
 fn not() {
     let input = "!true";
-    let expected = Value::new(ValueKind::Boolean(false), span(0, 5));
+    let expected = Value::new(ValueKind::Bool(false), span(0, 5));
     assert_eq!(run(input).unwrap(), expected);
 }
 
@@ -179,9 +192,8 @@ fn function() {
     let input = r#"with {
   greet = |name: string|: string "Hello, ${name}!"
 }
-greet("John Doe")
-"#;
-    let expected = Value::new(ValueKind::String("Hello, John Doe!".into()), span(40, 17));
+greet("John Doe")"#;
+    let expected = Value::new(ValueKind::String("Hello, John Doe!".into()), span(60, 17));
     assert_eq!(run(input).unwrap(), expected);
 }
 
@@ -200,18 +212,19 @@ fn bindings() {
 }
 
 #[test]
-#[ignore = "Weird stack overflow bug that only happens in tests"]
 fn recursion() {
     let input = r"with {
-  pow = base: exponent: if(
+  pow = |base, exponent| if(
     exponent == 0,
     1,
     base * pow(base, exponent - 1)
   )
 }
 pow(2, 10)";
-    let expected = Value::new(ValueKind::Int(1024), span(0, 0));
-    assert_eq!(run(input).unwrap(), expected);
+    // Can't be inline in the assert_eq call, otherwise IS_ASSERT gets set while its evaluated
+    let result = run(input).unwrap();
+    let expected = Value::new(ValueKind::Int(1024), span(103, 10));
+    assert_eq!(result, expected);
 }
 
 #[test]

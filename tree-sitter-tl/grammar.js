@@ -8,17 +8,20 @@
 // @ts-check
 
 const PREC = {
-  expr: 1,
-  function: 2,
-  with: 3,
-  unary: 4,
-  binary: 5,
+  pipe: 0,
+  with: 1,
+  binary: 2,
+  unary: 3,
+  postfix: 4,
+  function: 5,
 };
 
 export default grammar({
   name: "tl",
 
   externals: ($) => [$.path],
+
+  conflicts: ($) => [[$.expr, $.pipe_expr]],
 
   extras: ($) => [/\s/, $.comment],
 
@@ -27,11 +30,24 @@ export default grammar({
 
     comment: (_) => token(seq("//", /.*/)),
 
-    expr: ($) => choice($.binary_expr, $.unary_expr, $.postfix_expr),
+    expr: ($) =>
+      choice(
+        $.pipe_expr,
+        $.binary_expr,
+        $.unary_expr,
+        $.postfix_expr,
+        $.with_expr,
+      ),
+
+    pipe_expr: ($) =>
+      prec.left(
+        PREC.pipe,
+        seq($.postfix_expr, repeat1(seq("|", $.postfix_expr))),
+      ),
 
     postfix_expr: ($) =>
       prec.right(
-        PREC.expr,
+        PREC.postfix,
         seq(
           $.primary,
           repeat(choice(field("call", $.call), $.member_access, $.array_index)),
@@ -50,9 +66,13 @@ export default grammar({
 
     array_index: ($) => seq("[", $.expr, "]"),
 
-    primary: ($) => choice($.literal, $.function, $.identifier, $.with_expr),
+    primary: ($) => choice($.literal, $.function, $.identifier),
 
-    with_expr: ($) => prec.left(PREC.with, seq($.with, $.expr, $.expr)),
+    with_expr: ($) =>
+      prec.left(
+        PREC.with,
+        seq($.with, field("variables", $.expr), field("body", $.expr)),
+      ),
 
     binary_expr: ($) =>
       prec.left(PREC.binary, seq($.expr, $.binary_operator, $.expr)),
@@ -102,33 +122,20 @@ export default grammar({
         PREC.function,
         seq(
           "|",
-          repeat(seq($.identifier, optional(seq(":", $.type)), optional(","))),
+          repeat(
+            seq(
+              $.identifier,
+              optional(seq(":", field("type", $.expr))),
+              optional(","),
+            ),
+          ),
           "|",
-          optional(seq(":", $.type)),
+          optional(seq(":", field("type", $.expr))),
           $.expr,
         ),
       ),
 
     identifier: ($) => choice(token(/[a-zA-Z_]\w*/), $.if),
-
-    type: ($) =>
-      choice(
-        token("any"),
-        token("nothing"),
-        token("boolean"),
-        token("int"),
-        token("uint"),
-        token("float"),
-        token("number"),
-        token("string"),
-        token("path"),
-        token("function"),
-        seq(token("list"), "<", $.type, ">"),
-        seq(token("object"), "<", repeat1(seq($.identifier, ":", $.type)), ">"),
-        seq(token("either"), "<", repeat1(seq($.identifier, ",")), ">"),
-        seq(token("thunk"), "<", $.type, ">"),
-        $.expr,
-      ),
 
     // Keywords
     with: (_) => token("with"),

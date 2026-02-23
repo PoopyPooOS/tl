@@ -16,7 +16,7 @@ impl<'de> Deserializer<'de> for Value {
     {
         match self.kind {
             ValueKind::Null => visitor.visit_unit(),
-            ValueKind::Boolean(val) => visitor.visit_bool(val),
+            ValueKind::Bool(val) => visitor.visit_bool(val),
             ValueKind::Int(val) => visitor.visit_i64(
                 val.try_into()
                     .map_err(|_| de::Error::custom("Integer overflowed"))?,
@@ -130,7 +130,7 @@ impl<'de> MapAccess<'de> for ValueMap {
 impl Serialize for Value {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match &self.kind {
-            ValueKind::Boolean(v) => serializer.serialize_bool(*v),
+            ValueKind::Bool(v) => serializer.serialize_bool(*v),
             ValueKind::Int(v) => serializer.serialize_i64(*v as i64),
             ValueKind::Float(v) => serializer.serialize_f64(*v),
             ValueKind::String(v) => serializer.serialize_str(v),
@@ -165,7 +165,7 @@ impl<'de> Deserialize<'de> for Value {
             }
 
             fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E> {
-                Ok(Value::new_builtin(ValueKind::Boolean(v)))
+                Ok(Value::new_builtin(ValueKind::Bool(v)))
             }
 
             fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E> {

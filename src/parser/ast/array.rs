@@ -12,7 +12,7 @@ use tl_macro::{change_pos, consume, peek};
 
 impl super::Parser {
     pub(super) fn parse_array(&mut self) -> ExprResult {
-        let start = consume!("'{'", TokenKind::LBracket)?.clone();
+        let start = consume!("'['", TokenKind::LBracket)?.clone();
 
         let mut items = Vec::new();
         while let Some(next_token) = peek!(0) {

@@ -6,25 +6,53 @@
   (if)
 ] @keyword
 
-; Functions
+; Function parameters
+(function (identifier) @variable.parameter)
+
+; Function calls
 (postfix_expr
   (primary
     (identifier) @function
     (#not-eq? @function "if"))
+  .
   (call))
+(postfix_expr
+  (member_access
+    (identifier) @function)
+  .
+  call: (call))
 
-; Identifiers
+; Variables (simple identifier without call)
 (postfix_expr
   (primary (identifier) @variable)
   !call)
 
-; Function bindings
+; Object keys with simple identifiers (must come after variables)
 (element
-  key: (expr (postfix_expr (primary (identifier) @function)))
-  value: (expr (postfix_expr (primary (function)))))
+  key: (expr
+    (postfix_expr
+      (primary (identifier) @function))))
 
-; Function parameters
-(function (identifier) @variable.parameter)
+; Object keys with member access - highlight all identifiers
+(element
+  key: (expr
+    (postfix_expr
+      (primary (identifier) @function))))
+
+(element
+  key: (expr
+    (postfix_expr
+      (member_access (identifier) @function))))
+
+; Type annotations in functions (must come after variables for precedence)
+(function
+  type: (expr
+    (postfix_expr
+      (primary (identifier) @type))))
+(function
+  type: (expr
+    (postfix_expr
+      (member_access (identifier) @type))))
 
 ; Literals
 (null) @constant
@@ -33,29 +61,6 @@
 (string) @string
 (path) @string.special.path
 (escape_sequence) @constant.character.escape
-
-; Types
-[
-  "any"
-  "nothing"
-  "boolean"
-  "int"
-  "uint"
-  "float"
-  "number"
-  "string"
-  "path"
-  "function"
-  "list"
-  "object"
-  "either"
-  "thunk"
-  (type)
-] @type
-
-(type (expr (postfix_expr (primary
-  (identifier) @type)
-  !call)))
 
 ; Operators
 (binary_operator) @operator
@@ -77,13 +82,10 @@
   "]"
   "{"
   "}"
-  "<"
-  ">"
 ] @punctuation.bracket
 
-; Has to be after the bracket punctuation decl for the closing bracket to be highlighted properly
+; String interpolation
 (interpolation
   "${" @punctuation.special
-  (expr) @embedded
+  (_) @embedded
   "}" @punctuation.special)
-

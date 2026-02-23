@@ -1,1 +1,1 @@
-crate::export_modules!(binary_op, error, expr, types, literal);
+crate::export_modules!(binary_op, error, expr, literal);

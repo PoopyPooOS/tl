@@ -13,6 +13,7 @@ indexmap = { version = "2.0", features = ["serde"] }
 miette.workspace = true
 thiserror.workspace = true
 derive_more = { version = "2.1.0", features = ["eq", "display"] }
+try-iterator = "1.0.0"
 
 libloading = "0.9"
 
